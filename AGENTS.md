@@ -64,7 +64,7 @@ python scripts/scribe.py "Fetched snapshot for Austin_HCIM" \
   --meta duration_ms=842 result=success
 ```
 
-Entry format: `[YYYY-MM-DD HH:MM:SS UTC] [EMOJI] [Agent: <name>] [Project: codex-osrs-snapshot] message | key=value`
+Entry format: `[EMOJI] [YYYY-MM-DD HH:MM:SS UTC] [Agent: <name>] [Project: codex-osrs-snapshot] message | key=value`
 
 Set `--dry-run` to preview without writing.
 
@@ -154,6 +154,6 @@ DATA_PATH=./data/snapshots
 
 ## 🪶 Notes
 
-* SnapshotAgent should call Scribe after each success or failure.
+* SnapshotAgent now logs every run to Scribe automatically, including latency, mode, and output path metadata.
 * When creating new tooling, update `config/project.json` so shared utilities remain aware of the current project metadata.
 * Use `core/index_discovery.py` to refresh `config/activity_index_cache.json` when Jagex adds activities; the hiscore client will fall back to cached values and only scrape when missing.

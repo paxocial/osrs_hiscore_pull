@@ -232,7 +232,7 @@ Activities include all clue tiers, minigames, point trackers, and bosses support
 ### Snapshot JSON
 - Raw payload mirrors the structure returned by the OSRS JSON hiscores API, including skills, activities, clues, and bosses.
 - Each persisted file should include:
-  - `metadata`: player name, fetch timestamp (UTC), source URL, and any agent version string.
+  - `metadata`: player name, resolved mode, fetch timestamp (ISO + optional epoch), request latency (`latency_ms`), source URL, agent version, and schema version when available.
   - `data`: original JSON stats object as provided by the API.
 - Optional normalization can map ranks, levels, and XP values into typed dictionaries for downstream analytics.
 

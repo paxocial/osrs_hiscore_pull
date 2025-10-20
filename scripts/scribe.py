@@ -8,7 +8,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional, Iterable, Sequence, Tuple
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -61,7 +61,7 @@ def format_entry(
     if not emoji:
         emoji = "📝"
 
-    segments = [f"[{timestamp}]", f"[{emoji}]"]
+    segments = [f"[{emoji}]", f"[{timestamp}]"]
 
     if agent:
         segments.append(f"[Agent: {agent}]")
@@ -84,6 +84,62 @@ def append_log(path: Path, entry: str) -> None:
         handle.write(entry)
         if not entry.endswith("\n"):
             handle.write("\n")
+
+
+def log_progress(
+    message: str,
+    *,
+    emoji: Optional[str] = None,
+    status: Optional[str] = None,
+    agent: Optional[str] = None,
+    meta: Optional[Mapping[str, Any]] = None,
+    config_path: Optional[Path] = None,
+    timestamp: Optional[str] = None,
+    dry_run: bool = False,
+) -> str:
+    config_path = config_path or DEFAULT_CONFIG_PATH
+    config = load_config(config_path)
+
+    progress_log = config.get("progress_log")
+    if not progress_log:
+        raise ValueError("Config file is missing 'progress_log'.")
+
+    project_name = config.get("project_name")
+    default_emoji = config.get("default_emoji", "📝")
+    default_agent = config.get("default_agent")
+
+    resolved_emoji = emoji
+    if not resolved_emoji and status:
+        resolved_emoji = STATUS_EMOJI.get(status)
+    if not resolved_emoji:
+        resolved_emoji = default_emoji
+    if not resolved_emoji:
+        raise ValueError("Emoji is required; provide emoji/status or set default_emoji.")
+
+    resolved_agent = agent or default_agent
+
+    meta_pairs: Tuple[Tuple[str, str], ...] = ()
+    if meta:
+        meta_pairs = tuple((str(key), str(value)) for key, value in meta.items())
+
+    entry = format_entry(
+        message=message,
+        emoji=resolved_emoji,
+        agent=resolved_agent,
+        project_name=project_name,
+        meta=meta_pairs,
+        timestamp=timestamp,
+    )
+
+    log_path = Path(progress_log)
+    if not log_path.is_absolute():
+        log_path = ROOT_DIR / log_path
+
+    if dry_run:
+        return entry
+
+    append_log(log_path, entry)
+    return entry
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -139,49 +195,33 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv or sys.argv[1:])
 
     config_path = args.config or DEFAULT_CONFIG_PATH
-    config = load_config(config_path)
-
-    progress_log = config.get("progress_log")
-    if not progress_log:
-        raise SystemExit("Config file is missing 'progress_log'.")
-
-    project_name = config.get("project_name")
-    default_emoji = config.get("default_emoji", "📝")
-    default_agent = config.get("default_agent")
-
-    emoji = args.emoji
-    if not emoji and args.status:
-        emoji = STATUS_EMOJI.get(args.status)
-    if not emoji:
-        emoji = default_emoji
-
-    if not emoji:
-        raise SystemExit("Emoji is required; provide --emoji, --status, or set default_emoji.")
-
-    agent = args.agent or default_agent
 
     meta = parse_meta(args.meta)
 
-    entry = format_entry(
-        message=args.message,
-        emoji=emoji,
-        agent=agent,
-        project_name=project_name,
-        meta=meta,
-        timestamp=args.timestamp,
-    )
-
-    log_path = Path(progress_log)
-    if not log_path.is_absolute():
-        log_path = ROOT_DIR / log_path
+    try:
+        entry = log_progress(
+            message=args.message,
+            emoji=args.emoji,
+            status=args.status,
+            agent=args.agent,
+            meta=dict(meta),
+            config_path=config_path,
+            timestamp=args.timestamp,
+            dry_run=args.dry_run,
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if args.dry_run:
         print(entry)
-        return
-
-    append_log(log_path, entry)
-    print(f"Wrote entry to {log_path}:")
-    print(entry)
+    else:
+        config = load_config(config_path)
+        progress_log = config.get("progress_log")
+        log_path = Path(progress_log)
+        if not log_path.is_absolute():
+            log_path = ROOT_DIR / log_path
+        print(f"Wrote entry to {log_path}:")
+        print(entry)
 
 
 if __name__ == "__main__":
