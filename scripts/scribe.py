@@ -8,7 +8,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Optional, Iterable, Sequence, Tuple
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -86,7 +86,7 @@ def append_log(path: Path, entry: str) -> None:
             handle.write("\n")
 
 
-def parse_args(argv: Iterable[str]) -> argparse.Namespace:
+def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Append a formatted entry to the project progress log."
     )
@@ -135,7 +135,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Iterable[str] | None = None) -> None:
+def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv or sys.argv[1:])
 
     config_path = args.config or DEFAULT_CONFIG_PATH
@@ -160,10 +160,7 @@ def main(argv: Iterable[str] | None = None) -> None:
 
     agent = args.agent or default_agent
 
-    try:
-        meta = parse_meta(args.meta)
-    except SystemExit as exc:  # allow parse errors to propagate with message
-        raise
+    meta = parse_meta(args.meta)
 
     entry = format_entry(
         message=args.message,

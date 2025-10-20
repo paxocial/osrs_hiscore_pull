@@ -114,6 +114,8 @@ Set `--dry-run` to preview without writing.
 
 Pass `--emoji` for ad-hoc reactions. An emoji is always required; if none is provided, the `default_emoji` in the config is used.
 
+- **Workflow rules:** log with Scribe after every couple of meaningful steps, favour the status presets when they fit, include `--meta` for tickets or durations, use `--dry-run` to preview entries, and never edit the progress log by hand.
+
 ---
 
 ## 🧩 Development Workflow
