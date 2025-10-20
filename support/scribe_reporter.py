@@ -16,23 +16,37 @@ def report_snapshot(
     message: str,
     snapshot_path: Optional[Path],
     latency_ms: Optional[float],
+    expected_mode: Optional[str] = None,
+    resolved_mode: Optional[str] = None,
+    snapshot_id: Optional[str] = None,
+    delta_summary: Optional[str] = None,
     config_path: Optional[Path] = None,
 ) -> None:
     status = "success" if success else "error"
+    resolved = resolved_mode or mode
     meta = {
         "player": player,
-        "mode": mode,
+        "mode": resolved,
         "result": "success" if success else "failure",
     }
     if snapshot_path:
         meta["path"] = str(snapshot_path)
     if latency_ms is not None:
         meta["latency_ms"] = f"{latency_ms:.2f}"
+    if expected_mode:
+        meta["expected_mode"] = expected_mode
+    if resolved_mode:
+        meta["resolved_mode"] = resolved_mode
+    if snapshot_id:
+        meta["snapshot_id"] = snapshot_id
+    if delta_summary:
+        meta["summary"] = delta_summary
 
+    agent_name = meta.pop("agent", "SnapshotAgent")
     log_progress(
-        message=f"SnapshotAgent fetched hiscore report for {player}: {message}",
+        message=f"{agent_name} event for {player}: {message}",
         status=status,
-        agent="SnapshotAgent",
+        agent=agent_name,
         meta=meta,
         config_path=config_path,
     )

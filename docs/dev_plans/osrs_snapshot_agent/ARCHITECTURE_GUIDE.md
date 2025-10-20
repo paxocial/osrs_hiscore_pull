@@ -51,11 +51,14 @@ core/
 ├── clipboard.py
 ├── constants.py
 ├── hiscore_client.py
-└── index_discovery.py
+├── index_discovery.py
+├── mode_cache.py
+└── processing.py
 config/
 ├── accounts.json
 ├── project.json
 ├── activity_index_cache.json
+├── mode_cache.json (generated)
 └── (env files)
 data/
 └── snapshots/ (player folders with timestamped JSON)
@@ -85,6 +88,7 @@ requirements.txt
 | Logging | `scripts/scribe.py` | Appends formatted progress entries to the project log for development visibility. |
 | Clipboard export | `core/clipboard.py` | Copies summary snippets for quick sharing when supported. |
 | Activity index discovery | `core/index_discovery.py`, `config/activity_index_cache.json` | Scrapes leaderboard metadata periodically, caches indices, and refreshes on demand (falls back to deterministic ordering if scraping is blocked). |
+| Mode resolution cache | `core/mode_cache.py`, `config/mode_cache.json` | Stores last successful gamemode per player and guides retry sequences. |
 
 ---
 
@@ -234,6 +238,7 @@ Activities include all clue tiers, minigames, point trackers, and bosses support
 - Each persisted file should include:
   - `metadata`: player name, resolved mode, fetch timestamp (ISO + optional epoch), request latency (`latency_ms`), source URL, agent version, and schema version when available.
   - `data`: original JSON stats object as provided by the API.
+- `delta`: summary payload containing XP, level, and activity differences relative to the previous snapshot (or `null` for the first capture).
 - Optional normalization can map ranks, levels, and XP values into typed dictionaries for downstream analytics.
 
 ### Configuration Keys
@@ -306,7 +311,7 @@ Implementation milestones are detailed in `docs/dev_plans/osrs_snapshot_agent/PH
 
 ## 10. Testing & Verification
 
-- **Unit Tests:** Validate snapshot filename generation, metadata enrichment, and Scribe integration (dry-run mode).
+- **Unit Tests:** Validate snapshot normalization, delta computations, mode caching, and Scribe logging helpers (see `tests/`).
 - **Integration Tests:** Execute live fetch against the OSRS API in a controlled environment, verifying HTTP error handling (404, rate limits).
 - **Regression Checks:** Ensure repeated snapshots for the same user create deterministic paths without overwriting previous files.
 - **Manual QA:** Confirm progress log entries use the expected format and track key metadata such as duration or result status.

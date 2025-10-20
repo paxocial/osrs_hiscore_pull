@@ -103,6 +103,7 @@ flowchart TD
 * Cap concurrent network calls to avoid hitting API rate limits (≤5 in parallel when batching).
 * Log every successful snapshot with Scribe using the format `[TIMESTAMP] [EMOJI] message`.
 * Guard network operations with retries and clear error handling before logging failure entries.
+* Resolve gamemode using the mode cache; fall back across modes when the requested endpoint fails and record the resolved mode in metadata/logs.
 
 ---
 
@@ -155,5 +156,6 @@ DATA_PATH=./data/snapshots
 ## 🪶 Notes
 
 * SnapshotAgent now logs every run to Scribe automatically, including latency, mode, and output path metadata.
+* Snapshot logs also capture delta summaries so XP and activity changes stay visible in the progress ledger.
 * When creating new tooling, update `config/project.json` so shared utilities remain aware of the current project metadata.
 * Use `core/index_discovery.py` to refresh `config/activity_index_cache.json` when Jagex adds activities; the hiscore client will fall back to cached values and only scrape when missing.

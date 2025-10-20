@@ -9,6 +9,7 @@ from pathlib import Path
 from rich.console import Console
 
 from agents.osrs_snapshot_agent import SnapshotAgent
+from agents.report_agent import ReportAgent
 
 
 def load_accounts(path: Path) -> list[dict[str, str]]:
@@ -38,12 +39,16 @@ def main() -> None:
         console.print("[yellow]No accounts configured. Exiting.[/yellow]")
         return
 
-    agent = SnapshotAgent(args.output)
+    agent = SnapshotAgent(args.output, config_path=Path("config/project.json"))
+    report_agent = ReportAgent(Path("reports"), scribe_config=Path("config/project.json"))
     results = agent.run(accounts)
 
     for result in results:
         if result.success:
             console.print(f"[green]✓[/green] {result.player} ({result.mode}) → {result.snapshot_path}")
+            report_path = report_agent.build(result.snapshot_path) if result.snapshot_path else None
+            if report_path:
+                console.print(f"   [cyan]Report[/cyan] {report_path}")
         else:
             console.print(f"[red]✗[/red] {result.player} ({result.mode}) → {result.message}")
 
