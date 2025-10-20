@@ -1,8 +1,8 @@
 # 🧠 AGENTS.md — OSRS Snapshot Agent
 
-**Author:** CortaLabs  
-**System Focus:** Hiscore Ingestion / Snapshot Storage  
-**Version:** Draft v0.2  
+**Author:** CortaLabs
+**System Focus:** Hiscore Ingestion / Snapshot Storage
+**Version:** Draft v0.2
 **Last Updated:** 2025-05-13 00:00 UTC
 
 ---
@@ -34,6 +34,53 @@ Reference material: `docs/api_guide.md`
 | **SnapshotAgent** | Fetch a player's JSON stats, normalise lightweight metadata, and write the snapshot to disk.        |
 
 Supporting utilities (parsers, storage adapters) will be introduced only when needed for new features.
+
+---
+
+---
+
+## 🧾 Logging with Scribe
+
+Scribe centralises progress logging for this and future projects.
+
+*Configuration:* `config/project.json`
+
+```json
+{
+  "project_name": "codex-osrs-snapshot",
+  "progress_log": "docs/dev_plans/osrs_snapshot_agent/PROGRESS_LOG.md",
+  "default_emoji": "ℹ️",
+  "default_agent": "Scribe"
+}
+```
+- **Workflow rules:** The coding agent MUST log with Scribe after every couple of meaningful steps, favour the status presets when they fit, include `--meta` for tickets or durations, use `--dry-run` to preview entries, and never edit the progress log by hand.  Use Scribe to document the starting of new phases/goals.  Scribe everything you do for full observability!
+
+*CLI Usage (development workflow utility):*
+
+```bash
+python scripts/scribe.py "Fetched snapshot for Austin_HCIM" \
+  --agent SnapshotAgent \
+  --status success \
+  --meta duration_ms=842 result=success
+```
+
+Entry format: `[YYYY-MM-DD HH:MM:SS UTC] [EMOJI] [Agent: <name>] [Project: codex-osrs-snapshot] message | key=value`
+
+Set `--dry-run` to preview without writing.
+
+**Status presets:**
+
+| Status   | Emoji | Use case                     |
+| -------- | ----- | ---------------------------- |
+| `info`   | ℹ️     | Neutral update or note        |
+| `success`| ✅     | Completed task                |
+| `warn`   | ⚠️     | Minor issues or follow-ups    |
+| `error`  | ❌     | Blocking failure              |
+| `bug`    | 🐞     | Defect discovered             |
+| `plan`   | 🧭     | Planning or roadmap updates   |
+
+Pass `--emoji` for ad-hoc reactions. An emoji is always required; if none is provided, the `default_emoji` in the config is used.
+
 
 ---
 
@@ -71,52 +118,7 @@ docs/dev_plans/osrs_snapshot_agent/
 
 Templates are available under `docs/dev_plans/1_templates/` and should be copied when each document is first populated.
 
----
 
-## 🧾 Logging with Scribe
-
-Scribe centralises progress logging for this and future projects.
-
-*Configuration:* `config/project.json`
-
-```json
-{
-  "project_name": "codex-osrs-snapshot",
-  "progress_log": "docs/dev_plans/osrs_snapshot_agent/PROGRESS_LOG.md",
-  "default_emoji": "ℹ️",
-  "default_agent": "Scribe"
-}
-```
-
-*CLI Usage (development workflow utility):*
-
-```bash
-python scripts/scribe.py "Fetched snapshot for Austin_HCIM" \
-  --agent SnapshotAgent \
-  --status success \
-  --meta duration_ms=842 result=success
-```
-
-Entry format: `[YYYY-MM-DD HH:MM:SS UTC] [EMOJI] [Agent: <name>] [Project: codex-osrs-snapshot] message | key=value`
-
-Set `--dry-run` to preview without writing.
-
-**Status presets:**
-
-| Status   | Emoji | Use case                     |
-| -------- | ----- | ---------------------------- |
-| `info`   | ℹ️     | Neutral update or note        |
-| `success`| ✅     | Completed task                |
-| `warn`   | ⚠️     | Minor issues or follow-ups    |
-| `error`  | ❌     | Blocking failure              |
-| `bug`    | 🐞     | Defect discovered             |
-| `plan`   | 🧭     | Planning or roadmap updates   |
-
-Pass `--emoji` for ad-hoc reactions. An emoji is always required; if none is provided, the `default_emoji` in the config is used.
-
-- **Workflow rules:** log with Scribe after every couple of meaningful steps, favour the status presets when they fit, include `--meta` for tickets or durations, use `--dry-run` to preview entries, and never edit the progress log by hand.
-
----
 
 ## 🧩 Development Workflow
 

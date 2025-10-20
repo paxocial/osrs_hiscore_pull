@@ -3,7 +3,7 @@
 **System Focus:** Hiscore ingestion & snapshot storage  
 **Author:** CortaLabs  
 **Version:** Draft v0.1  
-**Last Updated:** 2025-10-20 04:05 UTC
+**Last Updated:** 2025-10-20 04:07 UTC
 
 ---
 
@@ -32,6 +32,39 @@ flowchart LR
     Agent --> Storage[data/snapshots/<player>/timestamp.json]
     Agent --> Logger[Scribe Utility]
     Logger --> ProgressLog[docs/dev_plans/osrs_snapshot_agent/PROGRESS_LOG.md]
+    Agent --> Clipboard[core/clipboard.py]
+    Main --> Accounts[config/accounts.json]
+```
+
+---
+
+### 3.1 Directory Layout
+
+```
+agents/
+├── __init__.py
+└── osrs_snapshot_agent.py
+core/
+├── __init__.py
+├── clipboard.py
+├── constants.py
+└── hiscore_client.py
+config/
+├── accounts.json
+├── project.json
+└── (env files)
+data/
+└── snapshots/ (player folders with timestamped JSON)
+reports/
+└── .gitkeep
+scripts/
+├── scribe.py
+└── (future automation)
+tests/
+├── __init__.py
+└── (unit/integration tests)
+main.py
+requirements.txt
 ```
 
 ---
@@ -40,10 +73,13 @@ flowchart LR
 
 | Integration | File Path | Description |
 |-------------|-----------|-------------|
-| Configuration | `config/project.json`, `.env` | Supplies project metadata, usernames, interval hints, and output directories. |
-| HTTP Client | `agents/osrs_snapshot_agent.py` (planned) | Performs GET requests to OSRS hiscore JSON endpoints documented in `docs/api_guide.md`. |
+| Project Metadata | `config/project.json`, `.env` | Supplies project metadata, usernames, interval hints, and output directories. |
+| Account List | `config/accounts.json` | Defines tracked accounts and preferred gamemodes. |
+| HTTP Client | `core/hiscore_client.py` | Performs GET requests to OSRS hiscore JSON endpoints documented in `docs/api_guide.md`. |
+| Constants Registry | `core/constants.py` | Houses gamemodes, activity enumerations, and formatted name helpers. |
 | Storage | `data/snapshots/<player>/` | Local filesystem directory for timestamped JSON payloads. |
 | Logging | `scripts/scribe.py` | Appends formatted progress entries to the project log for development visibility. |
+| Clipboard export | `core/clipboard.py` | Copies summary snippets for quick sharing when supported. |
 
 ---
 
@@ -217,6 +253,7 @@ sequenceDiagram
   Agent->>API: GET index_lite.json?player=<rsn>
   API-->>Agent: JSON payload
   Agent->>FS: write data/snapshots/<rsn>/<timestamp>.json
+  Agent->>Clipboard: copy summary JSON snippet
   Agent->>Scribe: log success/failure with metadata
   Scribe->>FS: append entry to PROGRESS_LOG.md
 ```
