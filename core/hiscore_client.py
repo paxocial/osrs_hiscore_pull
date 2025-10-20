@@ -7,7 +7,8 @@ from typing import Any, Dict, Iterable, List
 
 import httpx
 
-from .constants import ACTIVITY_LOOKUP, ACTIVITY_TABLE_INDEX, GAME_MODES, SKILLS
+from .constants import ACTIVITY_LOOKUP, GAME_MODES, SKILLS, get_activity_table_index
+from .index_discovery import refresh_activity_index_cache
 
 
 BASE_URL = "https://secure.runescape.com"
@@ -65,9 +66,12 @@ class HiscoreClient:
         if activity not in ACTIVITY_LOOKUP:
             raise ValueError(f"Unknown activity: {activity}")
         gamemode = GAME_MODES.get(mode) or GAME_MODES["main"]
-        index = ACTIVITY_TABLE_INDEX.get(activity)
+        index = get_activity_table_index(activity)
         if index is None:
-            raise NotImplementedError(f"Activity table index not defined for {activity}")
+            mapping = refresh_activity_index_cache()
+            index = mapping.get(activity)
+            if index is None:
+                raise RuntimeError(f"Activity table index not defined for {activity}")
         return f"{BASE_URL}/m={gamemode.path}/{ACTIVITY_PAGE}?category_type=1&table={index}&page={page}"
 
     def fetch(self, player: str, mode: str = "main") -> HiscoreResponse:

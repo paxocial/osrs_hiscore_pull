@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
+from typing import Dict
 
 
 @dataclass(frozen=True)
@@ -14,12 +17,12 @@ class Gamemode:
 
 GAME_MODES: dict[str, Gamemode] = {
     "main": Gamemode("main", "hiscore_oldschool", "Regular"),
-    "ironman": Gamemode("ironman", "hiscore_ironman", "Ironman"),
-    "hardcore": Gamemode("hardcore", "hiscore_hardcore_ironman", "Hardcore Ironman"),
-    "ultimate": Gamemode("ultimate", "hiscore_ultimate", "Ultimate Ironman"),
-    "deadman": Gamemode("deadman", "hiscore_deadman", "Deadman Mode"),
-    "tournament": Gamemode("tournament", "hiscore_tournament", "Tournament"),
-    "seasonal": Gamemode("seasonal", "hiscore_seasonal", "Leagues"),
+    "ironman": Gamemode("ironman", "hiscore_oldschool_ironman", "Ironman"),
+    "hardcore": Gamemode("hardcore", "hiscore_oldschool_hardcore_ironman", "Hardcore Ironman"),
+    "ultimate": Gamemode("ultimate", "hiscore_oldschool_ultimate", "Ultimate Ironman"),
+    "deadman": Gamemode("deadman", "hiscore_oldschool_deadman", "Deadman Mode"),
+    "tournament": Gamemode("tournament", "hiscore_oldschool_tournament", "Tournament"),
+    "seasonal": Gamemode("seasonal", "hiscore_oldschool_seasonal", "Leagues"),
 }
 
 DEFAULT_MODE = "main"
@@ -165,7 +168,31 @@ FORMATTED_MINIGAME_NAMES = MINIGAME_ACTIVITIES
 FORMATTED_POINT_NAMES = POINT_ACTIVITIES
 
 # Placeholder for activity table indexes (HTML leaderboard pages rely on numeric IDs).
-ACTIVITY_TABLE_INDEX: dict[str, int] = {}
+# Placeholder for activity table indexes (HTML leaderboard pages rely on numeric IDs).
+_ACTIVITY_CACHE_PATH = Path(__file__).resolve().parents[1] / "config/activity_index_cache.json"
 
 
-ACTIVITY_LOOKUP: dict[str, str] = {}
+def _load_activity_table_index(path: Path = _ACTIVITY_CACHE_PATH) -> Dict[str, int]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return {key: int(value) for key, value in data.items()}
+
+
+_ACTIVITY_TABLE_INDEX: Dict[str, int] = _load_activity_table_index()
+
+
+def get_activity_table_index(activity: str) -> int | None:
+    return _ACTIVITY_TABLE_INDEX.get(activity)
+
+
+def update_activity_table_index(mapping: Dict[str, int], path: Path = _ACTIVITY_CACHE_PATH) -> None:
+    global _ACTIVITY_TABLE_INDEX
+    _ACTIVITY_TABLE_INDEX = dict(mapping)
+    path.write_text(json.dumps(_ACTIVITY_TABLE_INDEX, indent=2), encoding="utf-8")
+
+
+DISPLAY_TO_ACTIVITY: Dict[str, str] = {display: key for key, display in ACTIVITY_LOOKUP.items()}

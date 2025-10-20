@@ -3,7 +3,7 @@
 **System Focus:** Hiscore ingestion & snapshot storage  
 **Author:** CortaLabs  
 **Version:** Draft v0.1  
-**Last Updated:** 2025-10-20 04:07 UTC
+**Last Updated:** 2025-10-20 04:22 UTC
 
 ---
 
@@ -34,6 +34,8 @@ flowchart LR
     Logger --> ProgressLog[docs/dev_plans/osrs_snapshot_agent/PROGRESS_LOG.md]
     Agent --> Clipboard[core/clipboard.py]
     Main --> Accounts[config/accounts.json]
+    Core --> Discovery[core/index_discovery.py]
+    Discovery --> Cache[config/activity_index_cache.json]
 ```
 
 ---
@@ -48,10 +50,12 @@ core/
 ├── __init__.py
 ├── clipboard.py
 ├── constants.py
-└── hiscore_client.py
+├── hiscore_client.py
+└── index_discovery.py
 config/
 ├── accounts.json
 ├── project.json
+├── activity_index_cache.json
 └── (env files)
 data/
 └── snapshots/ (player folders with timestamped JSON)
@@ -80,6 +84,7 @@ requirements.txt
 | Storage | `data/snapshots/<player>/` | Local filesystem directory for timestamped JSON payloads. |
 | Logging | `scripts/scribe.py` | Appends formatted progress entries to the project log for development visibility. |
 | Clipboard export | `core/clipboard.py` | Copies summary snippets for quick sharing when supported. |
+| Activity index discovery | `core/index_discovery.py`, `config/activity_index_cache.json` | Scrapes leaderboard metadata periodically, caches indices, and refreshes on demand (falls back to deterministic ordering if scraping is blocked). |
 
 ---
 

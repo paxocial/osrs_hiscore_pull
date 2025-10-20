@@ -27,3 +27,12 @@ _(Newest entries appended below this line.)_
 [2025-10-20 04:14:08 UTC] [✅] [Agent: Scribe] [Project: codex-osrs-snapshot] Initial scaffold: directories created, stubs added for agent, core client, clipboard, and entrypoint. | scope=scaffold
 [2025-10-20 04:16:26 UTC] [🧭] [Agent: Scribe] [Project: codex-osrs-snapshot] Starting constants population and hiscore client enhancements. | scope=core
 [2025-10-20 04:17:51 UTC] [✅] [Agent: Scribe] [Project: codex-osrs-snapshot] Populated constants, expanded hiscore client APIs, and aligned snapshot agent with mode registry. | scope=core
+[2025-10-20 04:20:43 UTC] [🧭] [Agent: Scribe] [Project: codex-osrs-snapshot] Designing activity index discovery with caching to protect the OSRS API. | scope=core
+[2025-10-20 04:22:22 UTC] [✅] [Agent: Scribe] [Project: codex-osrs-snapshot] Added activity index discovery with caching and documented workflow updates. | scope=core
+[2025-10-20 04:24:48 UTC] [⚠️] [Agent: Scribe] [Project: codex-osrs-snapshot] Activity index discovery failed (no options returned); need to adjust scraper or account for blocked response. | scope=core
+[2025-10-20 04:25:15 UTC] [ℹ️] [Agent: Scribe] [Project: codex-osrs-snapshot] Added sequential fallback for activity index cache when scraping fails. | scope=core
+[2025-10-20 04:27:26 UTC] [ℹ️] [Agent: Scribe] [Project: codex-osrs-snapshot] Activity index cache refreshed (likely using fallback). | scope=core
+[2025-10-20 04:29:30 UTC] [✅] [Agent: Scribe] [Project: codex-osrs-snapshot] Fixed constants duplication, fallback now writes activity index cache correctly. | scope=core
+[2025-10-20 04:31:02 UTC] [⚠️] [Agent: Scribe] [Project: codex-osrs-snapshot] Snapshot run for ArchonBorn: main mode success, hardcore endpoint 404 (likely de-ironed). | player=ArchonBorn
+[2025-10-20 04:35:05 UTC] [🧭] [Agent: Scribe] [Project: codex-osrs-snapshot] Investigating hardcore mode 404; suspect incorrect gamemode endpoint mapping. | scope=bug
+[2025-10-20 04:35:21 UTC] [⚠️] [Agent: Scribe] [Project: codex-osrs-snapshot] Hardcore fetch attempt failed due to network resolution; endpoint mapping updated. | scope=bug

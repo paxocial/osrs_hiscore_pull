@@ -156,3 +156,4 @@ DATA_PATH=./data/snapshots
 
 * SnapshotAgent should call Scribe after each success or failure.
 * When creating new tooling, update `config/project.json` so shared utilities remain aware of the current project metadata.
+* Use `core/index_discovery.py` to refresh `config/activity_index_cache.json` when Jagex adds activities; the hiscore client will fall back to cached values and only scrape when missing.
