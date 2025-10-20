@@ -22,7 +22,7 @@
 ---
 
 ## 🎮 OSRS Highscore API
-
+**EXAMPLE REPO THAT ACCOMPLISHES SIMILAR FEAT:** https://github.com/maxswa/osrs-json-hiscores
 ### Overview
 
 OSRS provides a "hiscores lite" API accessible via `https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player=<name>` for main accounts. There are equivalent endpoints for ironman and hardcore ironman game modes (e.g. `https://secure.runescape.com/m=hiscore_ironman/index_lite.ws?player=<name>`). These endpoints return the player's rank, level and experience or score for each skill and activity in **CSV format**.

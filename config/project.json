@@ -1,0 +1,6 @@
+{
+  "project_name": "codex-osrs-snapshot",
+  "progress_log": "docs/dev_plans/osrs_snapshot_agent/PROGRESS_LOG.md",
+  "default_emoji": "ℹ️",
+  "default_agent": "Scribe"
+}
