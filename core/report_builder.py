@@ -5,6 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
+import hashlib
+import json
+
+from .constants import CLUE_ACTIVITIES, MINIGAME_ACTIVITIES, BOSS_ACTIVITIES, POINT_ACTIVITIES
 
 
 def build_report_content(snapshot: Dict[str, Any]) -> str:
@@ -18,6 +22,7 @@ def build_report_content(snapshot: Dict[str, Any]) -> str:
     fetched_at_fmt = _format_timestamp(fetched_at)
     total_xp = _total_xp(data.get("skills", []))
     total_level = _total_level(data.get("skills", []))
+    snapshot_hash = _snapshot_hash(snapshot)
 
     lines = [
         f"# OSRS Snapshot Report — {player}",
@@ -31,6 +36,13 @@ def build_report_content(snapshot: Dict[str, Any]) -> str:
 
     if delta and isinstance(delta, dict):
         lines.append(f"- **Changes:** {_summarize_delta(delta)}")
+    else:
+        lines.append("- **Changes:** No changes recorded.")
+
+    snapshot_id = metadata.get("snapshot_id")
+    if snapshot_id:
+        lines.append(f"- **Snapshot ID:** {snapshot_id}")
+    lines.append(f"- **Hash:** `{snapshot_hash}`")
 
     lines.append("")
     lines.append("## Skills")
@@ -44,17 +56,44 @@ def build_report_content(snapshot: Dict[str, Any]) -> str:
         if name:
             lines.append(f"| {name} | {level} | {xp:,} |")
 
-    notable_activities = _filter_notable_activities(data.get("activities", []))
-    if notable_activities:
+    activity_sections = _group_notable_activities(data.get("activities", []))
+    if activity_sections:
         lines.append("")
-        lines.append("## Activities (Notable)")
+        lines.append("## Activities")
         lines.append("")
-        lines.append("| Activity | Score |")
-        lines.append("| -------- | ----- |")
-        for activity in notable_activities:
-            name = activity.get("name")
-            score = _safe_int(activity.get("score"))
-            lines.append(f"| {name} | {score:,} |")
+        for header, entries in activity_sections:
+            lines.append(f"### {header}")
+            lines.append("")
+            lines.append("| Activity | Score |")
+            lines.append("| -------- | ----- |")
+            for activity in entries:
+                name = activity.get("name")
+                score = _safe_int(activity.get("score"))
+                lines.append(f"| {name} | {score:,} |")
+            lines.append("")
+
+    if delta and isinstance(delta, dict):
+        lines.append("## Changes")
+        lines.append("")
+        skill_rows = _skill_delta_rows(delta)
+        if skill_rows:
+            lines.append("### Skills")
+            lines.append("")
+            lines.append("| Skill | ΔXP | ΔLevel |")
+            lines.append("| ----- | ---- | ------- |")
+            for name, xp_delta, level_delta in skill_rows:
+                lines.append(f"| {name} | {xp_delta} | {level_delta} |")
+            lines.append("")
+
+        activity_rows = _activity_delta_rows(delta)
+        if activity_rows:
+            lines.append("### Activities")
+            lines.append("")
+            lines.append("| Activity | ΔScore |")
+            lines.append("| -------- | ------- |")
+            for name, score_delta in activity_rows:
+                lines.append(f"| {name} | {score_delta} |")
+            lines.append("")
 
     lines.append("")
     lines.append("## Source")
@@ -90,13 +129,37 @@ def _safe_int(value: Any) -> int:
     return 0
 
 
-def _filter_notable_activities(activities: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    notable = []
+def _group_notable_activities(activities: Iterable[Dict[str, Any]]) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    groups: Dict[str, List[Dict[str, Any]]] = {
+        "Clue Scrolls": [],
+        "Minigames": [],
+        "Bosses": [],
+        "Points": [],
+        "Other": [],
+    }
+
     for activity in activities:
         score = activity.get("score")
-        if isinstance(score, (int, float)) and score > 0:
-            notable.append(activity)
-    return notable
+        if not (isinstance(score, (int, float)) and score > 0):
+            continue
+        name = activity.get("name")
+        if not name:
+            continue
+
+        key = None
+        if name in CLUE_ACTIVITIES.values():
+            key = "Clue Scrolls"
+        elif name in MINIGAME_ACTIVITIES.values():
+            key = "Minigames"
+        elif name in BOSS_ACTIVITIES.values():
+            key = "Bosses"
+        elif name in POINT_ACTIVITIES.values():
+            key = "Points"
+        else:
+            key = "Other"
+        groups[key].append(activity)
+
+    return [(category, entries) for category, entries in groups.items() if entries]
 
 
 def _summarize_delta(delta: Dict[str, Any]) -> str:
@@ -119,17 +182,47 @@ def _summarize_delta(delta: Dict[str, Any]) -> str:
             "XP " + ", ".join(f"{skill['name']} (+{int(skill['xp_delta'])})" for skill in xp_highlights[:3])
         )
     if not fragments:
-        return "No changes recorded."
+        return "No recorded gains."
     return " | ".join(fragments)
 
 
 def _truncate_json(snapshot: Dict[str, Any], limit: int = 2048) -> str:
-    import json
-
     raw = json.dumps(snapshot, indent=2)
     if len(raw) <= limit:
         return raw
     return raw[: limit - 3] + "..."
+
+
+def _snapshot_hash(snapshot: Dict[str, Any]) -> str:
+    encoded = json.dumps(snapshot, sort_keys=True).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _skill_delta_rows(delta: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+    rows = []
+    for entry in delta.get("skill_deltas", []):
+        name = entry.get("name")
+        if not name:
+            continue
+        xp_delta = int(entry.get("xp_delta", 0))
+        level_delta = int(entry.get("level_delta", 0))
+        if xp_delta == 0 and level_delta == 0:
+            continue
+        rows.append((name, f"{xp_delta:+,}", f"{level_delta:+d}"))
+    return rows
+
+
+def _activity_delta_rows(delta: Dict[str, Any]) -> List[Tuple[str, str]]:
+    rows = []
+    for entry in delta.get("activity_deltas", []):
+        name = entry.get("name")
+        if not name:
+            continue
+        score_delta = int(entry.get("score_delta", 0))
+        if score_delta == 0:
+            continue
+        rows.append((name, f"{score_delta:+,}"))
+    return rows
 
 
 def write_report(content: str, report_path: Path) -> None:

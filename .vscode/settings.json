@@ -1,0 +1,4 @@
+{
+  "codex.approvalMode": "agent.fullAccess",
+  "codex.sandboxMode": "workspace-write"
+}

@@ -1,10 +1,10 @@
 # ReportAgent Overview
 
 ## Purpose
-Generate Markdown reports (`reports/<player>/<snapshot_id>.md`) summarizing each snapshot. Reports include metadata, total level/XP, skill table, notable activities, and embedded snapshot JSON.
+Generate Markdown reports (`reports/<player>/<snapshot_id>.md`) summarizing each snapshot. Reports include metadata (schema version, snapshot ID, SHA-256 hash, total level/XP), grouped activity tables, change tables, and embedded JSON.
 
 ## Integration
-- Invoked by `main.py` after SnapshotAgent completes.
+- Invoked by `main.py` after SnapshotAgent completes (with payload + delta summary).
 - Uses `core/report_builder.py` for rendering.
 - Logs completion via Scribe (`Agent: ReportAgent`).
 

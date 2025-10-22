@@ -29,6 +29,10 @@ class SnapshotResult:
     success: bool
     message: str
     response: HiscoreResponse | None = None
+    metadata: Dict[str, Any] | None = None
+    payload: Dict[str, Any] | None = None
+    delta: Dict[str, Any] | None = None
+    delta_summary: str | None = None
 
 
 class SnapshotAgent:
@@ -118,6 +122,7 @@ class SnapshotAgent:
                         expected_mode=requested_mode,
                         resolved_mode=None,
                         config_path=self.scribe_config_path,
+                        agent_name="SnapshotAgent",
                     )
                     results.append(
                         SnapshotResult(
@@ -179,6 +184,7 @@ class SnapshotAgent:
                     snapshot_id=snapshot_id,
                     delta_summary=delta_summary,
                     config_path=self.scribe_config_path,
+                    agent_name="SnapshotAgent",
                 )
 
                 results.append(
@@ -189,6 +195,10 @@ class SnapshotAgent:
                         success=True,
                         message=delta_summary,
                         response=response,
+                        metadata=payload["metadata"],
+                        payload=payload,
+                        delta=payload.get("delta"),
+                        delta_summary=delta_summary,
                     )
                 )
 

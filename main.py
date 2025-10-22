@@ -46,7 +46,14 @@ def main() -> None:
     for result in results:
         if result.success:
             console.print(f"[green]✓[/green] {result.player} ({result.mode}) → {result.snapshot_path}")
-            report_path = report_agent.build(result.snapshot_path) if result.snapshot_path else None
+            report_path = None
+            if result.payload and result.snapshot_path:
+                report = report_agent.build_from_payload(
+                    payload=result.payload,
+                    report_source=result.snapshot_path,
+                    delta_summary=result.delta_summary,
+                )
+                report_path = report.report_path if report.success else None
             if report_path:
                 console.print(f"   [cyan]Report[/cyan] {report_path}")
         else:

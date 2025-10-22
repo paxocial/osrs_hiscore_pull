@@ -45,7 +45,8 @@ flowchart LR
 ```
 agents/
 ├── __init__.py
-└── osrs_snapshot_agent.py
+├── osrs_snapshot_agent.py
+└── report_agent.py
 core/
 ├── __init__.py
 ├── clipboard.py
@@ -53,7 +54,8 @@ core/
 ├── hiscore_client.py
 ├── index_discovery.py
 ├── mode_cache.py
-└── processing.py
+├── processing.py
+└── report_builder.py
 config/
 ├── accounts.json
 ├── project.json
@@ -63,7 +65,7 @@ config/
 data/
 └── snapshots/ (player folders with timestamped JSON)
 reports/
-└── .gitkeep
+└── (Markdown reports per player)
 scripts/
 ├── scribe.py
 └── (future automation)
@@ -89,6 +91,7 @@ requirements.txt
 | Clipboard export | `core/clipboard.py` | Copies summary snippets for quick sharing when supported. |
 | Activity index discovery | `core/index_discovery.py`, `config/activity_index_cache.json` | Scrapes leaderboard metadata periodically, caches indices, and refreshes on demand (falls back to deterministic ordering if scraping is blocked). |
 | Mode resolution cache | `core/mode_cache.py`, `config/mode_cache.json` | Stores last successful gamemode per player and guides retry sequences. |
+| Report generation | `agents/report_agent.py`, `core/report_builder.py`, `reports/` | Produces Markdown summaries (skills, activities, hash) for each snapshot and logs completion. |
 
 ---
 
@@ -241,6 +244,12 @@ Activities include all clue tiers, minigames, point trackers, and bosses support
 - `delta`: summary payload containing XP, level, and activity differences relative to the previous snapshot (or `null` for the first capture).
 - Optional normalization can map ranks, levels, and XP values into typed dictionaries for downstream analytics.
 
+### Snapshot Reports
+- Markdown reports live under `reports/<player>/<snapshot_id>.md` and capture player/mode metadata, total XP/level, delta summary, snapshot ID, and a SHA-256 hash of the payload.
+- Skill table lists all 24 skills with levels and XP; activities are grouped into Clue Scrolls, Minigames, Bosses, Points, and Other with only positive scores displayed.
+- Change tables highlight skill XP/level gains and activity score increases.
+- The report concludes with a (possibly truncated) JSON block for auditing.
+
 ### Configuration Keys
 - `project_name`: shared identifier for logs and tooling.
 - `progress_log`: relative path to the progress ledger file.
@@ -257,6 +266,7 @@ sequenceDiagram
   participant Agent as SnapshotAgent
   participant API as OSRS API
   participant FS as Filesystem
+  participant Report as ReportAgent
   participant Scribe as Scribe Logger
 
   CLI->>Agent: load config + request snapshot
@@ -264,7 +274,10 @@ sequenceDiagram
   API-->>Agent: JSON payload
   Agent->>FS: write data/snapshots/<rsn>/<timestamp>.json
   Agent->>Clipboard: copy summary JSON snippet
-  Agent->>Scribe: log success/failure with metadata
+  Agent->>Report: provide payload + delta summary
+  Report->>FS: write reports/<player>/<snapshot>.md
+  Report->>Scribe: log report generation (ReportAgent)
+  Agent->>Scribe: log snapshot result (SnapshotAgent)
   Scribe->>FS: append entry to PROGRESS_LOG.md
 ```
 
@@ -274,23 +287,36 @@ sequenceDiagram
 
 ```json
 {
-  "metadata": {
+"metadata": {
+    "schema_version": "1.1",
+    "snapshot_id": "80a015f3-528b-5e44-8378-bca0ce669bec",
     "player": "Austin_HCIM",
+    "requested_mode": "hardcore",
+    "resolved_mode": "hardcore",
     "fetched_at": "2025-10-20T04:05:00Z",
-    "endpoint": "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player=Austin_HCIM",
+    "fetched_at_unix": 1760933100,
+    "endpoint": "https://secure.runescape.com/m=hiscore_oldschool_hardcore_ironman/index_lite.json?player=Austin_HCIM",
+    "latency_ms": 735.08,
     "agent_version": "0.1.0"
   },
   "data": {
-    "skills": {
-      "overall": {"rank": 12345, "level": 2277, "xp": 460000000},
-      "attack": {"rank": 23456, "level": 99, "xp": 13034431}
-    },
-    "clues": {
-      "all": {"rank": 34567, "score": 251}
-    },
-    "bosses": {
-      "zulrah": {"rank": 45678, "score": 150}
-    }
+    "skills": [
+      {"name": "Overall", "level": 2277, "xp": 460000000},
+      {"name": "Attack", "level": 99, "xp": 13034431}
+    ],
+    "activities": [
+      {"name": "Clue Scrolls (all)", "score": 251},
+      {"name": "Zulrah", "score": 150}
+    ]
+  },
+  "delta": {
+    "total_xp_delta": 12000,
+    "skill_deltas": [
+      {"name": "Magic", "xp_delta": 6500, "level_delta": 1}
+    ],
+    "activity_deltas": [
+      {"name": "Tempoross", "score_delta": 5}
+    ]
   }
 }
 ```

@@ -38,6 +38,8 @@ def test_build_report_content():
     assert "Attack" in content
     assert "Tempoross" in content
     assert "ΔXP" in content
+    assert "Hash:" in content
+    assert "## Activities" in content
 
 
 def test_write_report(tmp_path: Path):

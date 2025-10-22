@@ -7,7 +7,7 @@
 ## Entry Format
 
 ```
-[YYYY-MM-DD HH:MM:SS UTC] [EMOJI] [Agent: <name>] [Project: codex-osrs-snapshot] Message text | key=value
+[EMOJI] [YYYY-MM-DD HH:MM:SS UTC][Agent: <name>] [Project: codex-osrs-snapshot] Message text | key=value
 ```
 
 *Use `scripts/scribe.py` to append new entries automatically.*
@@ -55,3 +55,12 @@ _(Newest entries appended below this line.)_
 [ℹ️] [2025-10-20 05:11:06 UTC] [Agent: Scribe] [Project: codex-osrs-snapshot] ReportAgent scaffolding complete; awaiting network run for real reports. | scope=reports
 [✅] [2025-10-20 05:11:45 UTC] [Agent: SnapshotAgent] [Project: codex-osrs-snapshot] SnapshotAgent event for ArchonBorn: Snapshot stored — Activities: Grid Points(+1), League Points(+1), Deadman Points(+1) | player=ArchonBorn; mode=hardcore; result=success; path=data/snapshots/ArchonBorn/20251020_051145.json; latency_ms=735.08; expected_mode=hardcore; resolved_mode=hardcore; snapshot_id=80a015f3-528b-5e44-8378-bca0ce669bec; summary=Activities: Grid Points(+1), League Points(+1), Deadman Points(+1)
 [✅] [2025-10-20 05:11:45 UTC] [Agent: SnapshotAgent] [Project: codex-osrs-snapshot] SnapshotAgent event for ArchonBorn: Report generated | player=ArchonBorn; mode=hardcore; result=success; path=reports/ArchonBorn/80a015f3-528b-5e44-8378-bca0ce669bec.md; resolved_mode=hardcore; snapshot_id=80a015f3-528b-5e44-8378-bca0ce669bec
+[🧭] [2025-10-20 05:14:11 UTC] [Agent: Scribe] [Project: codex-osrs-snapshot] Planning report enhancements: hashing, grouped sections, diff-ready layout. | scope=reports
+[ℹ️] [2025-10-20 05:14:23 UTC] [Agent: Scribe] [Project: codex-osrs-snapshot] Report renderer remains programmatic (no LLM); proceeding with enhancements. | scope=reports
+[✅] [2025-10-20 05:17:28 UTC] [Agent: ReportAgent] [Project: codex-osrs-snapshot] ReportAgent event for Tester: Report generated | player=Tester; mode=main; result=success; path=/tmp/pytest-of-austin/pytest-31/test_report_agent_build_from_p0/reports/Tester/demo.md; resolved_mode=main; snapshot_id=demo; summary=No changes
+[✅] [2025-10-20 05:19:53 UTC] [Agent: Scribe] [Project: codex-osrs-snapshot] ReportBuilder enhanced (hash, grouped sections, change tables); ReportAgent now consumes payload metadata. | scope=reports
+[🧭] [2025-10-22 07:39:48 UTC] [Agent: Scribe] [Project: codex-osrs-snapshot] Starting GUI scaffolding for interactive snapshot/report fetching. | scope=gui
+[✅] [2025-10-22 07:42:26 UTC] [Agent: ReportAgent] [Project: codex-osrs-snapshot] ReportAgent event for Tester: Report generated | player=Tester; mode=main; result=success; path=/tmp/pytest-of-austin/pytest-0/test_report_agent_build_from_p0/reports/Tester/demo.md; resolved_mode=main; snapshot_id=demo; summary=No changes
+[✅] [2025-10-22 07:42:37 UTC] [Agent: Scribe] [Project: codex-osrs-snapshot] Implemented tkinter GUI wrapper; reuse agents to fetch snapshots and auto-copy reports. | scope=gui
+[✅] [2025-10-22 07:43:55 UTC] [Agent: SnapshotAgent] [Project: codex-osrs-snapshot] SnapshotAgent event for ArchonBorn: Snapshot stored — ΔXP 717.47K | Levels: Overall(+94), Cooking(+8), Woodcutting(+5) | player=ArchonBorn; mode=main; result=success; path=data/snapshots/ArchonBorn/20251022_074355.json; latency_ms=1816.64; expected_mode=main; resolved_mode=main; snapshot_id=2bd74c57-eb16-539c-99ff-2c5b386723b9; summary=ΔXP 717.47K | Levels: Overall(+94), Cooking(+8), Woodcutting(+5)
+[✅] [2025-10-22 07:43:55 UTC] [Agent: ReportAgent] [Project: codex-osrs-snapshot] ReportAgent event for ArchonBorn: Report generated | player=ArchonBorn; mode=main; result=success; path=reports/ArchonBorn/2bd74c57-eb16-539c-99ff-2c5b386723b9.md; resolved_mode=main; snapshot_id=2bd74c57-eb16-539c-99ff-2c5b386723b9; summary=ΔXP 717.47K | Levels: Overall(+94), Cooking(+8), Woodcutting(+5)

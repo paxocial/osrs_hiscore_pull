@@ -29,9 +29,10 @@ Reference material: `docs/api_guide.md`
 
 ## 🧩 Agent Definition
 
-| Agent           | Responsibilities                                                                                     |
-| ----------------| ----------------------------------------------------------------------------------------------------- |
-| **SnapshotAgent** | Fetch a player's JSON stats, normalise lightweight metadata, and write the snapshot to disk.        |
+| Agent             | Responsibilities                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------- |
+| **SnapshotAgent** | Fetch a player's JSON stats, normalise metadata, compute deltas, and write the snapshot to disk.      |
+| **ReportAgent**   | Render Markdown reports summarising snapshots (skills, activities, hash) and log completion via Scribe. |
 
 Supporting utilities (parsers, storage adapters) will be introduced only when needed for new features.
 
@@ -155,7 +156,8 @@ DATA_PATH=./data/snapshots
 
 ## 🪶 Notes
 
-* SnapshotAgent now logs every run to Scribe automatically, including latency, mode, and output path metadata.
-* Snapshot logs also capture delta summaries so XP and activity changes stay visible in the progress ledger.
+* SnapshotAgent now logs every run to Scribe automatically (latency, expected/resolved mode, snapshot/delta summary).
+* ReportAgent records Markdown report creation in Scribe and stores reports under `reports/<player>/<snapshot_id>.md`.
 * When creating new tooling, update `config/project.json` so shared utilities remain aware of the current project metadata.
 * Use `core/index_discovery.py` to refresh `config/activity_index_cache.json` when Jagex adds activities; the hiscore client will fall back to cached values and only scrape when missing.
+* Launch the desktop GUI via `python -m app.gui` to fetch snapshots interactively; it reuses SnapshotAgent/ReportAgent and copies the Markdown report plus JSON path to the clipboard automatically.

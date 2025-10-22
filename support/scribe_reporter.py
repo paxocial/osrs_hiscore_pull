@@ -21,6 +21,7 @@ def report_snapshot(
     snapshot_id: Optional[str] = None,
     delta_summary: Optional[str] = None,
     config_path: Optional[Path] = None,
+    agent_name: str = "SnapshotAgent",
 ) -> None:
     status = "success" if success else "error"
     resolved = resolved_mode or mode
@@ -42,7 +43,6 @@ def report_snapshot(
     if delta_summary:
         meta["summary"] = delta_summary
 
-    agent_name = meta.pop("agent", "SnapshotAgent")
     log_progress(
         message=f"{agent_name} event for {player}: {message}",
         status=status,

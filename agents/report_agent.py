@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from core.report_builder import build_report_content, write_report
 from support.scribe_reporter import report_snapshot
@@ -32,12 +31,17 @@ class ReportAgent:
         directory.mkdir(parents=True, exist_ok=True)
         return directory / f"{snapshot_id}.md"
 
-    def build(self, snapshot_path: Path) -> ReportResult:
-        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-        metadata: Dict[str, str] = snapshot.get("metadata", {})
+    def build_from_payload(
+        self,
+        *,
+        payload: Dict[str, Any],
+        report_source: Path,
+        delta_summary: Optional[str] = None,
+    ) -> ReportResult:
+        metadata: Dict[str, str] = payload.get("metadata", {})
         player = metadata.get("player") or "unknown"
         resolved_mode = metadata.get("resolved_mode") or metadata.get("mode") or "main"
-        snapshot_id = metadata.get("snapshot_id") or snapshot_path.stem
+        snapshot_id = metadata.get("snapshot_id") or report_source.stem
 
         if player == "unknown" or not snapshot_id:
             message = "Missing metadata for report"
@@ -49,10 +53,11 @@ class ReportAgent:
                 snapshot_path=None,
                 latency_ms=None,
                 config_path=self.scribe_config,
+                agent_name="ReportAgent",
             )
             return ReportResult(player=player, mode=resolved_mode, report_path=None, success=False, message=message)
 
-        content = build_report_content(snapshot)
+        content = build_report_content(payload)
         report_path = self._report_path(player, snapshot_id)
         write_report(content, report_path)
 
@@ -65,9 +70,9 @@ class ReportAgent:
             latency_ms=None,
             config_path=self.scribe_config,
             snapshot_id=snapshot_id,
-            delta_summary=None,
-            expected_mode=None,
+            delta_summary=delta_summary,
             resolved_mode=resolved_mode,
-            )
+            agent_name="ReportAgent",
+        )
 
         return ReportResult(player=player, mode=resolved_mode, report_path=report_path, success=True, message="Report generated")
