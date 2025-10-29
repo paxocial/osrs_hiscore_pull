@@ -120,7 +120,8 @@ def _total_xp(skills: Iterable[Dict[str, Any]]) -> int:
 
 
 def _total_level(skills: Iterable[Dict[str, Any]]) -> int:
-    return sum(_safe_int(skill.get("level")) for skill in skills)
+    # Exclude "Overall" skill from total level calculation since it already represents the sum
+    return sum(_safe_int(skill.get("level")) for skill in skills if skill.get("name") != "Overall")
 
 
 def _safe_int(value: Any) -> int:

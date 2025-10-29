@@ -4,3 +4,4 @@
 *.pyc
 data/snapshots/*
 reports/*
+claude_code_zai_env.sh

@@ -84,11 +84,13 @@ class SnapshotApp(tk.Tk):
         requested_mode = self.mode_var.get()
         if requested_mode.lower().startswith("auto"):
             account = {"name": player}
+            mode_text = "Auto-detecting mode..."
         else:
             account = {"name": player, "mode": requested_mode}
+            mode_text = f"Mode: {requested_mode}"
 
         self.fetch_button.configure(state=tk.DISABLED)
-        self._set_status(f"Fetching snapshot for {player}…")
+        self._set_status(f"🔍 Fetching snapshot for {player} ({mode_text})")
 
         self._fetch_thread = threading.Thread(
             target=self._run_snapshot,
@@ -119,10 +121,20 @@ class SnapshotApp(tk.Tk):
 
             report_path = report_result.report_path if report_result and report_result.success else None
             status_lines = [
-                f"Snapshot saved: {result.snapshot_path}",
+                f"✅ Snapshot saved: {result.snapshot_path}",
             ]
+
+            # Add mode detection information
+            if result.metadata:
+                requested_mode = result.metadata.get("requested_mode", "unknown")
+                resolved_mode = result.metadata.get("resolved_mode", "unknown")
+                if requested_mode != resolved_mode:
+                    status_lines.append(f"🔄 Mode Detection: Requested '{requested_mode}' → Resolved '{resolved_mode}' ✅")
+                else:
+                    status_lines.append(f"✅ Mode confirmed: {resolved_mode}")
+
             if report_path:
-                status_lines.append(f"Report saved: {report_path}")
+                status_lines.append(f"📄 Report saved: {report_path}")
 
             clipboard_text = None
             if report_path and report_path.exists():
@@ -133,14 +145,14 @@ class SnapshotApp(tk.Tk):
                     pass
 
             if clipboard_text and copy_text(clipboard_text):
-                status_lines.append("Report copied to clipboard.")
+                status_lines.append("📋 Report copied to clipboard.")
             elif clipboard_text:
-                status_lines.append("Report ready (clipboard copy unavailable).")
+                status_lines.append("📋 Report ready (clipboard copy unavailable).")
 
             self._set_status("\n".join(status_lines))
         except Exception as exc:  # pragma: no cover - GUI surface
             traceback.print_exc()
-            self._set_status(f"Error: {exc}")
+            self._set_status(f"❌ Error: {exc}")
         finally:
             self.after(0, lambda: self.fetch_button.configure(state=tk.NORMAL))
 
