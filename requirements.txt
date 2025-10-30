@@ -3,3 +3,7 @@ python-dotenv>=1.0.1
 rich>=13.7.0
 pyperclip>=1.8.2
 beautifulsoup4>=4.12.3
+sqlalchemy>=2.0.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
