@@ -53,6 +53,7 @@ SKILLS: tuple[str, ...] = (
     "runecraft",
     "hunter",
     "construction",
+    "sailing",
 )
 
 

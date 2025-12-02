@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card auth-card">
+  <h2>API Tokens</h2>
+  <p class="lede">Issue scoped tokens for bots/overlays. Store the token now; it is shown only once.</p>
+
+  {% if new_token %}
+    <div class="alert success">
+      <strong>New token:</strong> <code>{{ new_token }}</code>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/auth/tokens/issue" class="form inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Label
+      <input type="text" name="label" placeholder="Clan bot, overlay, etc.">
+    </label>
+    <label>Scopes
+      <input type="text" name="scopes" value="read">
+    </label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Issue token</button>
+    </div>
+  </form>
+
+  <div class="token-list">
+    {% if tokens %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Label</th><th>Scopes</th><th>Created</th><th>Last used</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tokens %}
+            <tr>
+              <td>{{ t.label or '—' }}</td>
+              <td>{{ t.scopes }}</td>
+              <td>{{ t.created_at }}</td>
+              <td>{{ t.last_used_at or '—' }}</td>
+              <td>{{ 'Revoked' if t.revoked_at else 'Active' }}</td>
+              <td>
+                {% if not t.revoked_at %}
+                  <form method="post" action="/auth/tokens/revoke" hx-boost="true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="token_id" value="{{ t.id }}">
+                    <button class="btn ghost small" type="submit">Revoke</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="ink-2">No tokens yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

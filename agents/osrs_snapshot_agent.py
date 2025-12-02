@@ -59,8 +59,17 @@ class SnapshotAgent:
 
     def _candidate_modes(self, player: str, requested_mode: str) -> List[str]:
         candidates: List[str] = []
-        for mode in (requested_mode, self.mode_cache.get(player), *GAME_MODES.keys()):
-            if mode and mode in GAME_MODES and mode not in candidates:
+        # Auto-detect: skip the requested slot and rely on cache + all modes.
+        if requested_mode not in ("auto", "auto-detect"):
+            if requested_mode in GAME_MODES:
+                candidates.append(requested_mode)
+
+        cache_mode = self.mode_cache.get(player)
+        if cache_mode and cache_mode in GAME_MODES and cache_mode not in candidates:
+            candidates.append(cache_mode)
+
+        for mode in GAME_MODES.keys():
+            if mode not in candidates:
                 candidates.append(mode)
         return candidates
 
@@ -85,8 +94,12 @@ class SnapshotAgent:
         with HiscoreClient() as client:
             for account in accounts:
                 player = account["name"]
-                requested_mode = (account.get("mode") or DEFAULT_MODE).lower()
-                if requested_mode not in GAME_MODES:
+                raw_mode = (account.get("mode") or DEFAULT_MODE).lower()
+                if raw_mode in ("auto", "auto-detect"):
+                    requested_mode = "auto"
+                elif raw_mode in GAME_MODES:
+                    requested_mode = raw_mode
+                else:
                     requested_mode = DEFAULT_MODE
 
                 response: Optional[HiscoreResponse] = None

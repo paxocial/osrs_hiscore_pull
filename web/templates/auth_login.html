@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card auth-card">
+  <h2>Log In</h2>
+  <p class="lede">Access your dashboard, manage RSNs, and issue API tokens.</p>
+  {% if error %}
+    <div class="alert error">{{ error }}</div>
+  {% endif %}
+  <form method="post" action="/auth/login" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token if csrf_token is defined else '' }}">
+    <label>Email
+      <input type="email" name="email" required autofocus>
+    </label>
+    <label>Password
+      <input type="password" name="password" required>
+    </label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Log In</button>
+      <a class="btn ghost" href="/auth/register">Create account</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

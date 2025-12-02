@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+import anyio
+from pydantic import BaseModel, Field
+from pathlib import Path
+
+from agents.osrs_snapshot_agent import SnapshotAgent, SnapshotResult
+from core.constants import DEFAULT_MODE
 
 from api.dependencies import (
     get_database_connection,
@@ -25,6 +32,87 @@ from api.exceptions import DataNotFoundException, ValidationException
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+class SnapshotRunAccount(BaseModel):
+    name: str
+    mode: str = Field(default=DEFAULT_MODE)
+
+
+class SnapshotRunRequest(BaseModel):
+    player: str | None = None
+    mode: str = Field(default="auto")
+    accounts: List[SnapshotRunAccount] | None = None
+
+
+def _format_delta_summary(delta_row: Optional[dict]) -> str:
+    if not delta_row:
+        return "No delta recorded"
+    total_xp_delta = delta_row.get("total_xp_delta")
+    hours = delta_row.get("time_diff_hours")
+    parts = []
+    if total_xp_delta is not None:
+        parts.append(f"{total_xp_delta:+,} XP")
+    if hours:
+        parts.append(f"over {hours:.1f}h")
+    return " ".join(parts) if parts else "Delta recorded"
+
+
+def _build_snapshot_payload(snapshot_row: dict, conn) -> dict:
+    # Skills and activities
+    skills = conn.execute(
+        "SELECT * FROM skills WHERE snapshot_id = ? ORDER BY skill_id",
+        (snapshot_row["id"],),
+    ).fetchall()
+    activities = conn.execute(
+        "SELECT * FROM activities WHERE snapshot_id = ? ORDER BY activity_id",
+        (snapshot_row["id"],),
+    ).fetchall()
+
+    # Deltas
+    delta_row = conn.execute(
+        "SELECT * FROM snapshots_deltas WHERE current_snapshot_id = ?",
+        (snapshot_row["id"],),
+    ).fetchone()
+
+    parsed_delta = None
+    if delta_row:
+        parsed_delta = dict(delta_row)
+        for key in ("skill_deltas", "activity_deltas"):
+            try:
+                parsed_delta[key] = json.loads(parsed_delta.get(key) or "[]")
+            except Exception:
+                parsed_delta[key] = []
+
+    # Metadata stored as JSON/text
+    metadata = snapshot_row.get("metadata")
+    try:
+        metadata = json.loads(metadata) if isinstance(metadata, str) else dict(metadata or {})
+    except Exception:
+        metadata = {}
+
+    payload = {
+        "metadata": {
+            **metadata,
+            "snapshot_id": snapshot_row.get("snapshot_id"),
+            "player": snapshot_row.get("account_name"),
+            "requested_mode": snapshot_row.get("requested_mode"),
+            "resolved_mode": snapshot_row.get("resolved_mode"),
+            "fetched_at": snapshot_row.get("fetched_at"),
+            "endpoint": snapshot_row.get("endpoint"),
+            "latency_ms": snapshot_row.get("latency_ms"),
+            "agent_version": snapshot_row.get("agent_version"),
+            "total_level": snapshot_row.get("total_level"),
+            "total_xp": snapshot_row.get("total_xp"),
+        },
+        "data": {
+            "skills": [dict(s) for s in skills],
+            "activities": [dict(a) for a in activities],
+        },
+        "delta": parsed_delta,
+    }
+    payload["delta_summary"] = _format_delta_summary(parsed_delta)
+    return payload
 
 
 @router.get("/", response_model=SnapshotListResponse, summary="List snapshots")
@@ -436,6 +524,65 @@ async def compare_snapshots(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to compare snapshots"
         )
+
+
+def _convert_result(res: SnapshotResult) -> dict:
+    return {
+        "player": res.player,
+        "resolved_mode": res.mode,
+        "success": res.success,
+        "message": res.message,
+        "snapshot_path": str(res.snapshot_path) if res.snapshot_path else None,
+        "delta_summary": res.delta_summary,
+    }
+
+
+async def _run_snapshots(payload: SnapshotRunRequest) -> List[dict]:
+    accounts: List[dict] = []
+    if payload.accounts:
+        accounts = [{"name": acct.name, "mode": acct.mode} for acct in payload.accounts]
+    elif payload.player:
+        accounts = [{"name": payload.player, "mode": payload.mode or DEFAULT_MODE}]
+    else:
+        raise HTTPException(status_code=400, detail="Provide 'player' or 'accounts'.")
+
+    agent = SnapshotAgent(
+        output_dir=Path("data/snapshots"),
+        mode_cache_path=Path("config/mode_cache.json"),
+        config_path=Path("config/project.json"),
+    )
+
+    def runner():
+        return [_convert_result(r) for r in agent.run(accounts)]
+
+    return await anyio.to_thread.run_sync(runner)
+
+
+@router.post("/run", summary="Trigger snapshot agent", tags=["Snapshots"])
+async def run_snapshots(payload: SnapshotRunRequest):
+    results = await _run_snapshots(payload)
+    return {"results": results}
+
+
+@router.get("/{snapshot_id}/raw", response_class=PlainTextResponse, summary="Get raw snapshot payload (text)")
+async def get_snapshot_raw(snapshot_data: dict = Depends(get_snapshot_or_404), conn=Depends(get_database_connection)):
+    with conn:
+        payload = _build_snapshot_payload(snapshot_data, conn)
+    return PlainTextResponse(json.dumps(payload, indent=2))
+
+
+@router.get("/{snapshot_id}/report", response_class=PlainTextResponse, summary="Get snapshot report (Markdown)")
+async def get_snapshot_report(snapshot_data: dict = Depends(get_snapshot_or_404)):
+    account_name = snapshot_data.get("account_name") or snapshot_data.get("name") or "unknown"
+    safe = account_name.replace(" ", "_")
+    report_path = Path(f"reports/{safe}/{snapshot_data['snapshot_id']}.md")
+    if not report_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found for snapshot")
+    try:
+        content = report_path.read_text(encoding="utf-8")
+    except Exception as exc:  # pragma: no cover - filesystem edge
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error reading report: {exc}")
+    return PlainTextResponse(content)
 
 
 @router.post("/", response_model=Snapshot, status_code=status.HTTP_201_CREATED, summary="Create snapshot")

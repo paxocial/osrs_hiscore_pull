@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Clan</p>
+      <h2>{{ clan.name }}</h2>
+      <p class="lede">Manage roster and members for {{ clan.slug }}.</p>
+    </div>
+    <div class="pill">Members: {{ members|length }}</div>
+  </div>
+
+  <form method="post" action="/clans/add-member" class="form inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="clan_id" value="{{ clan.id }}">
+    <label>RSN
+      <input type="text" name="account_name" required placeholder="Add member RSN">
+    </label>
+    <label>Mode
+      <select name="mode">
+        {% for mode in modes %}
+          <option value="{{ mode }}">{{ 'Auto-detect' if mode == 'auto' else mode }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Add member</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Members</h3>
+  {% if members %}
+    <div class="list">
+      {% for m in members %}
+        <div class="list-row">
+          <div>
+            <div class="list-title">{{ m.name }}</div>
+            <div class="list-sub">Mode: {{ m.default_mode or 'main' }}</div>
+          </div>
+          <div class="list-actions">
+            <a class="btn ghost small" href="/profiles">View account</a>
+            <form method="post" action="/clans/remove-member">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="clan_id" value="{{ clan.id }}">
+              <input type="hidden" name="account_id" value="{{ m.account_id }}">
+              <button class="btn ghost small" type="submit">Remove</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="ink-2">No members yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

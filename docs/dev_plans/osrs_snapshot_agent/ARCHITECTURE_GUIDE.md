@@ -246,7 +246,7 @@ Activities include all clue tiers, minigames, point trackers, and bosses support
 
 ### Snapshot Reports
 - Markdown reports live under `reports/<player>/<snapshot_id>.md` and capture player/mode metadata, total XP/level, delta summary, snapshot ID, and a SHA-256 hash of the payload.
-- Skill table lists all 24 skills with levels and XP; activities are grouped into Clue Scrolls, Minigames, Bosses, Points, and Other with only positive scores displayed.
+- Skill table lists all 25 skills with levels and XP; activities are grouped into Clue Scrolls, Minigames, Bosses, Points, and Other with only positive scores displayed.
 - Change tables highlight skill XP/level gains and activity score increases.
 - The report concludes with a (possibly truncated) JSON block for auditing.
 

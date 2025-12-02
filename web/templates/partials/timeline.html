@@ -1,0 +1,49 @@
+<div class="list">
+  {% for snap in snapshots %}
+    <div class="list-row">
+      <div>
+        <div class="list-title">{{ snap.fetched_at }}</div>
+        <div class="list-sub">
+          Mode: {{ snap.resolved_mode }}
+          · Total LVL {{ snap.total_level }}
+          · XP {{ snap.total_xp }}
+          {% if snap.delta_summary %}· {{ snap.delta_summary }}{% endif %}
+        </div>
+      </div>
+      <div class="list-actions">
+        {% if snap.snapshot_id %}
+          <button class="btn ghost small"
+                  hx-get="/profiles/{{ rsn }}/report?snapshot_id={{ snap.snapshot_id }}"
+                  hx-target="#snapshot-content"
+                  hx-swap="innerHTML"
+                  data-copy-report="/api/snapshots/{{ snap.snapshot_id }}/report"
+                  onclick="window.snapshotCopyMode && window.snapshotCopyMode('report', this)">Report</button>
+          <button class="btn ghost small"
+                  hx-get="/profiles/{{ rsn }}/json?snapshot_id={{ snap.snapshot_id }}"
+                  hx-target="#snapshot-content"
+                  hx-swap="innerHTML"
+                  data-copy-json="/api/snapshots/{{ snap.snapshot_id }}/raw"
+                  onclick="window.snapshotCopyMode && window.snapshotCopyMode('json', this)">JSON</button>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+  {% if not snapshots %}
+    <p class="ink-2">No snapshots yet. Run one above.</p>
+  {% endif %}
+</div>
+
+{% if total > page_size %}
+<div class="pagination">
+    {% set total_pages = (total // page_size) + (1 if total % page_size else 0) %}
+    <span class="ink-2">Page {{ page }} / {{ total_pages }}</span>
+    <div>
+      {% if page > 1 %}
+        <button class="btn ghost small" hx-get="/profiles/{{ rsn }}/timeline?page={{ page - 1 }}&page_size={{ page_size }}" hx-target="#timeline" hx-swap="innerHTML">Prev</button>
+      {% endif %}
+      {% if page * page_size < total %}
+        <button class="btn ghost small" hx-get="/profiles/{{ rsn }}/timeline?page={{ page + 1 }}&page_size={{ page_size }}" hx-target="#timeline" hx-swap="innerHTML">Next</button>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}

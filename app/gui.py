@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import traceback
 from pathlib import Path
+import codecs
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -90,7 +91,7 @@ class SnapshotApp(tk.Tk):
             mode_text = f"Mode: {requested_mode}"
 
         self.fetch_button.configure(state=tk.DISABLED)
-        self._set_status(f"🔍 Fetching snapshot for {player} ({mode_text})")
+        self._set_status(self._decode_unicode_escapes(f"🔍 Fetching snapshot for {player} ({mode_text})"))
 
         self._fetch_thread = threading.Thread(
             target=self._run_snapshot,
@@ -121,7 +122,7 @@ class SnapshotApp(tk.Tk):
 
             report_path = report_result.report_path if report_result and report_result.success else None
             status_lines = [
-                f"✅ Snapshot saved: {result.snapshot_path}",
+                self._decode_unicode_escapes(f"✅ Snapshot saved: {result.snapshot_path}"),
             ]
 
             # Add mode detection information
@@ -129,12 +130,12 @@ class SnapshotApp(tk.Tk):
                 requested_mode = result.metadata.get("requested_mode", "unknown")
                 resolved_mode = result.metadata.get("resolved_mode", "unknown")
                 if requested_mode != resolved_mode:
-                    status_lines.append(f"🔄 Mode Detection: Requested '{requested_mode}' → Resolved '{resolved_mode}' ✅")
+                    status_lines.append(self._decode_unicode_escapes(f"🔄 Mode Detection: Requested '{requested_mode}' → Resolved '{resolved_mode}' ✅"))
                 else:
-                    status_lines.append(f"✅ Mode confirmed: {resolved_mode}")
+                    status_lines.append(self._decode_unicode_escapes(f"✅ Mode confirmed: {resolved_mode}"))
 
             if report_path:
-                status_lines.append(f"📄 Report saved: {report_path}")
+                status_lines.append(self._decode_unicode_escapes(f"📄 Report saved: {report_path}"))
 
             clipboard_text = None
             if report_path and report_path.exists():
@@ -145,19 +146,75 @@ class SnapshotApp(tk.Tk):
                     pass
 
             if clipboard_text and copy_text(clipboard_text):
-                status_lines.append("📋 Report copied to clipboard.")
+                status_lines.append(self._decode_unicode_escapes("📋 Report copied to clipboard."))
             elif clipboard_text:
-                status_lines.append("📋 Report ready (clipboard copy unavailable).")
+                status_lines.append(self._decode_unicode_escapes("📋 Report ready (clipboard copy unavailable)."))
 
             self._set_status("\n".join(status_lines))
         except Exception as exc:  # pragma: no cover - GUI surface
             traceback.print_exc()
-            self._set_status(f"❌ Error: {exc}")
+            self._set_status(self._decode_unicode_escapes(f"❌ Error: {exc}"))
         finally:
             self.after(0, lambda: self.fetch_button.configure(state=tk.NORMAL))
 
     def _set_status(self, message: str) -> None:
+        # Ensure Unicode characters are properly handled for Tkinter
+        try:
+            # First, decode any literal Unicode escape sequences
+            if '\\u' in message:
+                decoded_message = codecs.decode(message, 'unicode_escape')
+                message = decoded_message
+
+            # Ensure the message is properly encoded for display
+            # Tkinter should handle UTF-8 encoded strings properly
+            if isinstance(message, str):
+                # Make sure the string is clean and displayable
+                message = message.encode('utf-8', errors='replace').decode('utf-8')
+
+        except Exception:
+            # If anything fails, fall back to a safe version
+            pass
+
         self.after(0, lambda: self.status_var.set(message))
+
+    def _decode_unicode_escapes(self, text: str) -> str:
+        """Helper method to decode Unicode escape sequences and handle emoji display.
+
+        Args:
+            text: Text that may contain Unicode escape sequences or emoji
+
+        Returns:
+            Text with Unicode escapes decoded and emoji handled for display
+        """
+        try:
+            # First, decode any literal Unicode escape sequences
+            if '\\u' in text:
+                text = codecs.decode(text, 'unicode_escape')
+
+            # Replace emoji with ASCII alternatives if emoji display is problematic
+            emoji_replacements = {
+                '✅': '[OK]',
+                '❌': '[ERROR]',
+                '🔍': '[SEARCH]',
+                '🔄': '[CHANGE]',
+                '📄': '[REPORT]',
+                '📋': '[COPY]',
+                '🏆': '[MILESTONE]',
+                '📊': '[ANALYTICS]',
+                '📈': '[PROGRESS]',
+                '⚡': '[FAST]',
+                '🎯': '[GOAL]'
+            }
+
+            # Check if any emoji replacements are needed
+            for emoji, replacement in emoji_replacements.items():
+                if emoji in text:
+                    text = text.replace(emoji, replacement)
+
+        except Exception:
+            pass
+
+        return text
 
 
 def main() -> None:

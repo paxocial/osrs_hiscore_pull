@@ -14,46 +14,24 @@ from api.schemas import (
     SnapshotQueryParams,
     AnalyticsQueryParams
 )
+from database.connection import DatabaseConnection
 
 logger = logging.getLogger(__name__)
 
 # Security setup (optional for future use)
 security = HTTPBearer(auto_error=False)
 
+# Use per-request connections configured via shared helper (thread-safe).
+_shared_db = DatabaseConnection(reuse_connection=False, check_same_thread=False)
+
 
 def get_database_connection() -> Generator[sqlite3.Connection, None, None]:
     """Dependency to get database connection."""
     try:
-        # Create a fresh database connection for each request
-        db_path = Path("data/analytics.db")
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-
-        conn = sqlite3.connect(
-            db_path,
-            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
-            check_same_thread=False,  # ESSENTIAL FOR FASTAPI
-            timeout=30.0  # Prevent busy timeouts
-        )
-
-        # Configure connection
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA journal_mode = WAL")
-        conn.execute("PRAGMA synchronous = NORMAL")
-        conn.execute("PRAGMA cache_size = 10000")
-        conn.execute("PRAGMA temp_store = MEMORY")
-        conn.row_factory = sqlite3.Row
-
-        try:
+        with _shared_db.get_connection() as conn:
             yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-
     except Exception as e:
-        logger.error(f"Database connection error: {e}")
+        logger.error(f"Database connection error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection failed"

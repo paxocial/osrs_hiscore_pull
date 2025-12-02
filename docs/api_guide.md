@@ -39,7 +39,7 @@ A **JSON endpoint** is also available (`index_lite.json?player=`). The [OSRS JSO
 | Ultimate Ironman | `https://secure.runescape.com/m=hiscore_ultimate/index_lite.ws?player=<name>` |
 | Seasonal/Tournament | Additional modes with distinct base URLs in `GAMEMODE_URL` constants |
 
-Each `index_lite` endpoint returns lines for all **24 skills** followed by **activities** (clues, bounty hunter modes, bosses and miscellaneous activities), with each line containing either `rank,level,xp` or `rank,score` values.
+Each `index_lite` endpoint returns lines for all **25 skills** followed by **activities** (clues, bounty hunter modes, bosses and miscellaneous activities), with each line containing either `rank,level,xp` or `rank,score` values.
 
 OSRS also exposes web-based hiscore pages which can be scraped to retrieve leaderboards. `getSkillPageURL` builds skill leaderboard URLs (`...overall.ws?table=<skill_index>&page=<n>`) and `getActivityPageURL` builds activity/boss pages (`...overall.ws?category_type=1&table=<activity_index>&page=<n>`).
 
@@ -84,7 +84,7 @@ The `osrs-json-hiscores` library converts the official hiscore CSV/JSON into a s
 
 - **`GAMEMODE_URL`** – Maps gamemodes (main, ironman, hardcore, ultimate, deadman, seasonal, tournament, skiller variants) to their respective base URLs.
 
-- **Lists** – `SKILLS` (24 skills), `CLUES` (clue tiers), `BH_MODES`, `BOSSES` and aggregated `ACTIVITIES` define the order of entries returned by the API.
+- **Lists** – `SKILLS` (25 skills), `CLUES` (clue tiers), `BH_MODES`, `BOSSES` and aggregated `ACTIVITIES` define the order of entries returned by the API.
 
 - **Formatted names** – `FORMATTED_SKILL_NAMES`, `FORMATTED_BOSS_NAMES`, etc., translate internal keys into human-readable names.
 

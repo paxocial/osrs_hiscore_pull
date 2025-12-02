@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Profile</p>
+      <h2>{{ rsn }}</h2>
+      <p class="lede">Account overview with snapshots, deltas, and activities.</p>
+    </div>
+    <div class="pill">Total snapshots: {{ total_snapshots }}</div>
+  </div>
+  <div class="profile-hero">
+    <div class="stat-block">
+      <div class="stat-label">Mode</div>
+      <div class="stat-value">
+        {{ latest.resolved_mode if latest else '—' }}
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Total Level</div>
+      <div class="stat-value">
+        {{ latest.total_level if latest else '—' }}
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Total XP</div>
+      <div class="stat-value">
+        {{ latest.total_xp if latest else '—' }}
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Last snapshot</div>
+      <div class="stat-value">
+        {{ latest.fetched_at if latest else '—' }}
+      </div>
+    </div>
+    <form hx-post="/snapshots/run" hx-target="#snapshot-inline" hx-swap="innerHTML" class="snapshot-form">
+      <input type="hidden" name="player" value="{{ rsn }}">
+      <input type="hidden" name="mode" value="{{ latest.resolved_mode if latest else 'auto' }}">
+      <button class="btn primary" type="submit" hx-indicator="#snapshot-indicator">Run snapshot</button>
+    </form>
+    <div id="snapshot-indicator" class="indicator">Running…</div>
+  </div>
+  <div id="snapshot-inline"></div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Timeline</p>
+      <h3>Snapshot history</h3>
+    </div>
+  </div>
+  <div id="timeline" hx-get="/profiles/{{ rsn }}/timeline" hx-trigger="load" hx-swap="innerHTML"></div>
+  <div class="copy-actions" id="copy-actions" style="display:none;">
+    <div class="copy-info">Snapshot content loaded</div>
+    <button class="btn ghost small" style="display:none;" id="copy-report-btn">Copy report</button>
+    <button class="btn ghost small" style="display:none;" id="copy-json-btn">Copy JSON</button>
+  </div>
+  <div id="snapshot-content"></div>
+  <div id="copy-feedback"></div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Skills</p>
+      <h3>Skill overview</h3>
+      <p class="lede">Each card leaves space for icons; add assets later.</p>
+    </div>
+  </div>
+  <div class="skill-grid">
+    {% if latest and latest.skills %}
+      {% for sk in latest.skills %}
+        <div class="skill-card">
+          <div class="skill-icon"></div>
+          <div class="skill-name">{{ sk.name }}</div>
+          <div class="skill-value">LVL {{ sk.level }} · XP {{ sk.xp }}</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="ink-2">No skill data yet.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Activities</p>
+      <h3>Bosses & Minigames</h3>
+    </div>
+  </div>
+  {% if latest and latest.activities %}
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Score</th><th>Rank</th></tr>
+      </thead>
+      <tbody>
+        {% for act in latest.activities %}
+          <tr>
+            <td>{{ act.name }}</td>
+            <td>{{ act.score }}</td>
+            <td>{{ act.rank }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="ink-2">No activities yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Charts</p>
+      <h3>XP & KC over time</h3>
+      <p class="lede">Placeholders for advanced visualizations (Chart.js/Three.js later).</p>
+    </div>
+  </div>
+  <div class="chart-placeholder">XP / level timeline (placeholder)</div>
+  <div class="chart-placeholder">Boss KC progression (placeholder)</div>
+  <div class="chart-placeholder">Weekly XP heatmap (placeholder)</div>
+</section>
+{% endblock %}

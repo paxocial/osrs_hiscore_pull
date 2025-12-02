@@ -25,16 +25,17 @@ def setup_database(db_path: str, force: bool = False) -> None:
 
     if db_path_obj.exists() and not force:
         print(f"Database already exists at {db_path}")
-        response = input("Do you want to re-initialize it? This will delete all data. (y/N): ")
+        print("Running migrations and health check (use --force to reset).")
+    elif db_path_obj.exists() and force:
+        response = input("Force re-initialize? This will DELETE all data. (y/N): ")
         if response.lower() != 'y':
             print("Database setup cancelled.")
             return
-
-        # Remove existing database
         db_path_obj.unlink()
         print(f"Removed existing database at {db_path}")
-
-    print(f"Setting up database at {db_path}")
+        print(f"Setting up database at {db_path}")
+    else:
+        print(f"Setting up database at {db_path}")
 
     try:
         db = DatabaseConnection(Path(db_path))

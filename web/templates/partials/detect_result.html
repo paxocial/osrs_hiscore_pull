@@ -1,0 +1,9 @@
+<div class="detect-result">
+  {% if result.status == 'found' %}
+    <div class="alert success">Detected mode for <strong>{{ name }}</strong>: <strong>{{ result.mode }}</strong></div>
+  {% elif result.status == 'not_found' %}
+    <div class="alert error">Could not find <strong>{{ name }}</strong> on any hiscore.</div>
+  {% else %}
+    <div class="alert error">Error detecting mode: {{ result.error }}</div>
+  {% endif %}
+</div>

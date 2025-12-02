@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" style="margin-bottom:16px;">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Phase 1 · My Accounts</p>
+      <h2>Track your RuneScape names</h2>
+      <p class="lede">Link RSNs to your account, set a default, and auto-detect modes from hiscores.</p>
+    </div>
+  </div>
+
+  <form method="post" action="/profiles/add" class="form inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>RSN
+      <input type="text" name="name" required placeholder="ArchonBorn">
+    </label>
+    <label>Display name
+      <input type="text" name="display_name" placeholder="Optional">
+    </label>
+    <label>Mode
+      <select name="mode">
+        {% for mode in modes %}
+          <option value="{{ mode }}">{{ 'Auto-detect' if mode == 'auto' else mode }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <input type="checkbox" name="make_default" value="true"> Make default
+    </label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Add profile</button>
+      <button class="btn ghost" type="button" hx-post="/profiles/detect" hx-include="closest form" hx-target="#detect-result" hx-swap="innerHTML">Detect mode</button>
+    </div>
+  </form>
+  <div id="detect-result"></div>
+</section>
+
+<section class="card" style="margin-bottom:24px;">
+  <h3>Linked RSNs</h3>
+  {% if links %}
+    <div class="list">
+      {% for link in links %}
+        <div class="list-row">
+          <div>
+            <div class="list-title">{{ link.name }}</div>
+            <div class="list-sub">
+              {{ link.display_name or '—' }}
+              · Mode: {{ link.cached_mode or link.default_mode or 'main' }}
+              {% if link.cached_mode %}<span class="pill soft">Detected</span>{% endif %}
+            </div>
+            {% if link.is_default %}
+              <span class="pill">Default</span>
+            {% endif %}
+          </div>
+          <div class="list-actions">
+            <a class="btn primary small" href="/profiles/{{ link.name }}">Open profile</a>
+            {% if not link.is_default %}
+              <form method="post" action="/profiles/default">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="account_id" value="{{ link.id }}">
+                <button class="btn ghost small" type="submit">Set default</button>
+              </form>
+            {% endif %}
+            <form hx-post="/snapshots/run" hx-target="#snapshot-result-{{ link.id }}" hx-swap="outerHTML" class="snapshot-form">
+              <input type="hidden" name="player" value="{{ link.name }}">
+              <input type="hidden" name="mode" value="{{ link.cached_mode or link.default_mode or 'auto' }}">
+              <button class="btn primary small" type="submit">Run snapshot</button>
+            </form>
+            <form method="post" action="/profiles/remove">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="account_id" value="{{ link.id }}">
+              <button class="btn ghost small" type="submit">Remove</button>
+            </form>
+          </div>
+          <div id="snapshot-result-{{ link.id }}"></div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="ink-2">No RSNs linked yet. Add one above.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Phase 1 · Clans</p>
+      <h2>Manage your clan roster</h2>
+      <p class="lede">Create a clan, auto-add your default RSN, and attach member RSNs. Snapshots and contests come next.</p>
+    </div>
+  </div>
+
+  <form method="post" action="/clans/create" class="form inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Clan name
+      <input type="text" name="name" required placeholder="Sea Kings">
+    </label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Create clan</button>
+    </div>
+  </form>
+
+  {% if clans %}
+    <div class="list" style="margin-top:12px;">
+      {% for clan in clans %}
+        <div class="list-row">
+          <div>
+            <div class="list-title"><a href="/clans/{{ clan.slug }}" class="nav-link">{{ clan.name }}</a></div>
+            <div class="list-sub">Members: {{ clan.member_count }} · Slug: {{ clan.slug }}</div>
+          </div>
+          <div class="list-actions">
+            <form method="post" action="/clans/add-member" class="form inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="clan_id" value="{{ clan.id }}">
+              <label style="min-width:160px">
+                <input type="text" name="account_name" placeholder="RSN to add" required>
+              </label>
+              <label style="min-width:140px">
+                <select name="mode">
+                  {% for mode in modes %}
+                    <option value="{{ mode }}">{{ 'Auto-detect' if mode == 'auto' else mode }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <button class="btn ghost small" type="submit">Add member</button>
+            </form>
+            <a class="btn primary small" href="/clans/{{ clan.slug }}">Manage</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="ink-2" style="margin-top:12px;">No clans yet. Create one above.</p>
+  {% endif %}
+</section>
+{% endblock %}

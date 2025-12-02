@@ -17,39 +17,64 @@ SCHEMA_DIR = Path(__file__).parent / "sql"
 class DatabaseConnection:
     """Manages SQLite database connections and operations."""
 
-    def __init__(self, db_path: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        db_path: Optional[Path] = None,
+        *,
+        reuse_connection: bool = True,
+        check_same_thread: bool = True,
+    ) -> None:
         self.db_path = db_path or DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection: Optional[sqlite3.Connection] = None
+        self.reuse_connection = reuse_connection
+        self.check_same_thread = check_same_thread
+
+    def _connect(self, *, check_same_thread: Optional[bool] = None) -> sqlite3.Connection:
+        cs_thread = self.check_same_thread if check_same_thread is None else check_same_thread
+        conn = sqlite3.connect(
+            self.db_path,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+            check_same_thread=cs_thread,
+        )
+        # Enable foreign keys
+        conn.execute("PRAGMA foreign_keys = ON")
+        # Optimize for analytics queries
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
+        conn.execute("PRAGMA cache_size = 10000")
+        conn.execute("PRAGMA temp_store = MEMORY")
+        # Set row factory for dict-like access
+        conn.row_factory = sqlite3.Row
+        return conn
 
     @contextmanager
     def get_connection(self) -> sqlite3.Connection:
         """Get a database connection with proper configuration."""
-        if self._connection is None:
-            self._connection = sqlite3.connect(
-                self.db_path,
-                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
-            )
-            # Enable foreign keys
-            self._connection.execute("PRAGMA foreign_keys = ON")
-            # Optimize for analytics queries
-            self._connection.execute("PRAGMA journal_mode = WAL")
-            self._connection.execute("PRAGMA synchronous = NORMAL")
-            self._connection.execute("PRAGMA cache_size = 10000")
-            self._connection.execute("PRAGMA temp_store = MEMORY")
-            # Set row factory for dict-like access
-            self._connection.row_factory = sqlite3.Row
+        conn: sqlite3.Connection
+        if self.reuse_connection:
+            if self._connection is None:
+                self._connection = self._connect()
+            conn = self._connection
+        else:
+            conn = self._connect()
 
         try:
-            yield self._connection
-            self._connection.commit()
+            yield conn
+            conn.commit()
         except Exception:
-            if self._connection:
-                self._connection.rollback()
+            if conn:
+                conn.rollback()
             raise
+        finally:
+            if not self.reuse_connection:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def initialize_database(self) -> None:
-        """Initialize database with schema if not exists."""
+        """Initialize database with schema if not exists and run migrations."""
         logger.info(f"Initializing database at {self.db_path}")
 
         # Check if database is already initialized
@@ -58,20 +83,19 @@ class DatabaseConnection:
             self._run_migrations()
             return
 
-        # Run initial schema setup
+        # Run base schema setup
         with self.get_connection() as conn:
-            # Execute initial schema
             initial_schema_path = SCHEMA_DIR / "001_initial_schema.sql"
             self._execute_sql_file(conn, initial_schema_path)
 
-            # Execute performance indexes
             indexes_path = SCHEMA_DIR / "002_performance_indexes.sql"
             self._execute_sql_file(conn, indexes_path)
 
-            # Execute analytics functions
             analytics_path = SCHEMA_DIR / "003_analytics_functions.sql"
             self._execute_sql_file(conn, analytics_path)
 
+        # Apply any newer migrations after base load
+        self._run_migrations()
         logger.info("Database initialized successfully")
 
     def _is_initialized(self) -> bool:
@@ -90,34 +114,39 @@ class DatabaseConnection:
         """Run pending database migrations."""
         with self.get_connection() as conn:
             # Get current schema version
-            current_version = conn.execute(
+            current_version_row = conn.execute(
                 "SELECT version FROM schema_version ORDER BY id DESC LIMIT 1"
             ).fetchone()
 
-            if not current_version:
-                logger.warning("No schema version found, re-initializing")
-                self.initialize_database()
-                return
+            current_version = float(current_version_row["version"]) if current_version_row else 0.0
+            logger.info(f"Current schema version: {current_version}")
 
-            current_version_num = float(current_version["version"])
-            logger.info(f"Current schema version: {current_version_num}")
-
-            # Check for available migration files
             migration_files = sorted(SCHEMA_DIR.glob("*.sql"))
-            latest_version = self._parse_version_from_filename(migration_files[-1])
+            for sql_file in migration_files:
+                file_version = self._parse_version_from_filename(sql_file)
+                if file_version > current_version:
+                    logger.info(f"Applying migration {sql_file.name} (version {file_version})")
+                    self._execute_sql_file(conn, sql_file)
+                    # Refresh current version after migration
+                    version_row = conn.execute(
+                        "SELECT version FROM schema_version ORDER BY id DESC LIMIT 1"
+                    ).fetchone()
+                    if version_row:
+                        current_version = float(version_row["version"])
 
-            if current_version_num >= latest_version:
-                logger.info("Database is up to date")
-                return
-
-            logger.info(f"Running migrations from {current_version_num} to {latest_version}")
+            logger.info(f"Database is up to date at version {current_version}")
 
     def _parse_version_from_filename(self, filename: Path) -> float:
-        """Parse version number from migration filename."""
-        # Extract version from filename like "001_initial_schema.sql"
+        """Parse version number from migration filename.
+
+        Migration filenames use a zero-padded ordinal prefix (e.g., 001, 002, 003).
+        We map these to semantic versions: 001 -> 1.0, 002 -> 1.1, 003 -> 1.2, etc.
+        """
         parts = filename.stem.split("_")
         try:
-            return float(parts[0]) / 100.0
+            ordinal = int(parts[0])
+            # Example: 1 => 1.0, 2 => 1.1, 3 => 1.2
+            return 1.0 + (ordinal - 1) * 0.1
         except (ValueError, IndexError):
             return 1.0
 

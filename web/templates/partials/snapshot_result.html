@@ -1,0 +1,11 @@
+{% set results = result.body.get('results', []) if result.body else [] %}
+{% if result.status == 200 and results %}
+  {% set r = results[0] %}
+  <div class="alert success">
+    Snapshot triggered for {{ r.player }} ({{ r.resolved_mode or 'auto' }}): {{ r.delta_summary or r.message }}
+  </div>
+{% else %}
+  <div class="alert error">
+    Snapshot request failed ({{ result.status }}).
+  </div>
+{% endif %}

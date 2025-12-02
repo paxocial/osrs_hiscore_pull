@@ -7,3 +7,6 @@ sqlalchemy>=2.0.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
 pydantic>=2.5.0
+bcrypt>=4.1.2
+python-multipart>=0.0.9
+itsdangerous>=2.1.2

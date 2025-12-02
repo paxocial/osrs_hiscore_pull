@@ -116,7 +116,8 @@ def _format_timestamp(timestamp: Any) -> str:
 
 
 def _total_xp(skills: Iterable[Dict[str, Any]]) -> int:
-    return sum(_safe_int(skill.get("xp")) for skill in skills)
+    # Exclude "Overall" skill from total XP calculation since it already represents the sum
+    return sum(_safe_int(skill.get("xp")) for skill in skills if skill.get("name") != "Overall")
 
 
 def _total_level(skills: Iterable[Dict[str, Any]]) -> int:

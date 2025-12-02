@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-card">
+  <div class="hero-copy">
+    <p class="eyebrow">Phase 0 · Web Shell</p>
+    <h1>OSRS snapshots, clans, and contests in a dark-blue lab.</h1>
+    <p class="lede">Server-rendered HTMX pages, FastAPI backend, ready for auth, scheduling, and analytics. Mounted API lives at <code>/api</code>.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="/api/docs">Open API docs</a>
+      <a class="btn ghost" href="/api/health">Check API health</a>
+    </div>
+    <div id="api-status" class="status-card" hx-get="/status" hx-trigger="load" hx-swap="outerHTML">
+      <div class="status-pill neutral"></div>
+      <div>
+        <div class="status-title">Checking status…</div>
+        <div class="status-sub">Mounted API + analytics DB</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="glow"></div>
+    <div class="orbital">
+      <div class="orbital-dot"></div>
+      <div class="orbital-dot alt"></div>
+      <div class="orbital-core">🧭</div>
+    </div>
+    <div class="card steps">
+      <div class="steps-title">Phase Map</div>
+      <ol>
+        <li>Scaffold UI shell (you are here)</li>
+        <li>Auth + RSN linking + API tokens</li>
+        <li>Manual/scheduled snapshots</li>
+        <li>History, charts, public RSN pages</li>
+        <li>Clans, contests, webhooks</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>HTMX-first</h3>
+    <p>Nav and forms run with <code>hx-boost</code> + fragments. No SPA overhead, fast swaps, easy progressive enhancement.</p>
+  </div>
+  <div class="card">
+    <h3>Dark-blue theme</h3>
+    <p>Tokens from the style guide: night-sky backgrounds, cyan accents, gold highlights. Ready for reusable components.</p>
+  </div>
+  <div class="card">
+    <h3>API mounted</h3>
+    <p>Existing FastAPI service is mounted at <code>/api</code>. Use the health/docs links above to verify connectivity.</p>
+  </div>
+  <div class="card">
+    <h3>Next up</h3>
+    <p>Auth sessions, RSN linking, scoped API keys, and snapshot controls as Phase 1–2 milestones.</p>
+  </div>
+</section>
+{% endblock %}

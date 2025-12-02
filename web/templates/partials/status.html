@@ -1,0 +1,10 @@
+<div id="api-status" class="status-card" hx-get="/status" hx-trigger="every 15s" hx-swap="outerHTML">
+  <div class="status-pill {{ 'ok' if api_status == 'healthy' and db_present else 'warn' }}"></div>
+  <div>
+    <div class="status-title">{{ status_text }}</div>
+    <div class="status-sub">
+      {{ 'analytics.db detected' if db_present else 'missing analytics.db · run migrations' }}
+      · API: {{ api_status }}
+    </div>
+  </div>
+</div>
