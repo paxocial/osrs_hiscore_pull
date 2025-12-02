@@ -1,0 +1,124 @@
+{% set md = payload.metadata %}
+{% set skills = payload.data.skills %}
+{% set activities = payload.data.activities %}
+{% set delta = payload.delta %}
+{% set skill_deltas = delta.skill_deltas if delta else [] %}
+{% set activity_deltas = delta.activity_deltas if delta else [] %}
+{% set delta_map = {} %}
+{% if skill_deltas %}
+  {% set ns = namespace(map={}) %}
+  {% for sd in skill_deltas %}
+    {% set _ = ns.map.update({sd.name: sd}) %}
+  {% endfor %}
+  {% set delta_map = ns.map %}
+{% endif %}
+{% set is_latest = request.query_params.get('is_latest') == '1' %}
+
+<div hx-swap-oob="true" id="stat-mode">{{ md.resolved_mode or '—' }}</div>
+<div hx-swap-oob="true" id="stat-level">{{ md.total_level or '—' }}</div>
+<div hx-swap-oob="true" id="stat-xp">{{ "{:,}".format(md.total_xp) if md.total_xp is not none else '—' }}</div>
+<div hx-swap-oob="true" id="stat-last">{{ md.fetched_at_display or md.fetched_at or '—' }}</div>
+<div hx-swap-oob="true" id="stat-delta">{{ delta_summary or 'No delta recorded' }}</div>
+
+<div hx-swap-oob="true" id="snapshot-banner" class="snapshot-banner fade-swap">
+  <div class="snapshot-tag">{{ 'Viewing latest snapshot' if is_latest else 'Viewing archived snapshot' }}</div>
+  <div class="snapshot-meta">{{ md.fetched_at_display or md.fetched_at }}</div>
+  <div class="snapshot-meta">{{ delta_summary or 'No delta recorded' }}</div>
+</div>
+
+<div hx-swap-oob="true" id="skills-grid" class="skill-grid fade-swap">
+  {% if skills %}
+    {% set skill_icons = {
+      "attack": "Attack_icon.png",
+      "strength": "Strength_icon.png",
+      "defence": "Defence_icon.png",
+      "defense": "Defence_icon.png",
+      "ranged": "Ranged_icon.png",
+      "prayer": "Prayer_icon.png",
+      "magic": "Magic_icon.png",
+      "runecraft": "Runecraft_icon.png",
+      "runecrafting": "Runecraft_icon.png",
+      "construction": "Construction_icon.png",
+      "hitpoints": "Hitpoints_icon.png",
+      "hitpoint": "Hitpoints_icon.png",
+      "agility": "Agility_icon.png",
+      "herblore": "Herblore_icon.png",
+      "thieving": "Thieving_icon.png",
+      "crafting": "Crafting_icon.png",
+      "fletching": "Fletching_icon.png",
+      "slayer": "Slayer_icon.png",
+      "hunter": "Hunter_icon.png",
+      "mining": "Mining_icon.png",
+      "smithing": "Smithing_icon.png",
+      "fishing": "Fishing_icon.png",
+      "cooking": "Cooking_icon.png",
+      "firemaking": "Firemaking_icon.png",
+      "woodcutting": "Woodcutting_icon.png",
+      "farming": "Farming_icon.png",
+      "sailing": "Sailing_icon.png",
+      "combat": "Combat.png",
+    } %}
+    {% for sk in skills %}
+      {% set skill_key = sk.name|lower|replace(' ', '')|replace('_','')|replace('-','') %}
+      {% set icon_name = skill_icons.get(skill_key, 'Combat.png') %}
+      {% set sdelta = delta_map.get(sk.name) %}
+      {% set xp_delta = sdelta.xp_delta if sdelta else 0 %}
+      {% set level_delta = sdelta.level_delta if sdelta else 0 %}
+      <div class="skill-card">
+        <div class="skill-icon" style="background-image: url('/static/images/runescape/skills/{{ icon_name }}');"></div>
+        <div class="skill-name">{{ sk.name }}</div>
+        <div class="skill-value">LVL {{ sk.level }} · XP {{ "{:,}".format(sk.xp) }}</div>
+        {% if xp_delta or level_delta %}
+          {% set chip_class = 'delta-chip' %}
+          {% if xp_delta < 0 %}{% set chip_class = 'delta-chip negative' %}{% elif xp_delta == 0 and level_delta == 0 %}{% set chip_class = 'delta-chip neutral' %}{% endif %}
+          <div class="{{ chip_class }}">
+            {% if level_delta %}
+              {% if level_delta > 0 %}+{% endif %}{{ level_delta }} lvl
+            {% endif %}
+            {% if xp_delta %}
+              {% if xp_delta > 0 %}+{% endif %}{{ "{:,}".format(xp_delta) }} xp
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="ink-2">No skill data yet.</p>
+  {% endif %}
+</div>
+
+<div hx-swap-oob="true" id="activities-table" class="fade-swap">
+  {% if activities %}
+    {% set icon_overrides = {
+      "deadmanpoints": "minigame_icon_hs_thumb.png",
+      "gridpoints": "minigame_icon_hs_thumb.png",
+      "leaguepoints": "minigame_icon_hs_thumb.png"
+    } %}
+    <div class="activity-scroll">
+      <div class="activity-grid">
+        {% for act in activities %}
+          {% set key = act.name|lower|replace(" ", "")|replace("'", "")|replace("-", "")|replace("(", "")|replace(")", "")|replace(":", "") %}
+          {% set icon_name = icon_overrides.get(key, "game_icon_" + key + ".png") %}
+          <div class="activity-row">
+            <div class="activity-icon" style="background-image:url('/static/images/runescape/game/{{ icon_name }}');"></div>
+            <div>
+              <div class="activity-name">{{ act.name }}</div>
+              <div class="activity-rank">Rank {{ act.rank }}</div>
+            </div>
+            <div class="activity-score">{{ act.score }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <p class="ink-2">No activities yet.</p>
+  {% endif %}
+</div>
+
+{% if view == 'report' %}
+  <pre class="report-view">{{ report_content }}</pre>
+{% elif view == 'json' %}
+  <pre class="report-view">{{ json_content }}</pre>
+{% else %}
+  <div class="alert info">Snapshot loaded: {{ md.fetched_at }} · {{ delta_summary or 'No delta recorded' }}</div>
+{% endif %}

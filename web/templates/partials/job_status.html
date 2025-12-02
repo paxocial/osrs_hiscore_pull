@@ -1,0 +1,28 @@
+<div class="card control-card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Jobs</p>
+      <h4>Recent tasks</h4>
+    </div>
+  </div>
+  <div class="list">
+    {% if jobs %}
+      {% for job in jobs %}
+        <div class="list-row">
+          <div>
+            <div class="list-title">{{ job.job_id }}</div>
+            <div class="list-sub">
+              {{ job.type }}
+              {% if job.payload and job.payload.player %} · {{ job.payload.player }}{% endif %}
+              {% if job.payload and job.payload.target_type == 'clan' and job.payload.clan_id %} · clan {{ job.payload.clan_id }}{% endif %}
+              · {{ job.status }} · {{ job.created_at }}
+            </div>
+          </div>
+          <div class="pill {% if job.status == 'success' %}success{% elif job.status == 'error' %}danger{% endif %}">{{ job.status }}</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="ink-2">No jobs yet.</p>
+    {% endif %}
+  </div>
+</div>

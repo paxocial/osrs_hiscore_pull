@@ -62,9 +62,12 @@ async def register_submit(
 
 @router.get("/auth/login", response_class=HTMLResponse)
 async def login_form(request: Request):
+    current = get_current_user(request)
+    if current:
+        return RedirectResponse(url="/profiles", status_code=303)
     return templates.TemplateResponse(
         "auth_login.html",
-        {"request": request, "user": get_current_user(request), "csrf_token": get_csrf_token(request)},
+        {"request": request, "user": current, "csrf_token": get_csrf_token(request)},
     )
 
 

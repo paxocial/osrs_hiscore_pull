@@ -9,30 +9,26 @@
     </div>
     <div class="pill">Total snapshots: {{ total_snapshots }}</div>
   </div>
-  <div class="profile-hero">
+  <div class="profile-hero" id="profile-hero">
     <div class="stat-block">
       <div class="stat-label">Mode</div>
-      <div class="stat-value">
-        {{ latest.resolved_mode if latest else '—' }}
-      </div>
+      <div class="stat-value"><span id="stat-mode">{{ latest.resolved_mode if latest else '—' }}</span></div>
     </div>
     <div class="stat-block">
       <div class="stat-label">Total Level</div>
-      <div class="stat-value">
-        {{ latest.total_level if latest else '—' }}
-      </div>
+      <div class="stat-value"><span id="stat-level">{{ latest.total_level if latest else '—' }}</span></div>
     </div>
     <div class="stat-block">
       <div class="stat-label">Total XP</div>
-      <div class="stat-value">
-        {{ latest.total_xp if latest else '—' }}
-      </div>
+      <div class="stat-value"><span id="stat-xp">{{ "{:,}".format(latest.total_xp) if latest else '—' }}</span></div>
     </div>
     <div class="stat-block">
       <div class="stat-label">Last snapshot</div>
-      <div class="stat-value">
-        {{ latest.fetched_at if latest else '—' }}
-      </div>
+      <div class="stat-value"><span id="stat-last">{{ latest.fetched_at_display if latest else '—' }}</span></div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Delta</div>
+      <div class="stat-value"><span id="stat-delta">{{ latest.delta_summary if latest and latest.delta_summary else '—' }}</span></div>
     </div>
     <form hx-post="/snapshots/run" hx-target="#snapshot-inline" hx-swap="innerHTML" class="snapshot-form">
       <input type="hidden" name="player" value="{{ rsn }}">
@@ -50,8 +46,87 @@
       <p class="eyebrow">Timeline</p>
       <h3>Snapshot history</h3>
     </div>
+    <div class="form inline">
+      <label>Page size
+        <select hx-get="/profiles/{{ rsn }}/timeline?page=1" hx-target="#timeline" hx-include="closest .form" name="page_size">
+          {% for size in [5,10,20,50] %}
+            <option value="{{ size }}" {% if size == 5 %}selected{% endif %}>{{ size }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
   </div>
   <div id="timeline" hx-get="/profiles/{{ rsn }}/timeline" hx-trigger="load" hx-swap="innerHTML"></div>
+  <div class="control-grid" style="margin-top:12px;">
+    <div class="card control-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">Scheduler</p>
+          <h4>Schedule snapshot</h4>
+        </div>
+      </div>
+      <form class="form inline" hx-post="/jobs/schedule/account" hx-target="#job-schedules" hx-swap="innerHTML">
+        <label>Account
+          <input type="text" name="account_name" value="{{ rsn }}" required>
+        </label>
+        <label>Frequency
+          <select name="cron" required>
+            <option value="0 * * * *">Every hour</option>
+            <option value="0 */6 * * *" selected>Every 6 hours</option>
+            <option value="0 0 * * *">Daily (00:00 UTC)</option>
+            <option value="0 6 * * *">Daily (06:00 UTC)</option>
+            <option value="0 0 * * 0">Weekly (Sun 00:00 UTC)</option>
+            <option value="0 6 * * 1">Weekly (Mon 06:00 UTC)</option>
+            <option value="custom">Custom cron…</option>
+          </select>
+        </label>
+        <label>Custom (advanced)
+          <input type="text" name="custom_cron" placeholder="*/30 * * * *">
+        </label>
+        <button class="btn primary small" type="submit">Add schedule</button>
+      </form>
+    </div>
+    <div class="card control-card" id="job-schedules" hx-get="/jobs/schedule/list" hx-trigger="load, every 60s" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+    <div class="card control-card" id="job-status-panel" hx-get="/jobs/status?player={{ rsn }}" hx-trigger="load, every 30s" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+    {% if user %}
+      <div class="card control-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Webhooks</p>
+            <h4>User webhooks</h4>
+          </div>
+        </div>
+        <form class="form inline" hx-post="/webhooks/user" hx-target="#webhooks-panel" hx-swap="innerHTML">
+          <label>URL
+            <input type="url" name="url" placeholder="https://discord.com/api/webhooks/..." required>
+          </label>
+          <label>Events
+            <select name="events">
+              <option value="snapshot_complete" selected>snapshot_complete</option>
+            </select>
+          </label>
+          <label>Provider
+            <select name="provider">
+              <option value="discord" selected>Discord</option>
+              <option value="slack">Slack</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <button class="btn primary small" type="submit">Save webhook</button>
+        </form>
+        <div id="webhooks-panel" hx-get="/webhooks" hx-trigger="load, every 5m" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+      </div>
+    {% endif %}
+  </div>
+  <div class="form inline" style="margin-top:8px;">
+    <label>Page size
+      <select hx-get="/profiles/{{ rsn }}/timeline?page=1" hx-target="#timeline" hx-include="closest .form" name="page_size">
+        {% for size in [5,10,20,50] %}
+          <option value="{{ size }}">{{ size }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
   <div class="copy-actions" id="copy-actions" style="display:none;">
     <div class="copy-info">Snapshot content loaded</div>
     <button class="btn ghost small" style="display:none;" id="copy-report-btn">Copy report</button>
@@ -61,6 +136,17 @@
   <div id="copy-feedback"></div>
 </section>
 
+<div class="snapshot-banner fade-swap" id="snapshot-banner">
+  <div class="snapshot-tag" id="snapshot-banner-tag">Viewing snapshot</div>
+  {% if latest %}
+    <div class="snapshot-meta" id="snapshot-banner-meta">Latest · {{ latest.fetched_at_display }}</div>
+    <div class="snapshot-meta" id="snapshot-banner-delta">{{ latest.delta_summary or 'No delta recorded' }}</div>
+  {% else %}
+    <div class="snapshot-meta" id="snapshot-banner-meta">No snapshot selected</div>
+    <div class="snapshot-meta" id="snapshot-banner-delta"></div>
+  {% endif %}
+</div>
+
 <section class="card">
   <div class="card-header">
     <div>
@@ -69,13 +155,68 @@
       <p class="lede">Each card leaves space for icons; add assets later.</p>
     </div>
   </div>
-  <div class="skill-grid">
+  <div class="skill-grid" id="skills-grid">
     {% if latest and latest.skills %}
+      {% set skill_icons = {
+        "attack": "Attack_icon.png",
+        "strength": "Strength_icon.png",
+        "defence": "Defence_icon.png",
+        "defense": "Defence_icon.png",
+        "ranged": "Ranged_icon.png",
+        "prayer": "Prayer_icon.png",
+        "magic": "Magic_icon.png",
+        "runecraft": "Runecraft_icon.png",
+        "runecrafting": "Runecraft_icon.png",
+        "construction": "Construction_icon.png",
+        "hitpoints": "Hitpoints_icon.png",
+        "hitpoint": "Hitpoints_icon.png",
+        "agility": "Agility_icon.png",
+        "herblore": "Herblore_icon.png",
+        "thieving": "Thieving_icon.png",
+        "crafting": "Crafting_icon.png",
+        "fletching": "Fletching_icon.png",
+        "slayer": "Slayer_icon.png",
+        "hunter": "Hunter_icon.png",
+        "mining": "Mining_icon.png",
+        "smithing": "Smithing_icon.png",
+        "fishing": "Fishing_icon.png",
+        "cooking": "Cooking_icon.png",
+        "firemaking": "Firemaking_icon.png",
+        "woodcutting": "Woodcutting_icon.png",
+        "farming": "Farming_icon.png",
+        "sailing": "Sailing_icon.png",
+        "combat": "Combat.png",
+      } %}
+      {% set delta_map = {} %}
+      {% if latest.delta and latest.delta.skill_deltas %}
+        {% set ns = namespace(map={}) %}
+        {% for sd in latest.delta.skill_deltas %}
+          {% set _ = ns.map.update({sd.name: sd}) %}
+        {% endfor %}
+        {% set delta_map = ns.map %}
+      {% endif %}
       {% for sk in latest.skills %}
+        {% set skill_key = sk.name|lower|replace(' ', '')|replace('_','')|replace('-','') %}
+        {% set icon_name = skill_icons.get(skill_key, 'Combat.png') %}
+        {% set delta = delta_map.get(sk.name) %}
+        {% set xp_delta = delta.xp_delta if delta else 0 %}
+        {% set level_delta = delta.level_delta if delta else 0 %}
         <div class="skill-card">
-          <div class="skill-icon"></div>
+          <div class="skill-icon" style="background-image: url('/static/images/runescape/skills/{{ icon_name }}');"></div>
           <div class="skill-name">{{ sk.name }}</div>
-          <div class="skill-value">LVL {{ sk.level }} · XP {{ sk.xp }}</div>
+          <div class="skill-value">LVL {{ sk.level }} · XP {{ "{:,}".format(sk.xp) }}</div>
+          {% if xp_delta or level_delta %}
+            {% set chip_class = 'delta-chip' %}
+            {% if xp_delta < 0 %}{% set chip_class = 'delta-chip negative' %}{% elif xp_delta == 0 and level_delta == 0 %}{% set chip_class = 'delta-chip neutral' %}{% endif %}
+            <div class="{{ chip_class }}">
+              {% if level_delta %}
+                {% if level_delta > 0 %}+{% endif %}{{ level_delta }} lvl
+              {% endif %}
+              {% if xp_delta %}
+                {% if xp_delta > 0 %}+{% endif %}{{ "{:,}".format(xp_delta) }} xp
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
       {% endfor %}
     {% else %}
@@ -91,24 +232,33 @@
       <h3>Bosses & Minigames</h3>
     </div>
   </div>
-  {% if latest and latest.activities %}
-    <table class="table">
-      <thead>
-        <tr><th>Name</th><th>Score</th><th>Rank</th></tr>
-      </thead>
-      <tbody>
-        {% for act in latest.activities %}
-          <tr>
-            <td>{{ act.name }}</td>
-            <td>{{ act.score }}</td>
-            <td>{{ act.rank }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p class="ink-2">No activities yet.</p>
-  {% endif %}
+  <div id="activities-table">
+    {% if latest and latest.activities %}
+      {% set icon_overrides = {
+        "deadmanpoints": "minigame_icon_hs_thumb.png",
+        "gridpoints": "minigame_icon_hs_thumb.png",
+        "leaguepoints": "minigame_icon_hs_thumb.png"
+      } %}
+      <div class="activity-scroll">
+        <div class="activity-grid">
+          {% for act in latest.activities %}
+            {% set key = act.name|lower|replace(" ", "")|replace("'", "")|replace("-", "")|replace("(", "")|replace(")", "")|replace(":", "") %}
+            {% set icon_name = icon_overrides.get(key, "game_icon_" + key + ".png") %}
+            <div class="activity-row">
+              <div class="activity-icon" style="background-image:url('/static/images/runescape/game/{{ icon_name }}');"></div>
+              <div>
+                <div class="activity-name">{{ act.name }}</div>
+                <div class="activity-rank">Rank {{ act.rank }}</div>
+              </div>
+              <div class="activity-score">{{ act.score }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <p class="ink-2">No activities yet.</p>
+    {% endif %}
+  </div>
 </section>
 
 <section class="card">

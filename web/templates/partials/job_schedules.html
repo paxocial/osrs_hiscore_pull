@@ -1,0 +1,44 @@
+<div class="card control-card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Schedules</p>
+      <h4>Snapshot cadence</h4>
+    </div>
+  </div>
+  <div class="list">
+    {% if schedules %}
+      {% for sched in schedules %}
+        <div class="list-row">
+          <div>
+            <div class="list-title">{{ sched.account_name }}</div>
+            <div class="list-sub">Cron: {{ sched.cadence_cron }} · Next: {{ sched.next_run or '—' }}</div>
+          </div>
+          <form hx-post="/jobs/schedule/delete" hx-target="#job-schedules" hx-swap="innerHTML">
+            <input type="hidden" name="schedule_id" value="{{ sched.id }}">
+            <button class="btn ghost small" type="submit">Delete</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="ink-2">No account schedules yet.</p>
+    {% endif %}
+  </div>
+  <div class="list" style="margin-top:8px;">
+    {% if clan_schedules %}
+      {% for sched in clan_schedules %}
+        <div class="list-row">
+          <div>
+            <div class="list-title">Clan: {{ sched.clan_name }}</div>
+            <div class="list-sub">Cron: {{ sched.cadence_cron }} · Next: {{ sched.next_run or '—' }}</div>
+          </div>
+          <form hx-post="/jobs/schedule/delete" hx-target="#job-schedules" hx-swap="innerHTML">
+            <input type="hidden" name="schedule_id" value="{{ sched.id }}">
+            <button class="btn ghost small" type="submit">Delete</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="ink-2">No clan schedules yet.</p>
+    {% endif %}
+  </div>
+</div>

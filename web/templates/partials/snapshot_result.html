@@ -1,11 +1,31 @@
-{% set results = result.body.get('results', []) if result.body else [] %}
-{% if result.status == 200 and results %}
-  {% set r = results[0] %}
-  <div class="alert success">
-    Snapshot triggered for {{ r.player }} ({{ r.resolved_mode or 'auto' }}): {{ r.delta_summary or r.message }}
+{% if job is not defined or job is none %}
+  <div id="snapshot-job-{{ job_id }}" hx-get="/snapshots/run/status?job_id={{ job_id }}&player={{ player }}" hx-trigger="load, every 1.5s" hx-swap="outerHTML">
+    <div class="alert info">Starting snapshot for {{ player }}…</div>
   </div>
-{% else %}
+{% elif job.status in ['pending', 'running'] %}
+  <div id="snapshot-job-{{ job_id }}" hx-get="/snapshots/run/status?job_id={{ job_id }}&player={{ player }}" hx-trigger="load, every 1.5s" hx-swap="outerHTML">
+    <div class="alert info">Snapshot running for {{ player }}…</div>
+  </div>
+{% elif job.status == 'error' %}
   <div class="alert error">
-    Snapshot request failed ({{ result.status }}).
+    Snapshot failed for {{ player }}: {{ job.error or 'Unknown error' }}
   </div>
+{% elif job.status == 'success' %}
+  {% set result = job.result %}
+  {% set results = result.body.get('results', []) if result and result.body else [] %}
+  {% if results %}
+    {% set r = results[0] %}
+    {% set snap_id = (r.payload.get('metadata', {}).get('snapshot_id') if r.payload else (r.metadata.get('snapshot_id') if r.metadata else None)) %}
+    <div class="alert success">
+      Snapshot done for {{ r.player }} ({{ r.resolved_mode or 'auto' }}): {{ r.delta_summary or r.message }}
+    </div>
+    <div hx-get="/profiles/{{ player }}/timeline" hx-target="#timeline" hx-trigger="load" hx-swap="innerHTML"></div>
+    {% if snap_id %}
+      <div hx-get="/profiles/{{ player }}/snapshot_detail?snapshot_id={{ snap_id }}&view=panel"
+           hx-trigger="load"
+           hx-swap="none"></div>
+    {% endif %}
+  {% else %}
+    <div class="alert error">Snapshot finished but no result returned.</div>
+  {% endif %}
 {% endif %}

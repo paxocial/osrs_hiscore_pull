@@ -1,8 +1,14 @@
 <div class="list">
   {% for snap in snapshots %}
-    <div class="list-row">
+    {% set is_latest = (page == 1 and loop.first) %}
+    <div class="list-row"
+         hx-get="/profiles/{{ rsn }}/snapshot_detail?snapshot_id={{ snap.snapshot_id }}&view=panel&is_latest={{ 1 if is_latest else 0 }}"
+         hx-target="#snapshot-content"
+         hx-swap="innerHTML"
+         hx-indicator="#snapshot-indicator"
+         style="cursor:pointer;">
       <div>
-        <div class="list-title">{{ snap.fetched_at }}</div>
+        <div class="list-title">{{ snap.fetched_at_display or snap.fetched_at }}</div>
         <div class="list-sub">
           Mode: {{ snap.resolved_mode }}
           · Total LVL {{ snap.total_level }}
@@ -13,17 +19,22 @@
       <div class="list-actions">
         {% if snap.snapshot_id %}
           <button class="btn ghost small"
-                  hx-get="/profiles/{{ rsn }}/report?snapshot_id={{ snap.snapshot_id }}"
+                  hx-get="/profiles/{{ rsn }}/snapshot_detail?snapshot_id={{ snap.snapshot_id }}&view=report"
                   hx-target="#snapshot-content"
                   hx-swap="innerHTML"
                   data-copy-report="/api/snapshots/{{ snap.snapshot_id }}/report"
                   onclick="window.snapshotCopyMode && window.snapshotCopyMode('report', this)">Report</button>
           <button class="btn ghost small"
-                  hx-get="/profiles/{{ rsn }}/json?snapshot_id={{ snap.snapshot_id }}"
+                  hx-get="/profiles/{{ rsn }}/snapshot_detail?snapshot_id={{ snap.snapshot_id }}&view=json"
                   hx-target="#snapshot-content"
                   hx-swap="innerHTML"
                   data-copy-json="/api/snapshots/{{ snap.snapshot_id }}/raw"
                   onclick="window.snapshotCopyMode && window.snapshotCopyMode('json', this)">JSON</button>
+          <button class="btn ghost small danger"
+                  hx-delete="/profiles/{{ rsn }}/snapshot?snapshot_id={{ snap.snapshot_id }}&page={{ page }}&page_size={{ page_size }}"
+                  hx-target="#timeline"
+                  hx-swap="outerHTML"
+                  hx-confirm="Delete this snapshot?">Delete</button>
         {% endif %}
       </div>
     </div>
@@ -32,6 +43,12 @@
     <p class="ink-2">No snapshots yet. Run one above.</p>
   {% endif %}
 </div>
+
+{% if refresh_snapshot_id %}
+  <div hx-get="/profiles/{{ rsn }}/snapshot_detail?snapshot_id={{ refresh_snapshot_id }}&view=panel"
+       hx-trigger="load"
+       hx-swap="none"></div>
+{% endif %}
 
 {% if total > page_size %}
 <div class="pagination">

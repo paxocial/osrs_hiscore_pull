@@ -23,6 +23,9 @@ def get_current_user(request: Request) -> Optional[dict]:
 def require_user(request: Request) -> dict:
     user = get_current_user(request)
     if not user:
+        if request.headers.get("HX-Request") == "true":
+            # For HTMX, avoid full-page redirect; return 401 so the caller can handle gracefully.
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login required")
         raise HTTPException(
             status_code=status.HTTP_303_SEE_OTHER,
             detail="Login required",

@@ -1,0 +1,23 @@
+<div class="card control-card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Webhooks</p>
+      <h4>Snapshot events</h4>
+    </div>
+  </div>
+  <div class="list">
+    {% if hooks %}
+      {% for hook in hooks %}
+        <div class="list-row">
+          <div>
+            <div class="list-title">{{ hook.url }}</div>
+          <div class="list-sub">{{ hook.target_type }} {{ hook.target_id or '' }} · events: {{ hook.events }}</div>
+        </div>
+        <div class="pill">{{ 'active' if hook.active else 'disabled' }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="ink-2">No webhooks configured.</p>
+    {% endif %}
+  </div>
+</div>

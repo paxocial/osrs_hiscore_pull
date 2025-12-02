@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Optional, List, Dict
-from datetime import datetime
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
 from pathlib import Path
 from database.connection import DatabaseConnection
 
@@ -81,6 +81,104 @@ class ProfileDataService:
             parts.append(f"over {hours:.1f}h")
         return " ".join(parts) if parts else "Delta recorded"
 
+    def _friendly_time(self, fetched_at: Optional[str]) -> str:
+        if not fetched_at:
+            return "—"
+        try:
+            ts = datetime.fromisoformat(fetched_at.replace("Z", "+00:00"))
+            return ts.strftime("%Y-%m-%d %H:%M UTC")
+        except Exception:
+            return fetched_at
+
+    def _compute_delta_from_db(self, conn, snapshot_row: dict[str, Any]) -> Optional[dict]:
+        """Compute delta if none stored, by comparing to previous snapshot."""
+        account_id = snapshot_row.get("account_id")
+        fetched_at = snapshot_row.get("fetched_at")
+        if not account_id or not fetched_at:
+            return None
+
+        prev_row = conn.execute(
+            """
+            SELECT * FROM snapshots
+            WHERE account_id = ? AND fetched_at < ?
+            ORDER BY fetched_at DESC LIMIT 1
+            """,
+            (account_id, fetched_at),
+        ).fetchone()
+        if not prev_row:
+            return None
+        prev = dict(prev_row)
+
+        prev_skills = [
+            dict(s)
+            for s in conn.execute(
+                "SELECT * FROM skills WHERE snapshot_id = ?",
+                (prev.get("id"),),
+            ).fetchall()
+        ]
+        cur_skills = [
+            dict(s)
+            for s in conn.execute(
+                "SELECT * FROM skills WHERE snapshot_id = ?",
+                (snapshot_row["id"],),
+            ).fetchall()
+        ]
+
+        prev_acts = [
+            dict(a)
+            for a in conn.execute(
+                "SELECT * FROM activities WHERE snapshot_id = ?",
+                (prev.get("id"),),
+            ).fetchall()
+        ]
+        cur_acts = [
+            dict(a)
+            for a in conn.execute(
+                "SELECT * FROM activities WHERE snapshot_id = ?",
+                (snapshot_row["id"],),
+            ).fetchall()
+        ]
+
+        skill_map_prev = {s.get("name"): s for s in prev_skills}
+        skill_deltas: list[dict[str, Any]] = []
+        for s in cur_skills:
+            prev_s = skill_map_prev.get(s["name"], {})
+            skill_deltas.append(
+                {
+                    "name": s["name"],
+                    "xp_delta": (s.get("xp") or 0) - (prev_s.get("xp") or 0),
+                    "level_delta": (s.get("level") or 0) - (prev_s.get("level") or 0),
+                }
+            )
+
+        act_map_prev = {a.get("name"): a for a in prev_acts}
+        activity_deltas: list[dict[str, Any]] = []
+        for a in cur_acts:
+            prev_a = act_map_prev.get(a["name"], {})
+            activity_deltas.append(
+                {
+                    "name": a["name"],
+                    "score_delta": (a.get("score") or 0) - (prev_a.get("score") or 0),
+                }
+            )
+
+        try:
+            current_ts = datetime.fromisoformat(fetched_at.replace("Z", "+00:00"))
+            prev_ts = datetime.fromisoformat(prev.get("fetched_at", "").replace("Z", "+00:00"))
+            time_diff_hours = (current_ts - prev_ts).total_seconds() / 3600
+        except Exception:
+            time_diff_hours = None
+
+        delta_row = {
+            "current_snapshot_id": snapshot_row.get("id"),
+            "previous_snapshot_id": prev.get("id"),
+            "total_xp_delta": (snapshot_row.get("total_xp") or 0) - (prev.get("total_xp") or 0),
+            "skill_deltas": skill_deltas,
+            "activity_deltas": activity_deltas,
+            "time_diff_hours": time_diff_hours,
+        }
+        return delta_row
+
     def get_snapshot_payload(self, snapshot_id: str) -> Optional[dict]:
         """Build a JSON-like payload for a snapshot using DB-stored data."""
         with self.db.get_connection() as conn:
@@ -109,6 +207,8 @@ class ProfileDataService:
             # Deltas
             deltas_map = self._load_deltas(conn, [snapshot_row["id"]])
             delta_row = deltas_map.get(snapshot_row["id"])
+            if not delta_row:
+                delta_row = self._compute_delta_from_db(conn, snapshot)
 
             metadata = snapshot.get("metadata")
             try:
@@ -124,6 +224,7 @@ class ProfileDataService:
                     "requested_mode": snapshot.get("requested_mode"),
                     "resolved_mode": snapshot.get("resolved_mode"),
                     "fetched_at": snapshot.get("fetched_at"),
+                    "fetched_at_display": self._friendly_time(snapshot.get("fetched_at")),
                     "endpoint": snapshot.get("endpoint"),
                     "latency_ms": snapshot.get("latency_ms"),
                     "agent_version": snapshot.get("agent_version"),
@@ -170,6 +271,8 @@ class ProfileDataService:
                 latest_dict["activities"] = [dict(a) for a in acts]
                 deltas_map = self._load_deltas(conn, [latest["id"]])
                 delta_row = deltas_map.get(latest["id"])
+                if not delta_row:
+                    delta_row = self._compute_delta_from_db(conn, latest_dict)
                 if delta_row:
                     latest_dict["delta"] = delta_row
                     latest_dict["delta_summary"] = self._delta_summary(delta_row)
@@ -177,6 +280,7 @@ class ProfileDataService:
                 snapshot_id_val = latest_dict.get("snapshot_id")
                 latest_dict["json_path"] = self._snapshot_filename(fetched_at_val, account_name) if fetched_at_val else ""
                 latest_dict["report_path"] = self._report_path(snapshot_id_val, account_name) if snapshot_id_val else ""
+                latest_dict["fetched_at_display"] = self._friendly_time(fetched_at_val)
 
             timeline_rows = conn.execute(
                 "SELECT * FROM snapshots WHERE account_id = ? ORDER BY fetched_at DESC LIMIT ? OFFSET ?",
@@ -189,9 +293,12 @@ class ProfileDataService:
                 rd["json_path"] = self._snapshot_filename(rd.get("fetched_at", ""), account_name) if rd.get("fetched_at") else ""
                 rd["report_path"] = self._report_path(rd.get("snapshot_id", ""), account_name) if rd.get("snapshot_id") else ""
                 delta_row = deltas_map.get(r["id"])
+                if not delta_row:
+                    delta_row = self._compute_delta_from_db(conn, rd)
                 if delta_row:
                     rd["delta"] = delta_row
                     rd["delta_summary"] = self._delta_summary(delta_row)
+                rd["fetched_at_display"] = self._friendly_time(rd.get("fetched_at"))
                 timeline.append(rd)
 
             total = conn.execute(

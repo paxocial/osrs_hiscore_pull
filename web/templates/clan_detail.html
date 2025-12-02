@@ -55,4 +55,61 @@
     <p class="ink-2">No members yet.</p>
   {% endif %}
 </section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Scheduling</p>
+      <h3>Clan snapshot cadence</h3>
+    </div>
+  </div>
+  <form class="form inline" hx-post="/jobs/schedule/clan" hx-target="#job-schedules" hx-swap="innerHTML">
+    <input type="hidden" name="clan_id" value="{{ clan.id }}">
+    <label>Frequency
+      <select name="cron" required>
+        <option value="0 * * * *">Every hour</option>
+        <option value="0 */6 * * *" selected>Every 6 hours</option>
+        <option value="0 0 * * *">Daily (00:00 UTC)</option>
+        <option value="0 6 * * *">Daily (06:00 UTC)</option>
+        <option value="0 0 * * 0">Weekly (Sun 00:00 UTC)</option>
+        <option value="0 6 * * 1">Weekly (Mon 06:00 UTC)</option>
+        <option value="custom">Custom cron…</option>
+      </select>
+    </label>
+    <label>Custom (advanced)
+      <input type="text" name="custom_cron" placeholder="0 */6 * * *">
+    </label>
+    <button class="btn primary" type="submit">Add schedule</button>
+  </form>
+  <div id="job-schedules" hx-get="/jobs/schedule/list" hx-trigger="load, every 60s" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Webhooks</p>
+      <h3>Clan webhooks</h3>
+    </div>
+  </div>
+  <form class="form inline" hx-post="/webhooks/clan" hx-target="#webhooks-panel" hx-swap="innerHTML">
+    <input type="hidden" name="clan_id" value="{{ clan.id }}">
+    <label>URL
+      <input type="url" name="url" placeholder="https://discord.com/api/webhooks/..." required>
+    </label>
+    <label>Events
+      <select name="events">
+        <option value="snapshot_complete" selected>snapshot_complete</option>
+      </select>
+    </label>
+    <label>Provider
+      <select name="provider">
+        <option value="discord" selected>Discord</option>
+        <option value="slack">Slack</option>
+        <option value="custom">Custom</option>
+      </select>
+    </label>
+    <button class="btn primary" type="submit">Save webhook</button>
+  </form>
+  <div id="webhooks-panel" hx-get="/webhooks" hx-trigger="load, every 5m" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+</section>
 {% endblock %}

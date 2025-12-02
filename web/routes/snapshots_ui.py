@@ -2,23 +2,34 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Form, Request, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from web.deps import require_user
+from web.deps import require_user, get_current_user
 from web.services.snapshot import SnapshotService
+from web.services.jobs import JobService
 
 templates = Jinja2Templates(directory="web/templates")
 router = APIRouter()
-snapshot_service = SnapshotService()
+jobs = JobService()
 
 
 @router.post("/snapshots/run", response_class=HTMLResponse)
 async def run_snapshot(request: Request, player: str = Form(...), mode: str = Form("auto")):
-    require_user(request)
-    result = snapshot_service.trigger_snapshot(player, mode)
+    user = require_user(request)
+    job_id = jobs.create_job("snapshot", {"player": player, "mode": mode, "user_id": user["id"], "target_type": "account"})
     return templates.TemplateResponse(
         "partials/snapshot_result.html",
-        {"request": request, "result": result},
+        {"request": request, "job_id": job_id, "player": player},
+    )
+
+
+@router.get("/snapshots/run/status", response_class=HTMLResponse)
+async def snapshot_status(request: Request, job_id: str = Query(...), player: str = Query(...)):
+    require_user(request)
+    job = jobs.get_job(job_id)
+    return templates.TemplateResponse(
+        "partials/snapshot_result.html",
+        {"request": request, "job": job, "job_id": job_id, "player": player},
     )
