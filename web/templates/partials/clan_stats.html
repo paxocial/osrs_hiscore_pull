@@ -97,8 +97,8 @@
             {% endif %}
           </div>
         </div>
-        {{ bossclue.render_boss_clue_list(data.top_bosses, "Boss gains", False, True, fallback=False) }}
-        {{ bossclue.render_boss_clue_list(data.top_clues, "Clue gains", True, True, fallback=False) }}
+        {{ bossclue.render_boss_clue_list(data.top_bosses, "Boss gains", False, True, fallback=True) }}
+        {{ bossclue.render_boss_clue_list(data.top_clues, "Clue gains", True, True, fallback=True) }}
       </div>
     </div>
     <div class="tab-panel" id="clan-leaderboard">
@@ -121,9 +121,31 @@
         {% endif %}
       {% endfor %}
       <div class="card-grid">
-        {{ bossclue.render_boss_clue_list(ns.boss_items, "Boss gains", False, True, fallback=False) }}
-        {{ bossclue.render_boss_clue_list(ns.clue_items, "Clue gains", True, True, fallback=False) }}
+        {{ bossclue.render_boss_clue_list(ns.boss_items, "Boss gains", False, True, fallback=True) }}
+        {{ bossclue.render_boss_clue_list(ns.clue_items, "Clue gains", True, True, fallback=True) }}
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  (() => {
+    if (window.__clanTfSync) return;
+    window.__clanTfSync = true;
+    const sync = () => {
+      const tf = document.getElementById('clan-timeframe-control');
+      if (!tf) return;
+      const active = document.querySelector('.tab-btn.active');
+      const target = active ? active.getAttribute('data-tab-target') : '';
+      tf.style.display = target === '#clan-leaderboard' ? 'none' : '';
+    };
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.closest('.tab-btn')) {
+        setTimeout(sync, 0);
+      }
+    });
+    document.addEventListener('htmx:afterSwap', sync);
+    document.addEventListener('DOMContentLoaded', sync);
+    sync();
+  })();
+</script>

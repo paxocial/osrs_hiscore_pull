@@ -185,6 +185,15 @@ async def clan_member_overview(request: Request, slug: str, name: str, timeframe
     profile = profile_data.get_profile(name, limit=1, offset=0)
     latest = profile.get("latest")
 
+    # Recompute window-based delta for the requested timeframe
+    if latest:
+        since = profile_data._time_bounds(timeframe)
+        with profile_data.db.get_connection() as conn:
+            window_delta = profile_data._compute_window_delta(conn, latest.get("account_id"), since)
+        if window_delta:
+            latest["delta"] = window_delta
+            latest["delta_summary"] = profile_data._delta_summary(window_delta)
+
     return templates.TemplateResponse(
         "partials/clan_member_overview.html",
         {

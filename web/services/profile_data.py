@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from database.connection import DatabaseConnection
 
@@ -89,6 +89,110 @@ class ProfileDataService:
             return ts.strftime("%Y-%m-%d %H:%M UTC")
         except Exception:
             return fetched_at
+
+    def _time_bounds(self, timeframe: str) -> Optional[datetime]:
+        now = datetime.now(timezone.utc)
+        if timeframe == "7d":
+            return now - timedelta(days=7)
+        if timeframe == "30d":
+            return now - timedelta(days=30)
+        if timeframe == "mtd":
+            return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return None  # latest / all-time
+
+    def _compute_window_delta(self, conn, account_id: int, since: Optional[datetime]) -> Optional[dict]:
+        """Compute delta between earliest and latest snapshots within window (or all-time if since is None)."""
+        if since is None:
+            snaps = conn.execute(
+                """
+                SELECT id, fetched_at, total_xp, total_level
+                FROM snapshots
+                WHERE account_id = ?
+                ORDER BY fetched_at ASC
+                """,
+                (account_id,),
+            ).fetchall()
+        else:
+            since_iso = since.isoformat()
+            snaps = conn.execute(
+                """
+                SELECT id, fetched_at, total_xp, total_level
+                FROM snapshots
+                WHERE account_id = ? AND fetched_at >= ?
+                ORDER BY fetched_at ASC
+                """,
+                (account_id, since_iso),
+            ).fetchall()
+        if not snaps:
+            return None
+        baseline = dict(snaps[0])
+        latest = dict(snaps[-1])
+        if baseline["id"] == latest["id"]:
+            # Only one snapshot in window: treat as zero delta (baseline only).
+            return {
+                "current_snapshot_id": latest.get("id"),
+                "previous_snapshot_id": baseline.get("id"),
+                "total_xp_delta": 0,
+                "skill_deltas": [],
+                "activity_deltas": [],
+                "time_diff_hours": None,
+            }
+
+        def load_skills(snapshot_id: int):
+            rows = conn.execute(
+                "SELECT name, xp, level FROM skills WHERE snapshot_id = ?",
+                (snapshot_id,),
+            ).fetchall()
+            return {r["name"]: dict(r) for r in rows}
+
+        def load_acts(snapshot_id: int):
+            rows = conn.execute(
+                "SELECT name, score FROM activities WHERE snapshot_id = ?",
+                (snapshot_id,),
+            ).fetchall()
+            return {r["name"]: dict(r) for r in rows}
+
+        base_skills = load_skills(baseline["id"])
+        latest_skills = load_skills(latest["id"])
+        skill_deltas: list[dict] = []
+        for name, ls in latest_skills.items():
+            prev = base_skills.get(name, {})
+            skill_deltas.append(
+                {
+                    "name": name,
+                    "xp_delta": (ls.get("xp") or 0) - (prev.get("xp") or 0),
+                    "level_delta": (ls.get("level") or 0) - (prev.get("level") or 0),
+                }
+            )
+
+        base_acts = load_acts(baseline["id"])
+        latest_acts = load_acts(latest["id"])
+        activity_deltas: list[dict] = []
+        for name, la in latest_acts.items():
+            prev = base_acts.get(name, {})
+            activity_deltas.append(
+                {
+                    "name": name,
+                    "score_delta": (la.get("score") or 0) - (prev.get("score") or 0),
+                }
+            )
+
+        try:
+            current_ts = datetime.fromisoformat(latest.get("fetched_at", "").replace("Z", "+00:00"))
+            prev_ts = datetime.fromisoformat(baseline.get("fetched_at", "").replace("Z", "+00:00"))
+            time_diff_hours = (current_ts - prev_ts).total_seconds() / 3600
+        except Exception:
+            time_diff_hours = None
+
+        delta_row = {
+            "current_snapshot_id": latest.get("id"),
+            "previous_snapshot_id": baseline.get("id"),
+            "total_xp_delta": (latest.get("total_xp") or 0) - (baseline.get("total_xp") or 0),
+            "skill_deltas": skill_deltas,
+            "activity_deltas": activity_deltas,
+            "time_diff_hours": time_diff_hours,
+        }
+        return delta_row
 
     def _compute_delta_from_db(self, conn, snapshot_row: dict[str, Any]) -> Optional[dict]:
         """Compute delta if none stored, by comparing to previous snapshot."""

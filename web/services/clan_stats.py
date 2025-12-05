@@ -21,7 +21,7 @@ class ClanStatsService:
             return now - timedelta(days=30)
         if timeframe == "mtd":
             return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return None  # latest
+        return None  # latest / all-time
 
     def _load_members(self, clan_id: int) -> List[Dict]:
         with self.db.get_connection() as conn:
@@ -66,6 +66,48 @@ class ClanStatsService:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    def _snapshots_since(self, account_id: int, since: Optional[datetime]):
+        """Return snapshots at/after the timeframe boundary (ascending). If since is None, return all snapshots."""
+        with self.db.get_connection() as conn:
+            if since is None:
+                rows = conn.execute(
+                    """
+                    SELECT id, total_xp, total_level, fetched_at
+                    FROM snapshots
+                    WHERE account_id = ?
+                    ORDER BY fetched_at ASC
+                    """,
+                    (account_id,),
+                ).fetchall()
+            else:
+                since_iso = since.isoformat()
+                rows = conn.execute(
+                    """
+                    SELECT id, total_xp, total_level, fetched_at
+                    FROM snapshots
+                    WHERE account_id = ? AND fetched_at >= ?
+                    ORDER BY fetched_at ASC
+                    """,
+                    (account_id, since_iso),
+                ).fetchall()
+            return [dict(r) for r in rows]
+
+    def _skills_for_snapshot(self, snapshot_id: int) -> Dict[str, Dict]:
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT name, xp, level FROM skills WHERE snapshot_id = ?",
+                (snapshot_id,),
+            ).fetchall()
+            return {r["name"]: dict(r) for r in rows}
+
+    def _activities_for_snapshot(self, snapshot_id: int) -> Dict[str, Dict]:
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT name, score FROM activities WHERE snapshot_id = ?",
+                (snapshot_id,),
+            ).fetchall()
+            return {r["name"]: dict(r) for r in rows}
+
     def compute_stats(self, clan_id: int, timeframe: str = "7d") -> Dict[str, any]:
         members = self._load_members(clan_id)
         since = self._time_bounds(timeframe)
@@ -78,48 +120,50 @@ class ClanStatsService:
         leaderboard: List[Dict] = []
 
         for m in members:
-            latest = self._latest_snapshot(m["account_id"])
-            xp_gain = 0
-            lvl_gain = 0
-            if latest:
-                totals["xp"] += latest.get("total_xp") or 0
-                totals["level"] += latest.get("total_level") or 0
-                # Track current highs per activity (for fallback display)
-                with self.db.get_connection() as conn:
-                    acts = conn.execute(
-                        "SELECT name, score FROM activities WHERE snapshot_id = ?",
-                        (latest.get("id"),),
-                    ).fetchall()
-                    for a in acts:
-                        name = a["name"]
-                        score = a["score"] or 0
-                        existing = per_activity_current.get(name)
-                        if existing is None or score > existing.get("total", 0):
-                            per_activity_current[name] = {"total": score, "top_member": m["name"], "top_value": score}
+            snapshots = self._snapshots_since(m["account_id"], since)
+            if not snapshots:
+                continue
 
-            deltas = self._deltas_since(m["account_id"], since)
-            for d in deltas:
-                xp_gain += d.get("total_xp_delta") or 0
-                try:
-                    skill_ds = json.loads(d.get("skill_deltas") or "[]")
-                except Exception:
-                    skill_ds = []
-                for sd in skill_ds:
-                    name = sd.get("name") or ""
-                    per_skill[name] = per_skill.get(name, 0) + (sd.get("xp_delta") or 0)
-                    lvl_gain += sd.get("level_delta") or 0
-                try:
-                    act_ds = json.loads(d.get("activity_deltas") or "[]")
-                except Exception:
-                    act_ds = []
-                for ad in act_ds:
-                    aname = ad.get("name") or ""
-                    delta_val = ad.get("score_delta") or 0
-                    per_activity[aname] = per_activity.get(aname, 0) + delta_val
-                    if delta_val > 0:
-                        top = per_activity_top.get(aname)
-                        if top is None or delta_val > top.get("value", 0):
-                            per_activity_top[aname] = {"member": m["name"], "value": delta_val}
+            baseline = snapshots[0]
+            latest = snapshots[-1]
+
+            # Track current totals from latest snapshot
+            totals["xp"] += latest.get("total_xp") or 0
+            totals["level"] += latest.get("total_level") or 0
+
+            # Current highs per activity (fallback display)
+            latest_acts = self._activities_for_snapshot(latest["id"])
+            for name, a in latest_acts.items():
+                score = a.get("score") or 0
+                existing = per_activity_current.get(name)
+                if existing is None or score > existing.get("total", 0):
+                    per_activity_current[name] = {"total": score, "top_member": m["name"], "top_value": score}
+
+            xp_gain = (latest.get("total_xp") or 0) - (baseline.get("total_xp") or 0)
+            lvl_gain = (latest.get("total_level") or 0) - (baseline.get("total_level") or 0)
+
+            # Skill deltas between baseline and latest in window
+            base_skills = self._skills_for_snapshot(baseline["id"])
+            latest_skills = self._skills_for_snapshot(latest["id"])
+            for name, ls in latest_skills.items():
+                prev = base_skills.get(name, {})
+                xp_delta = (ls.get("xp") or 0) - (prev.get("xp") or 0)
+                level_delta = (ls.get("level") or 0) - (prev.get("level") or 0)
+                if xp_delta > 0:
+                    per_skill[name] = per_skill.get(name, 0) + xp_delta
+                if level_delta > 0:
+                    lvl_gain += level_delta
+
+            # Activity deltas between baseline and latest in window
+            base_acts = self._activities_for_snapshot(baseline["id"])
+            for name, la in latest_acts.items():
+                prev = base_acts.get(name, {})
+                delta_val = (la.get("score") or 0) - (prev.get("score") or 0)
+                if delta_val > 0:
+                    per_activity[name] = per_activity.get(name, 0) + delta_val
+                    top = per_activity_top.get(name)
+                    if top is None or delta_val > top.get("value", 0):
+                        per_activity_top[name] = {"member": m["name"], "value": delta_val}
 
             totals["xp_gain"] += xp_gain
             totals["level_gain"] += lvl_gain
@@ -149,19 +193,6 @@ class ClanStatsService:
                 }
             )
         all_activities = [a for a in all_activities if a["total"] > 0]
-
-        # Fallback: if no delta-based activity gains, show current highest scores
-        if not all_activities and per_activity_current:
-            for name, info in per_activity_current.items():
-                all_activities.append(
-                    {
-                        "name": name,
-                        "total": info.get("total") or 0,
-                        "top_member": info.get("top_member"),
-                        "top_value": info.get("top_value"),
-                    }
-                )
-            all_activities = [a for a in all_activities if a["total"] > 0]
 
         all_activities_sorted = sorted(all_activities, key=lambda kv: kv["total"], reverse=True)
         top_activities = all_activities_sorted[:10]

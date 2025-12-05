@@ -9,13 +9,28 @@
 
 <div class="lb-controls">
   <div class="form inline">
+    <label>Timeframe
+      <select id="lb-timeframe"
+              name="timeframe"
+              hx-get="/clans/{{ clan.slug }}/leaderboard?page=1&metric={{ metric }}&page_size={{ page_size }}"
+              hx-target="#clan-leaderboard-panel"
+              hx-swap="innerHTML"
+              hx-include="#lb-metric,#lb-page-size,#lb-timeframe"
+              hx-trigger="change">
+        <option value="7d" {% if timeframe == '7d' %}selected{% endif %}>Last 7d</option>
+        <option value="30d" {% if timeframe == '30d' %}selected{% endif %}>Last 30d</option>
+        <option value="mtd" {% if timeframe == 'mtd' %}selected{% endif %}>Month to date</option>
+        <option value="all" {% if timeframe == 'all' %}selected{% endif %}>All time</option>
+      </select>
+    </label>
     <label>Metric
       <select id="lb-metric"
               name="metric"
               hx-get="/clans/{{ clan.slug }}/leaderboard?page=1&page_size={{ page_size }}"
               hx-target="#clan-leaderboard-panel"
               hx-swap="innerHTML"
-              hx-include="#clan-stats-timeframe,#lb-page-size">
+              hx-include="#lb-timeframe,#lb-page-size"
+              hx-trigger="change">
         <option value="xp" {% if metric == 'xp' %}selected{% endif %}>XP gained</option>
         <option value="levels" {% if metric == 'levels' %}selected{% endif %}>Levels gained</option>
       </select>
@@ -26,7 +41,8 @@
               hx-get="/clans/{{ clan.slug }}/leaderboard?page=1&metric={{ metric }}"
               hx-target="#clan-leaderboard-panel"
               hx-swap="innerHTML"
-              hx-include="#clan-stats-timeframe,#lb-metric">
+              hx-include="#lb-timeframe,#lb-metric"
+              hx-trigger="change">
         {% for size in [5, 10, 20, 50] %}
           <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }}</option>
         {% endfor %}
@@ -73,7 +89,7 @@
             hx-get="/clans/{{ clan.slug }}/leaderboard?page={{ prev_page }}&page_size={{ page_size }}&metric={{ metric }}"
             hx-target="#clan-leaderboard-panel"
             hx-swap="innerHTML"
-            hx-include="#clan-stats-timeframe"
+            hx-include="#lb-timeframe"
             {% if page <= 1 %}disabled{% endif %}>
       Prev
     </button>
@@ -81,7 +97,7 @@
             hx-get="/clans/{{ clan.slug }}/leaderboard?page={{ next_page }}&page_size={{ page_size }}&metric={{ metric }}"
             hx-target="#clan-leaderboard-panel"
             hx-swap="innerHTML"
-            hx-include="#clan-stats-timeframe"
+            hx-include="#lb-timeframe"
             {% if total_pages and page >= total_pages %}disabled{% endif %}>
       Next
     </button>

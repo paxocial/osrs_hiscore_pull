@@ -39,6 +39,23 @@
       <p class="ink-2">Latest snapshot stats</p>
     </div>
     <div class="list-actions">
+      <form class="form inline" id="member-timeframe-form">
+        <input type="hidden" name="name" value="{{ member_name }}">
+        <label>Timeframe
+          <select name="timeframe"
+                  hx-get="/clans/{{ clan.slug }}/member_overview"
+                  hx-target="#clan-stats"
+                  hx-swap="innerHTML"
+                  hx-trigger="change"
+                  hx-include="#member-timeframe-form"
+                  hx-params="*">
+            <option value="7d" {% if timeframe == '7d' %}selected{% endif %}>Last 7d</option>
+            <option value="30d" {% if timeframe == '30d' %}selected{% endif %}>Last 30d</option>
+            <option value="mtd" {% if timeframe == 'mtd' %}selected{% endif %}>Month to date</option>
+            <option value="all" {% if timeframe == 'all' %}selected{% endif %}>All time</option>
+          </select>
+        </label>
+      </form>
       <button class="btn ghost small"
               hx-get="/clans/{{ clan.slug }}/stats"
               hx-target="#clan-stats"
@@ -87,9 +104,7 @@
     {% if sorted_skills|length == 0 and latest_skills %}
       {% set sorted_skills = latest_skills|sort(attribute='xp', reverse=True) %}
     {% endif %}
-    {% set latest_acts = latest.activities or [] %}
     {% set activity_list = activity_deltas|selectattr('score_delta', '>', 0)|list %}
-    {% set activity_list = activity_list if activity_list|length > 0 else latest_acts %}
     <div class="card-grid">
       <div class="card control-card">
         <div class="card-header">
@@ -136,8 +151,8 @@
           {% set ns.boss_items = ns.boss_items + [act] %}
         {% endif %}
       {% endfor %}
-      {{ bossclue.render_boss_clue_list(ns.boss_items, "Boss gains", False, False, False) }}
-      {{ bossclue.render_boss_clue_list(ns.clue_items, "Clue gains", True, False, False) }}
+      {{ bossclue.render_boss_clue_list(ns.boss_items, "Boss gains", False, False, True) }}
+      {{ bossclue.render_boss_clue_list(ns.clue_items, "Clue gains", True, False, True) }}
     </div>
   {% else %}
     <div class="alert warn">No snapshots found for this member yet.</div>

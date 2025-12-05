@@ -35,12 +35,13 @@
       <p class="eyebrow">Stats</p>
       <h3>Clan performance</h3>
     </div>
-    <div class="form inline">
+    <div class="form inline" id="clan-timeframe-control">
       <label>Timeframe
         <select id="clan-stats-timeframe" hx-get="/clans/{{ clan.slug }}/stats" hx-target="#clan-stats" hx-swap="innerHTML" name="timeframe">
           <option value="7d" selected>Last 7d</option>
           <option value="30d">Last 30d</option>
           <option value="mtd">Month to date</option>
+          <option value="all">All time</option>
         </select>
       </label>
     </div>
@@ -123,6 +124,27 @@
     <div id="webhooks-panel" hx-get="/webhooks" hx-trigger="load, every 5m" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
   </section>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const tf = document.getElementById('clan-timeframe-control');
+    const buttons = document.querySelectorAll('.tab-btn');
+    const update = (target) => {
+      if (!tf) return;
+      tf.style.display = target === '#clan-leaderboard' ? 'none' : '';
+    };
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-tab-target');
+        update(target);
+      });
+    });
+    const active = document.querySelector('.tab-btn.active');
+    if (active) {
+      update(active.getAttribute('data-tab-target'));
+    }
+  });
+</script>
 
 <script>
 document.addEventListener("click", function (evt) {
