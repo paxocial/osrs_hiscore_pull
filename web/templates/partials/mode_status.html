@@ -1,0 +1,8 @@
+<div class="list-sub">
+  Mode: {{ mode or 'unknown' }}
+  {% if result.cached %}<span class="pill soft">Cached</span>{% endif %}
+  {% if result.status and result.status != 'found' %}
+    <span class="pill warn">{{ result.status }}</span>
+  {% endif %}
+  {% if result.error %}<span class="pill warn">{{ result.error }}</span>{% endif %}
+</div>

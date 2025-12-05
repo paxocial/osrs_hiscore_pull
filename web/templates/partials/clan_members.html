@@ -1,0 +1,39 @@
+{% set total = total or 0 %}
+{% set offset = offset or 0 %}
+{% set limit = limit or 20 %}
+<div class="list">
+  {% for m in members %}
+    <div class="list-row member-row"
+         hx-get="/clans/{{ clan.slug }}/member_overview?name={{ m.name|urlencode }}"
+         hx-target="#clan-stats"
+         hx-swap="innerHTML"
+         hx-include="#clan-stats-timeframe"
+         style="cursor:pointer;">
+      <div>
+        <div class="list-title">{{ m.name }}</div>
+        <div class="list-sub">Mode: {{ m.default_mode or 'main' }}</div>
+      </div>
+      <div class="list-actions">
+        <a class="btn ghost small" href="/profiles/{{ m.name|urlencode }}" onclick="event.stopPropagation()">Open profile</a>
+        <form method="post" action="/clans/remove-member" onclick="event.stopPropagation()">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="clan_id" value="{{ clan.id }}">
+          <input type="hidden" name="account_id" value="{{ m.account_id }}">
+          <button class="btn ghost small" type="submit">Remove</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+  {% if not members %}
+    <p class="ink-2">No members yet.</p>
+  {% endif %}
+</div>
+{% set next_offset = offset + limit %}
+{% set prev_offset = offset - limit %}
+<div class="pagination" style="margin-top:8px;">
+  <span class="ink-2">Showing {{ offset + 1 if total else 0 }} - {{ [offset + limit, total]|min }} of {{ total }}</span>
+  <div>
+    <button class="btn ghost small" hx-get="/clans/{{ clan.slug }}/members?offset={{ prev_offset if prev_offset > 0 else 0 }}&limit={{ limit }}" hx-target="#clan-members" hx-swap="innerHTML" {% if offset <= 0 %}disabled{% endif %}>Prev</button>
+    <button class="btn ghost small" hx-get="/clans/{{ clan.slug }}/members?offset={{ next_offset }}&limit={{ limit }}" hx-target="#clan-members" hx-swap="innerHTML" {% if next_offset >= total %}disabled{% endif %}>Next</button>
+  </div>
+</div>

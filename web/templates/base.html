@@ -9,37 +9,76 @@
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script src="/static/js/htmx-hooks.js" defer></script>
   <script src="/static/js/clipboard.js" defer></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const topbar = document.querySelector(".topbar");
+      const toggle = document.getElementById("mobile-nav-toggle");
+      if (!topbar || !toggle) return;
+      toggle.addEventListener("click", function () {
+        const isOpen = topbar.getAttribute("data-nav-open") === "true";
+        topbar.setAttribute("data-nav-open", (!isOpen).toString());
+        toggle.setAttribute("aria-expanded", (!isOpen).toString());
+      });
+    });
+  </script>
 </head>
 <body>
   <div class="page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark">⚔️</div>
-        <div>
-          <div class="brand-title">OSRS Web Lab</div>
-          <div class="brand-sub">Snapshots · Clans · Analytics</div>
-        </div>
+<header class="topbar" data-nav-open="false">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="brand-mark">⚔️</div>
+      <div>
+        <div class="brand-title">OSRS Web Lab</div>
+        <div class="brand-sub">Snapshots · Clans · Analytics</div>
       </div>
-      <nav class="nav-links" hx-boost="true">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/api/docs" class="nav-link">API Docs</a>
-        <a href="/api/health" class="nav-link ghost">API Health</a>
-        {% if user %}
-          <a href="/profiles" class="nav-link">My Profiles</a>
-          <a href="/auth/tokens" class="nav-link">API Tokens</a>
-        {% endif %}
-      </nav>
-      <div class="nav-actions">
-        <button class="btn ghost">Disable 3D</button>
-        {% if user %}
-          <form method="post" action="/auth/logout">
-            <button class="btn primary" type="submit">Log Out</button>
-          </form>
-        {% else %}
-          <a class="btn primary" href="/auth/login">Log In</a>
-        {% endif %}
-      </div>
-    </header>
+    </div>
+    <nav class="nav-links desktop-only" hx-boost="true">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/api/docs" class="nav-link">API Docs</a>
+      <a href="/api/health" class="nav-link ghost">API Health</a>
+      {% if user %}
+        <a href="/profiles" class="nav-link">My Profiles</a>
+        <a href="/auth/tokens" class="nav-link">API Tokens</a>
+      {% endif %}
+    </nav>
+    <div class="nav-actions desktop-only">
+      <button class="btn ghost">Disable 3D</button>
+      {% if user %}
+        <form method="post" action="/auth/logout">
+          <button class="btn primary" type="submit">Log Out</button>
+        </form>
+      {% else %}
+        <a class="btn primary" href="/auth/login">Log In</a>
+      {% endif %}
+    </div>
+    <button class="btn ghost icon mobile-only" id="mobile-nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav">
+      ☰ Menu
+    </button>
+  </div>
+
+  <div class="nav-drawer mobile-only" id="mobile-nav">
+    <nav class="nav-links vertical" hx-boost="true">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/api/docs" class="nav-link">API Docs</a>
+      <a href="/api/health" class="nav-link ghost">API Health</a>
+      {% if user %}
+        <a href="/profiles" class="nav-link">My Profiles</a>
+        <a href="/auth/tokens" class="nav-link">API Tokens</a>
+      {% endif %}
+    </nav>
+    <div class="nav-actions stacked">
+      <button class="btn ghost full">Disable 3D</button>
+      {% if user %}
+        <form method="post" action="/auth/logout" class="full">
+          <button class="btn primary full" type="submit">Log Out</button>
+        </form>
+      {% else %}
+        <a class="btn primary full" href="/auth/login">Log In</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
 
     <main class="main">
       {% block content %}{% endblock %}

@@ -7,7 +7,7 @@
       <h2>{{ clan.name }}</h2>
       <p class="lede">Manage roster and members for {{ clan.slug }}.</p>
     </div>
-    <div class="pill">Members: {{ members|length }}</div>
+  <div class="pill">Members: {{ members|length }}</div>
   </div>
 
   <form method="post" action="/clans/add-member" class="form inline">
@@ -30,86 +30,126 @@
 </section>
 
 <section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Stats</p>
+      <h3>Clan performance</h3>
+    </div>
+    <div class="form inline">
+      <label>Timeframe
+        <select id="clan-stats-timeframe" hx-get="/clans/{{ clan.slug }}/stats" hx-target="#clan-stats" hx-swap="innerHTML" name="timeframe">
+          <option value="7d" selected>Last 7d</option>
+          <option value="30d">Last 30d</option>
+          <option value="mtd">Month to date</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div id="clan-stats" hx-get="/clans/{{ clan.slug }}/stats" hx-trigger="load, change from:#clan-stats-timeframe" hx-include="#clan-stats-timeframe" hx-swap="innerHTML"></div>
+</section>
+
+<section class="card">
   <h3>Members</h3>
-  {% if members %}
-    <div class="list">
-      {% for m in members %}
-        <div class="list-row">
-          <div>
-            <div class="list-title">{{ m.name }}</div>
-            <div class="list-sub">Mode: {{ m.default_mode or 'main' }}</div>
-          </div>
-          <div class="list-actions">
-            <a class="btn ghost small" href="/profiles">View account</a>
-            <form method="post" action="/clans/remove-member">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <input type="hidden" name="clan_id" value="{{ clan.id }}">
-              <input type="hidden" name="account_id" value="{{ m.account_id }}">
-              <button class="btn ghost small" type="submit">Remove</button>
-            </form>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p class="ink-2">No members yet.</p>
-  {% endif %}
+  <div id="clan-members" hx-get="/clans/{{ clan.slug }}/members" hx-trigger="load" hx-swap="innerHTML"></div>
 </section>
 
-<section class="card">
-  <div class="card-header">
-    <div>
-      <p class="eyebrow">Scheduling</p>
-      <h3>Clan snapshot cadence</h3>
+<div class="advanced-toggle-row">
+  <button class="btn ghost small" id="clan-advanced-toggle" type="button" aria-expanded="false">Show advanced settings</button>
+</div>
+<div class="advanced-collapsible" id="clan-advanced" data-open="false">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <p class="eyebrow">Scheduling</p>
+        <h3>Clan snapshot cadence (max 2/day)</h3>
+        <p class="ink-2">Defaults to once daily; adjust only if needed.</p>
+      </div>
+      <form hx-post="/clans/{{ clan.id }}/snapshot" hx-target="#clan-snapshot-status" hx-swap="innerHTML" class="form inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn primary" type="submit">Run snapshot now</button>
+      </form>
     </div>
-  </div>
-  <form class="form inline" hx-post="/jobs/schedule/clan" hx-target="#job-schedules" hx-swap="innerHTML">
-    <input type="hidden" name="clan_id" value="{{ clan.id }}">
-    <label>Frequency
-      <select name="cron" required>
-        <option value="0 * * * *">Every hour</option>
-        <option value="0 */6 * * *" selected>Every 6 hours</option>
-        <option value="0 0 * * *">Daily (00:00 UTC)</option>
-        <option value="0 6 * * *">Daily (06:00 UTC)</option>
-        <option value="0 0 * * 0">Weekly (Sun 00:00 UTC)</option>
-        <option value="0 6 * * 1">Weekly (Mon 06:00 UTC)</option>
-        <option value="custom">Custom cron…</option>
-      </select>
-    </label>
-    <label>Custom (advanced)
-      <input type="text" name="custom_cron" placeholder="0 */6 * * *">
-    </label>
-    <button class="btn primary" type="submit">Add schedule</button>
-  </form>
-  <div id="job-schedules" hx-get="/jobs/schedule/list" hx-trigger="load, every 60s" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
-</section>
+    <form class="form inline" hx-post="/jobs/schedule/clan" hx-target="#job-schedules" hx-swap="innerHTML">
+      <input type="hidden" name="clan_id" value="{{ clan.id }}">
+      <label>Frequency
+        <select name="cron" required>
+          <option value="0 0 * * *" selected>Daily (00:00 UTC)</option>
+          <option value="0 12 * * *">Daily (12:00 UTC)</option>
+          <option value="0 0,12 * * *">Twice daily (00:00 & 12:00 UTC)</option>
+        </select>
+      </label>
+      <button class="btn primary" type="submit">Add schedule</button>
+    </form>
+    <div id="job-schedules" hx-get="/jobs/schedule/list" hx-trigger="load, every 60s" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+    <div id="clan-snapshot-status"></div>
+  </section>
 
-<section class="card">
-  <div class="card-header">
-    <div>
-      <p class="eyebrow">Webhooks</p>
-      <h3>Clan webhooks</h3>
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <p class="eyebrow">Last run</p>
+        <h3>Most recent clan snapshot</h3>
+      </div>
     </div>
-  </div>
-  <form class="form inline" hx-post="/webhooks/clan" hx-target="#webhooks-panel" hx-swap="innerHTML">
-    <input type="hidden" name="clan_id" value="{{ clan.id }}">
-    <label>URL
-      <input type="url" name="url" placeholder="https://discord.com/api/webhooks/..." required>
-    </label>
-    <label>Events
-      <select name="events">
-        <option value="snapshot_complete" selected>snapshot_complete</option>
-      </select>
-    </label>
-    <label>Provider
-      <select name="provider">
-        <option value="discord" selected>Discord</option>
-        <option value="slack">Slack</option>
-        <option value="custom">Custom</option>
-      </select>
-    </label>
-    <button class="btn primary" type="submit">Save webhook</button>
-  </form>
-  <div id="webhooks-panel" hx-get="/webhooks" hx-trigger="load, every 5m" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
-</section>
+    <div id="clan-last-run" hx-get="/clans/{{ clan.slug }}/last_run" hx-trigger="load, every 60s" hx-swap="innerHTML"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <p class="eyebrow">Webhooks</p>
+        <h3>Clan webhooks</h3>
+      </div>
+    </div>
+    <form class="form inline" hx-post="/webhooks/clan" hx-target="#webhooks-panel" hx-swap="innerHTML">
+      <input type="hidden" name="clan_id" value="{{ clan.id }}">
+      <label>URL
+        <input type="url" name="url" placeholder="https://discord.com/api/webhooks/..." required>
+      </label>
+      <label>Events
+        <select name="events">
+          <option value="snapshot_complete" selected>snapshot_complete</option>
+        </select>
+      </label>
+      <label>Provider
+        <select name="provider">
+          <option value="discord" selected>Discord</option>
+          <option value="slack">Slack</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <button class="btn primary" type="submit">Save webhook</button>
+    </form>
+    <div id="webhooks-panel" hx-get="/webhooks" hx-trigger="load, every 5m" hx-swap="innerHTML" hx-headers='{"HX-Request":"true"}'></div>
+  </section>
+</div>
+
+<script>
+document.addEventListener("click", function (evt) {
+  const btn = evt.target.closest("[data-tab-target]");
+  if (!btn) return;
+  const tabs = btn.closest("[data-tabs]");
+  if (!tabs) return;
+  const targetSel = btn.getAttribute("data-tab-target");
+  const panel = tabs.querySelector(targetSel);
+  if (!panel) return;
+  tabs.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+  tabs.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  btn.classList.add("active");
+  panel.classList.add("active");
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  const toggle = document.getElementById("clan-advanced-toggle");
+  const panel = document.getElementById("clan-advanced");
+  if (!toggle || !panel) return;
+  toggle.addEventListener("click", function () {
+    const isOpen = panel.getAttribute("data-open") === "true";
+    const next = (!isOpen).toString();
+    panel.setAttribute("data-open", next);
+    toggle.setAttribute("aria-expanded", next);
+    toggle.textContent = isOpen ? "Show advanced settings" : "Hide advanced settings";
+  });
+});
+</script>
 {% endblock %}

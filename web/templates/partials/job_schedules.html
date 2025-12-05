@@ -29,7 +29,7 @@
         <div class="list-row">
           <div>
             <div class="list-title">Clan: {{ sched.clan_name }}</div>
-            <div class="list-sub">Cron: {{ sched.cadence_cron }} · Next: {{ sched.next_run or '—' }}</div>
+            <div class="list-sub">Schedule: {{ sched.cadence_cron }} · Next: {{ sched.next_run or '—' }}</div>
           </div>
           <form hx-post="/jobs/schedule/delete" hx-target="#job-schedules" hx-swap="innerHTML">
             <input type="hidden" name="schedule_id" value="{{ sched.id }}">

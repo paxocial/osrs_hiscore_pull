@@ -85,10 +85,16 @@ async def schedule_clan(request: Request, clan_id: int = Form(...), cron: str = 
         c = conn.execute("SELECT * FROM clans WHERE id = ?", (clan_id,)).fetchone()
     if not c or c["owner_user_id"] != user["id"]:
         return HTMLResponse("<div class='alert error'>Not authorized for this clan</div>", status_code=403)
-    cron_expr = custom_cron.strip() if cron == "custom" and custom_cron.strip() else cron
-    if not cron_expr:
-        return HTMLResponse("<div class='alert error'>Select a schedule</div>", status_code=400)
-    schedules.add_clan_schedule(user["id"], clan_id, cron_expr)
+    # Enforce allowed presets only (no custom cron) and cap to 2/day
+    allowed = {
+        "0 0 * * *": "daily",
+        "0 12 * * *": "daily_mid",
+        "0 0,12 * * *": "twice_daily",
+    }
+    cron_expr = cron.strip()
+    if cron_expr not in allowed:
+        return HTMLResponse("<div class='alert error'>Use allowed schedules only (daily or twice daily)</div>", status_code=400)
+    schedules.add_clan_schedule(user["id"], clan_id, cron_expr, max_daily_runs=2)
     user_schedules = schedules.list_user_schedules(user["id"])
     clan_schedules = schedules.list_clan_schedules(user["id"])
     return templates.TemplateResponse(

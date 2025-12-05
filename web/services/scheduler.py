@@ -102,26 +102,14 @@ class Scheduler:
                         metadata = json.loads(sched["metadata"])
                 except Exception:
                     metadata = {}
-                # One job per clan member
-                members = conn.execute(
-                    """
-                    SELECT a.name, a.default_mode
-                    FROM clan_members cm
-                    JOIN accounts a ON cm.account_id = a.id
-                    WHERE cm.clan_id = ?
-                    """,
-                    (sched["target_id"],),
-                ).fetchall()
-                for m in members:
-                    m_dict = dict(m)
-                    payload = {
-                        "player": m_dict["name"],
-                        "mode": metadata.get("mode") or m_dict.get("default_mode") or "auto",
-                        "user_id": sched.get("user_id"),
-                        "target_type": "clan",
-                        "clan_id": sched["target_id"],
-                    }
-                    self.jobs.create_job("snapshot", payload)
+                payload = {
+                    "clan_id": sched["target_id"],
+                    "user_id": sched.get("user_id"),
+                    "target_type": "clan",
+                    "config_path": metadata.get("config_path"),
+                    "mode_cache_path": metadata.get("mode_cache_path"),
+                }
+                self.jobs.create_job("clan_snapshot", payload)
 
                 itr = croniter(sched["cadence_cron"], now)
                 next_run = itr.get_next(datetime)

@@ -1,0 +1,89 @@
+{% set lb = lb or {} %}
+{% set rows = lb.rows or [] %}
+{% set total = lb.total or 0 %}
+{% set page = lb.page or 1 %}
+{% set page_size = lb.page_size or lb.limit or 10 %}
+{% set metric = lb.metric or 'xp' %}
+{% set timeframe = lb.timeframe or '7d' %}
+{% set total_pages = (total // page_size) + (1 if total % page_size else 0) %}
+
+<div class="lb-controls">
+  <div class="form inline">
+    <label>Metric
+      <select id="lb-metric"
+              name="metric"
+              hx-get="/clans/{{ clan.slug }}/leaderboard?page=1&page_size={{ page_size }}"
+              hx-target="#clan-leaderboard-panel"
+              hx-swap="innerHTML"
+              hx-include="#clan-stats-timeframe,#lb-page-size">
+        <option value="xp" {% if metric == 'xp' %}selected{% endif %}>XP gained</option>
+        <option value="levels" {% if metric == 'levels' %}selected{% endif %}>Levels gained</option>
+      </select>
+    </label>
+    <label>Page size
+      <select id="lb-page-size"
+              name="page_size"
+              hx-get="/clans/{{ clan.slug }}/leaderboard?page=1&metric={{ metric }}"
+              hx-target="#clan-leaderboard-panel"
+              hx-swap="innerHTML"
+              hx-include="#clan-stats-timeframe,#lb-metric">
+        {% for size in [5, 10, 20, 50] %}
+          <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="ink-2">Timeframe: {{ timeframe|upper }}</div>
+</div>
+
+<div class="lb-grid">
+  {% for row in rows %}
+    {% set rank = (page - 1) * page_size + loop.index %}
+    <div class="lb-card">
+      <div class="lb-main">
+        <div class="lb-rank">#{{ rank }}</div>
+        <div class="lb-meta">
+          <div class="lb-name"><a href="/profiles/{{ row.name }}" class="nav-link">{{ row.name }}</a></div>
+          <div class="lb-sub">
+            {% if metric == 'levels' %}
+              +{{ row.level_gain }} levels · +{{ "{:,}".format(row.xp_gain) }} XP
+            {% else %}
+              +{{ "{:,}".format(row.xp_gain) }} XP · +{{ row.level_gain }} levels
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="lb-stats">
+        <span class="chip small positive">+{{ "{:,}".format(row.xp_gain) }} XP</span>
+        <span class="chip small muted">+{{ row.level_gain }} lvls</span>
+      </div>
+    </div>
+  {% endfor %}
+  {% if not rows %}
+    <p class="ink-2">No data yet.</p>
+  {% endif %}
+</div>
+
+<div class="pagination" style="margin-top:8px;">
+  <span class="ink-2">Page {{ page }} of {{ total_pages if total_pages else 1 }} · Showing {{ rows|length }} of {{ total }}</span>
+  <div class="pagination-actions">
+    {% set prev_page = page - 1 %}
+    {% set next_page = page + 1 %}
+    <button class="btn ghost small"
+            hx-get="/clans/{{ clan.slug }}/leaderboard?page={{ prev_page }}&page_size={{ page_size }}&metric={{ metric }}"
+            hx-target="#clan-leaderboard-panel"
+            hx-swap="innerHTML"
+            hx-include="#clan-stats-timeframe"
+            {% if page <= 1 %}disabled{% endif %}>
+      Prev
+    </button>
+    <button class="btn ghost small"
+            hx-get="/clans/{{ clan.slug }}/leaderboard?page={{ next_page }}&page_size={{ page_size }}&metric={{ metric }}"
+            hx-target="#clan-leaderboard-panel"
+            hx-swap="innerHTML"
+            hx-include="#clan-stats-timeframe"
+            {% if total_pages and page >= total_pages %}disabled{% endif %}>
+      Next
+    </button>
+  </div>
+</div>

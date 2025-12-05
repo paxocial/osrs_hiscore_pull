@@ -45,10 +45,17 @@ class ClanService:
     def add_member(self, clan_id: int, account_name: str, requested_mode: str = "auto") -> None:
         account_name = account_name.strip()
         with self.db.get_connection() as conn:
-            # Ensure account exists
+            # Ensure account exists; if exists and mode is auto, re-detect and update.
             acct = conn.execute("SELECT id, default_mode FROM accounts WHERE name = ?", (account_name,)).fetchone()
-            if not acct:
-                # auto mode detection if needed
+            if acct:
+                account_id = acct["id"]
+                final_mode = acct["default_mode"] or "main"
+                if requested_mode in ("auto", "auto-detect"):
+                    detection = detect_mode(account_name, requested_mode="auto")
+                    if detection.get("status") == "found":
+                        final_mode = detection["mode"]
+                        conn.execute("UPDATE accounts SET default_mode = ? WHERE id = ?", (final_mode, account_id))
+            else:
                 final_mode = requested_mode
                 if requested_mode in ("auto", "auto-detect"):
                     detection = detect_mode(account_name, requested_mode="auto")
@@ -64,8 +71,6 @@ class ClanService:
                     (account_name, final_mode),
                 )
                 account_id = cursor.lastrowid
-            else:
-                account_id = acct["id"]
 
             # Add member if not present
             existing = conn.execute(
@@ -98,10 +103,35 @@ class ClanService:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    def list_members_paginated(self, clan_id: int, *, offset: int = 0, limit: int = 20) -> dict:
+        with self.db.get_connection() as conn:
+            total_row = conn.execute(
+                "SELECT COUNT(*) as c FROM clan_members WHERE clan_id = ?",
+                (clan_id,),
+            ).fetchone()
+            total = total_row["c"] if total_row else 0
+            rows = conn.execute(
+                """
+                SELECT cm.*, a.name, a.default_mode
+                FROM clan_members cm
+                JOIN accounts a ON cm.account_id = a.id
+                WHERE cm.clan_id = ?
+                ORDER BY a.name ASC
+                LIMIT ? OFFSET ?
+                """,
+                (clan_id, limit, offset),
+            ).fetchall()
+            return {"total": total, "rows": [dict(r) for r in rows], "offset": offset, "limit": limit}
+
     def get_clan_by_slug(self, slug: str) -> Optional[dict]:
         with self.db.get_connection() as conn:
             row = conn.execute(
                 "SELECT * FROM clans WHERE slug = ?",
                 (slug,),
             ).fetchone()
+            return dict(row) if row else None
+
+    def get_clan_by_id(self, clan_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT * FROM clans WHERE id = ?", (clan_id,)).fetchone()
             return dict(row) if row else None

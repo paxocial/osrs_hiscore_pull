@@ -20,6 +20,8 @@ GAME_MODES: dict[str, Gamemode] = {
     "ironman": Gamemode("ironman", "hiscore_oldschool_ironman", "Ironman"),
     "hardcore": Gamemode("hardcore", "hiscore_oldschool_hardcore_ironman", "Hardcore Ironman"),
     "ultimate": Gamemode("ultimate", "hiscore_oldschool_ultimate", "Ultimate Ironman"),
+    "group_ironman": Gamemode("group_ironman", "hiscore_oldschool_group_ironman", "Group Ironman"),
+    "hardcore_group_ironman": Gamemode("hardcore_group_ironman", "hiscore_oldschool_hardcore_group_ironman", "Hardcore Group Ironman"),
     "deadman": Gamemode("deadman", "hiscore_oldschool_deadman", "Deadman Mode"),
     "tournament": Gamemode("tournament", "hiscore_oldschool_tournament", "Tournament"),
     "seasonal": Gamemode("seasonal", "hiscore_oldschool_seasonal", "Leagues"),

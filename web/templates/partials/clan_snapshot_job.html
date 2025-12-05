@@ -1,0 +1,43 @@
+{% if job is not defined or job is none %}
+  <div id="clan-job-{{ job_id }}" hx-get="/clans/jobs/status?job_id={{ job_id }}" hx-trigger="load, every 1.5s" hx-swap="outerHTML">
+    <div class="alert info">
+      <div class="inline">
+        <span class="spinner"></span>
+        <div>
+          <div>Starting clan snapshot…</div>
+          <div class="ink-2">Kicking off member snapshots.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% elif job.status in ['pending', 'running'] %}
+  <div id="clan-job-{{ job_id }}" hx-get="/clans/jobs/status?job_id={{ job_id }}" hx-trigger="load, every 1.5s" hx-swap="outerHTML">
+    <div class="alert info">
+      <div class="inline">
+        <span class="spinner"></span>
+        <div>
+          <div>Clan snapshot running…</div>
+          <div class="ink-2">This may take a bit for large clans.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% elif job.status == 'error' %}
+  <div class="alert error">
+    Clan snapshot failed: {{ job.error or 'Unknown error' }}
+  </div>
+{% elif job.status == 'success' %}
+  {% set result = job.result %}
+  {% set results = result.body.get('results', []) if result and result.body else [] %}
+  <div class="alert success">
+    Clan snapshot complete ({{ results|length }} members processed).
+  </div>
+  <div class="list">
+    <div class="list-row">
+      <div>
+        <div class="list-title">Summary</div>
+        <div class="list-sub">Processed {{ results|length }} member snapshots.</div>
+      </div>
+    </div>
+  </div>
+{% endif %}

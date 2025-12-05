@@ -1,0 +1,270 @@
+{% set skill_icons = {
+  "attack": "Attack_icon.png",
+  "strength": "Strength_icon.png",
+  "defence": "Defence_icon.png",
+  "defense": "Defence_icon.png",
+  "ranged": "Ranged_icon.png",
+  "prayer": "Prayer_icon.png",
+  "magic": "Magic_icon.png",
+  "runecraft": "Runecraft_icon.png",
+  "runecrafting": "Runecraft_icon.png",
+  "construction": "Construction_icon.png",
+  "hitpoints": "Hitpoints_icon.png",
+  "hitpoint": "Hitpoints_icon.png",
+  "agility": "Agility_icon.png",
+  "herblore": "Herblore_icon.png",
+  "thieving": "Thieving_icon.png",
+  "crafting": "Crafting_icon.png",
+  "fletching": "Fletching_icon.png",
+  "slayer": "Slayer_icon.png",
+  "hunter": "Hunter_icon.png",
+  "mining": "Mining_icon.png",
+  "smithing": "Smithing_icon.png",
+  "fishing": "Fishing_icon.png",
+  "cooking": "Cooking_icon.png",
+  "firemaking": "Firemaking_icon.png",
+  "woodcutting": "Woodcutting_icon.png",
+  "farming": "Farming_icon.png",
+  "sailing": "Sailing_icon.png",
+  "combat": "Combat.png",
+} %}
+
+{% set boss_icons = {
+  "tempoross": "game_icon_tempoross.png",
+  "wintertodt": "game_icon_wintertodt.png",
+  "vorkath": "game_icon_vorkath.png",
+  "zulrah": "game_icon_zulrah.png",
+  "thegauntlet": "game_icon_thegauntlet.png",
+  "thewhisperer": "game_icon_thewhisperer.png",
+  "theleviathan": "game_icon_theleviathan.png",
+  "vardorvis": "game_icon_vardorvis.png",
+  "barrowschests": "game_icon_barrows.png",
+  "chambersofxeric": "game_icon_chambersofxeric.png",
+  "chambersofxericchallengemode": "game_icon_chambersofxeric.png",
+  "theatreofblood": "game_icon_theatreofblood.png",
+  "theatreofbloodhardmode": "game_icon_theatreofblood.png",
+  "tombsofamasuct": "game_icon_tombsofamascut.png",
+  "tombsofamascutexpertmode": "game_icon_tombsofamascut.png",
+  "artio": "game_icon_artio.png",
+  "callisto": "game_icon_callisto.png",
+  "calvarion": "game_icon_calvarion.png",
+  "spindel": "game_icon_spindel.png",
+  "venenatis": "game_icon_venenatis.png",
+  "vetion": "game_icon_vetion.png",
+  "crazyarchaeologist": "game_icon_crazyarchaeologist.png",
+  "scorpia": "game_icon_scorpia.png",
+  "kingblackdragon": "game_icon_kingblackdragon.png",
+  "kraken": "game_icon_kraken.png",
+  "sarachnis": "game_icon_sarachnis.png",
+  "skotizo": "game_icon_skotizo.png",
+  "cerberus": "game_icon_cerberus.png",
+  "kalphitequeen": "game_icon_kalphitequeen.png",
+  "abyssalsire": "game_icon_abyssalsire.png",
+  "alchemicalhydra": "game_icon_alchemicalhydra.png",
+  "generalgraardor": "game_icon_general_graardor.png",
+  "kriltsutsaroth": "game_icon_kril.png",
+  "kreearra": "game_icon_kreearra.png",
+  "commanderzilyana": "game_icon_zilyana.png",
+  "nex": "game_icon_nex.png",
+  "zalcano": "game_icon_zalcano.png",
+  "hespori": "game_icon_hespori.png",
+  "obor": "game_icon_obor.png",
+  "bryophyta": "game_icon_bryophyta.png",
+  "grotesqueguardians": "game_icon_grotesqueguardians.png",
+} %}
+
+{% set latest = latest or None %}
+<div class="card control-card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Member overview</p>
+      <h3>{{ member_name }}</h3>
+      <p class="ink-2">Latest snapshot stats</p>
+    </div>
+    <div class="list-actions">
+      <button class="btn ghost small"
+              hx-get="/clans/{{ clan.slug }}/stats"
+              hx-target="#clan-stats"
+              hx-swap="innerHTML"
+              hx-include="#clan-stats-timeframe">Back to clan overview</button>
+      <a class="btn primary small" href="/profiles/{{ member_name|urlencode }}">Open profile</a>
+    </div>
+  </div>
+  {% if latest %}
+    <div class="stats-grid">
+      <div class="stat-block">
+        <div class="stat-label">Mode</div>
+        <div class="stat-value">{{ latest.resolved_mode or '—' }}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total Level</div>
+        <div class="stat-value">{{ "{:,}".format(latest.total_level) if latest.total_level is not none else '—' }}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total XP</div>
+        <div class="stat-value">{{ "{:,}".format(latest.total_xp) if latest.total_xp is not none else '—' }}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Last snapshot</div>
+        <div class="stat-value">{{ latest.fetched_at_display or latest.fetched_at or '—' }}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Delta</div>
+        <div class="stat-value">{{ latest.delta_summary or 'No delta recorded' }}</div>
+      </div>
+    </div>
+
+    {% set delta = latest.delta if latest.delta else None %}
+    {% set skill_deltas = [] %}
+    {% if delta and delta.skill_deltas %}
+      {% set skill_deltas = delta.skill_deltas %}
+    {% endif %}
+
+    {% set activity_deltas = [] %}
+    {% if delta and delta.activity_deltas %}
+      {% set activity_deltas = delta.activity_deltas %}
+    {% endif %}
+
+    {% set sorted_skills = skill_deltas|selectattr('xp_delta', '>', 0)|list|sort(attribute='xp_delta', reverse=True) %}
+    {% set latest_skills = latest.skills or [] %}
+    {% if sorted_skills|length == 0 and latest_skills %}
+      {% set sorted_skills = latest_skills|sort(attribute='xp', reverse=True) %}
+    {% endif %}
+    {% set latest_acts = latest.activities or [] %}
+    {% set activity_list = activity_deltas|selectattr('score_delta', '>', 0)|list %}
+    {% if activity_list|length == 0 %}
+      {% set activity_list = latest_acts %}
+    {% endif %}
+    <div class="card-grid">
+      <div class="card control-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Skill gains</p>
+            <h4>Top skills</h4>
+          </div>
+        </div>
+        <div class="list scrollable">
+          {% for sd in sorted_skills[:8] %}
+            {% set sname = sd.name if sd.name is defined else sd['name'] if sd['name'] is defined else sd %}
+            {% set key = sname|lower|replace(' ', '')|replace('_','')|replace('-','') %}
+            {% set icon = skill_icons.get(key, 'Combat.png') %}
+            {% set xp_val = sd.xp_delta if sd.xp_delta is defined else sd['xp_delta'] if sd['xp_delta'] is defined else sd.xp if sd.xp is defined else sd['xp'] if sd['xp'] is defined else 0 %}
+            <div class="list-row skill-row">
+              <div class="list-title" style="display:flex; align-items:center; gap:8px;">
+                <span class="chip-icon" style="background-image:url('/static/images/runescape/skills/{{ icon }}');"></span>
+                <span>{{ sname }}</span>
+              </div>
+              <div class="list-sub" style="text-align:right;">
+                <span class="chip positive small">+{{ "{:,}".format(xp_val|int) }} XP</span>
+              </div>
+            </div>
+          {% endfor %}
+          {% if sorted_skills|length == 0 %}
+            <p class="ink-2">No skill data yet.</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card control-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Bosses</p>
+            <h4>Recent KC gains</h4>
+          </div>
+        </div>
+        <div class="list scrollable">
+          {% set has_boss = false %}
+          {% for ad in activity_list %}
+            {% set aname = ad.name if ad.name is defined else ad['name'] if ad['name'] is defined else '' %}
+            {% set delta = ad.score_delta if ad.score_delta is defined else ad['score_delta'] if ad['score_delta'] is defined else ad.score if ad.score is defined else ad['score'] if ad['score'] is defined else 0 %}
+            {% set lower = aname|lower %}
+            {% if delta > 0 and 'clue' not in lower %}
+              {% set key = aname|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':','') %}
+              {% set icon = boss_icons.get(key, 'game_icon_boss.png') %}
+              {% set has_boss = true %}
+              <div class="list-row">
+                <div class="list-title" style="display:flex; align-items:center; gap:8px;">
+                  <span class="chip-icon" style="background-image:url('/static/images/runescape/game/{{ icon }}');"></span>
+                  <span>{{ aname }}</span>
+                </div>
+                <div class="list-sub"><span class="chip small positive">+{{ delta }}</span></div>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if not has_boss %}
+            <p class="ink-2">No boss gains recorded.</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card control-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Clues</p>
+            <h4>Recent clue gains</h4>
+          </div>
+        </div>
+        <div class="list scrollable">
+          {% set has_clue = false %}
+          {% for ad in activity_list %}
+            {% set aname = ad.name if ad.name is defined else ad['name'] if ad['name'] is defined else '' %}
+            {% set delta = ad.score_delta if ad.score_delta is defined else ad['score_delta'] if ad['score_delta'] is defined else ad.score if ad.score is defined else ad['score'] if ad['score'] is defined else 0 %}
+            {% if delta > 0 and 'clue' in aname|lower %}
+              {% set has_clue = true %}
+              <div class="list-row">
+                <div class="list-title">{{ aname }}</div>
+                <div class="list-sub"><span class="chip small positive">+{{ delta }}</span></div>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if not has_clue %}
+            <p class="ink-2">No clue gains recorded.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert warn">No snapshots found for this member yet.</div>
+  {% endif %}
+</div>
+{% set boss_icons = {
+  "tempoross": "game_icon_tempoross.png",
+  "wintertodt": "game_icon_wintertodt.png",
+  "vorkath": "game_icon_vorkath.png",
+  "zulrah": "game_icon_zulrah.png",
+  "thegauntlet": "game_icon_thegauntlet.png",
+  "thewhisperer": "game_icon_thewhisperer.png",
+  "theleviathan": "game_icon_theleviathan.png",
+  "vardorvis": "game_icon_vardorvis.png",
+  "barrowschests": "game_icon_barrowschests.png",
+  "chambersofxeric": "game_icon_chambersofxeric.png",
+  "chambersofxericchallengemode": "game_icon_chambersofxeric.png",
+  "theatreofblood": "game_icon_theatreofblood.png",
+  "theatreofbloodhardmode": "game_icon_theatreofblood.png",
+  "tombsofamasuct": "game_icon_tombsofamascut.png",
+  "tombsofamascutexpertmode": "game_icon_tombsofamascut.png",
+  "artio": "game_icon_artio.png",
+  "callisto": "game_icon_callisto.png",
+  "calvarion": "game_icon_calvarion.png",
+  "spindel": "game_icon_spindel.png",
+  "venenatis": "game_icon_venenatis.png",
+  "vetion": "game_icon_vetion.png",
+  "crazyarchaeologist": "game_icon_crazyarchaeologist.png",
+  "scorpia": "game_icon_scorpia.png",
+  "kingblackdragon": "game_icon_kingblackdragon.png",
+  "kraken": "game_icon_kraken.png",
+  "sarachnis": "game_icon_sarachnis.png",
+  "skotizo": "game_icon_skotizo.png",
+  "cerberus": "game_icon_cerberus.png",
+  "kalphitequeen": "game_icon_kalphitequeen.png",
+  "abyssalsire": "game_icon_abyssalsire.png",
+  "alchemicalhydra": "game_icon_alchemicalhydra.png",
+  "generalgraardor": "game_icon_generalgraardor.png",
+  "kriltsutsaroth": "game_icon_kriltsutsaroth.png",
+  "kreearra": "game_icon_kreearra.png",
+  "commanderzilyana": "game_icon_commanderzilyana.png",
+  "nex": "game_icon_nex.png",
+  "zalcano": "game_icon_zalcano.png",
+  "hespori": "game_icon_hespori.png",
+  "obor": "game_icon_obor.png",
+  "bryophyta": "game_icon_bryophyta.png",
+  "grotesqueguardians": "game_icon_grotesqueguardians.png",
+} %}

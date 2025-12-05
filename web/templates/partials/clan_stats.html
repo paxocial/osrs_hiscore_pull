@@ -1,0 +1,243 @@
+{% set skill_icons = {
+  "attack": "Attack_icon.png",
+  "strength": "Strength_icon.png",
+  "defence": "Defence_icon.png",
+  "defense": "Defence_icon.png",
+  "ranged": "Ranged_icon.png",
+  "prayer": "Prayer_icon.png",
+  "magic": "Magic_icon.png",
+  "runecraft": "Runecraft_icon.png",
+  "runecrafting": "Runecraft_icon.png",
+  "construction": "Construction_icon.png",
+  "hitpoints": "Hitpoints_icon.png",
+  "hitpoint": "Hitpoints_icon.png",
+  "agility": "Agility_icon.png",
+  "herblore": "Herblore_icon.png",
+  "thieving": "Thieving_icon.png",
+  "crafting": "Crafting_icon.png",
+  "fletching": "Fletching_icon.png",
+  "slayer": "Slayer_icon.png",
+  "hunter": "Hunter_icon.png",
+  "mining": "Mining_icon.png",
+  "smithing": "Smithing_icon.png",
+  "fishing": "Fishing_icon.png",
+  "cooking": "Cooking_icon.png",
+  "firemaking": "Firemaking_icon.png",
+  "woodcutting": "Woodcutting_icon.png",
+  "farming": "Farming_icon.png",
+  "sailing": "Sailing_icon.png",
+  "combat": "Combat.png",
+} %}
+
+{% set boss_icons = {
+  "tempoross": "game_icon_tempoross.png",
+  "wintertodt": "game_icon_wintertodt.png",
+  "vorkath": "game_icon_vorkath.png",
+  "zulrah": "game_icon_zulrah.png",
+  "thegauntlet": "game_icon_thegauntlet.png",
+  "thewhisperer": "game_icon_thewhisperer.png",
+  "theleviathan": "game_icon_theleviathan.png",
+  "vardorvis": "game_icon_vardorvis.png",
+  "barrowschests": "game_icon_barrowschests.png",
+  "chambersofxeric": "game_icon_chambersofxeric.png",
+  "chambersofxericchallengemode": "game_icon_chambersofxeric.png",
+  "theatreofblood": "game_icon_theatreofblood.png",
+  "theatreofbloodhardmode": "game_icon_theatreofblood.png",
+  "tombsofamasuct": "game_icon_tombsofamascut.png",
+  "tombsofamascutexpertmode": "game_icon_tombsofamascut.png",
+  "artio": "game_icon_artio.png",
+  "callisto": "game_icon_callisto.png",
+  "calvarion": "game_icon_calvarion.png",
+  "spindel": "game_icon_spindel.png",
+  "venenatis": "game_icon_venenatis.png",
+  "vetion": "game_icon_vetion.png",
+  "crazyarchaeologist": "game_icon_crazyarchaeologist.png",
+  "scorpia": "game_icon_scorpia.png",
+  "kingblackdragon": "game_icon_kingblackdragon.png",
+  "kraken": "game_icon_kraken.png",
+  "sarachnis": "game_icon_sarachnis.png",
+  "skotizo": "game_icon_skotizo.png",
+  "cerberus": "game_icon_cerberus.png",
+  "kalphitequeen": "game_icon_kalphitequeen.png",
+  "abyssalsire": "game_icon_abyssalsire.png",
+  "alchemicalhydra": "game_icon_alchemicalhydra.png",
+  "generalgraardor": "game_icon_generalgraardor.png",
+  "kriltsutsaroth": "game_icon_kriltsutsaroth.png",
+  "kreearra": "game_icon_kreearra.png",
+  "commanderzilyana": "game_icon_commanderzilyana.png",
+  "nex": "game_icon_nex.png",
+  "zalcano": "game_icon_zalcano.png",
+  "hespori": "game_icon_hespori.png",
+  "obor": "game_icon_obor.png",
+  "bryophyta": "game_icon_bryophyta.png",
+  "grotesqueguardians": "game_icon_grotesqueguardians.png",
+} %}
+
+{% set totals = data.totals %}
+{% set activities = data.activities or {} %}
+{% set timeframe_label = data.timeframe|upper %}
+<div class="tabs" data-tabs>
+  <div class="tab-list">
+    <button class="tab-btn active" data-tab-target="#clan-overview">Overview</button>
+    <button class="tab-btn" data-tab-target="#clan-leaderboard">Leaderboard</button>
+    <button class="tab-btn" data-tab-target="#clan-activities">Activities</button>
+  </div>
+  <div class="tab-panels">
+    <div class="tab-panel active" id="clan-overview">
+      <div class="stats-grid">
+        <div class="stat-block">
+          <div class="stat-label">Total XP</div>
+          <div class="stat-value">
+            {{ "{:,}".format(totals.xp) if totals.xp is not none else '—' }}
+            <span class="chip small positive">+{{ "{:,}".format(totals.xp_gain) }} ({{ timeframe_label }})</span>
+          </div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Total Level</div>
+          <div class="stat-value">
+            {{ "{:,}".format(totals.level) if totals.level is not none else '—' }}
+            <span class="chip small muted">+{{ "{:,}".format(totals.level_gain) }} ({{ timeframe_label }})</span>
+          </div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Members</div>
+          <div class="stat-value">{{ totals.members }}</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Boss KC gained ({{ timeframe_label }})</div>
+          <div class="stat-value"><span class="chip small positive">+{{ activities.bosses or 0 }}</span></div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Clues completed ({{ timeframe_label }})</div>
+          <div class="stat-value"><span class="chip small positive">+{{ activities.clues or 0 }}</span></div>
+        </div>
+      </div>
+      <div class="card-grid">
+        <div class="card control-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Skill gains</p>
+              <h4>Top skills ({{ timeframe_label }})</h4>
+            </div>
+          </div>
+          <div class="list scrollable">
+            {% for sk, xp in data.top_skills[:8] %}
+              {% set key = sk|lower|replace(' ', '')|replace('_','')|replace('-','') %}
+              {% set icon = skill_icons.get(key, 'Combat.png') %}
+              <div class="list-row skill-row">
+                <div class="list-title" style="display:flex; align-items:center; gap:8px;">
+                  <span class="chip-icon" style="background-image:url('/static/images/runescape/skills/{{ icon }}');"></span>
+                  <span>{{ sk }}</span>
+                </div>
+                <div class="list-sub" style="text-align:right;">
+                  <span class="chip positive small">+{{ "{:,}".format(xp|int) }} XP</span>
+                </div>
+              </div>
+            {% endfor %}
+            {% if not data.top_skills %}
+              <p class="ink-2">No skill gains yet.</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card control-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Bosses & clues</p>
+              <h4>Top activities ({{ timeframe_label }})</h4>
+            </div>
+          </div>
+          <div class="list scrollable">
+            {% for act, val in data.top_activities[:10] %}
+              {% if val <= 0 %}
+                {% set _ = None %}
+              {% else %}
+              {% set key = act|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':', '') %}
+              {% set icon = boss_icons.get(key, 'game_icon_boss.png') %}
+              <div class="list-row">
+                <div class="list-title" style="display:flex; align-items:center; gap:8px;">
+                  <span class="chip-icon" style="background-image:url('/static/images/runescape/game/{{ icon }}');"></span>
+                  <span>{{ act }}</span>
+                </div>
+                <div class="list-sub" style="text-align:right;">
+                  <span class="chip small positive">+{{ val }}</span>
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+            {% if not data.top_activities %}
+              <p class="ink-2">No activity gains yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-panel" id="clan-leaderboard">
+      <div id="clan-leaderboard-panel"
+           hx-get="/clans/{{ clan.slug }}/leaderboard"
+           hx-trigger="load, change from:#clan-stats-timeframe"
+           hx-include="#clan-stats-timeframe"
+           hx-swap="innerHTML">
+      </div>
+    </div>
+    <div class="tab-panel" id="clan-activities">
+      <div class="card-grid">
+        <div class="card control-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Bosses</p>
+              <h4>Top boss gains</h4>
+            </div>
+          </div>
+          <div class="list scrollable">
+            {% set has_boss = false %}
+            {% for act, val in data.top_activities %}
+              {% if val > 0 %}
+                {% set lower = act|lower %}
+                {% if 'clue' not in lower %}
+                  {% set key = act|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':', '') %}
+                  {% set icon = boss_icons.get(key, 'game_icon_boss.png') %}
+                  {% set has_boss = true %}
+                  <div class="list-row">
+                    <div class="list-title" style="display:flex; align-items:center; gap:8px;">
+                      <span class="chip-icon" style="background-image:url('/static/images/runescape/game/{{ icon }}');"></span>
+                      <span>{{ act }}</span>
+                    </div>
+                    <div class="list-sub"><span class="chip small positive">+{{ val }}</span></div>
+                  </div>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {% if not has_boss %}
+              <p class="ink-2">No boss gains yet.</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card control-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Clues</p>
+              <h4>Top clue tiers</h4>
+            </div>
+          </div>
+          <div class="list scrollable">
+            {% set ns = namespace(clues=[]) %}
+            {% for act, val in data.top_activities %}
+              {% if val > 0 and 'clue' in act|lower %}
+                {% set _ = ns.clues.append((act, val)) %}
+              {% endif %}
+            {% endfor %}
+            {% for act, val in ns.clues %}
+              <div class="list-row">
+                <div class="list-title">{{ act }}</div>
+                <div class="list-sub"><span class="chip small positive">+{{ val }}</span></div>
+              </div>
+            {% endfor %}
+            {% if ns.clues|length == 0 %}
+              <p class="ink-2">No clues yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

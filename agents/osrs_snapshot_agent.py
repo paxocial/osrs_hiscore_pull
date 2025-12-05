@@ -13,6 +13,7 @@ from core.clipboard import copy_json_snippet
 from core.constants import DEFAULT_MODE, GAME_MODES
 from core.hiscore_client import HiscoreClient, HiscoreResponse, PlayerNotFoundError
 from core.mode_cache import ModeCache
+from web.services.detect_mode import detect_mode
 from core.processing import compute_snapshot_delta, normalize_snapshot_data, summarize_delta
 from support.scribe_reporter import report_snapshot
 
@@ -102,12 +103,21 @@ class SnapshotAgent:
                 else:
                     requested_mode = DEFAULT_MODE
 
+                # Build candidate list; for auto-detect use the detector to seed best guess.
+                candidate_modes = self._candidate_modes(player, requested_mode)
+                if requested_mode in ("auto", "auto-detect"):
+                    detection = detect_mode(player, requested_mode="auto", cache_path=self.mode_cache.path)
+                    if detection.get("status") == "found":
+                        best = detection.get("mode")
+                        if best:
+                            candidate_modes = [best] + [m for m in candidate_modes if m != best]
+
                 response: Optional[HiscoreResponse] = None
                 resolved_mode: Optional[str] = None
                 latency_ms: Optional[float] = None
                 last_error = "Player not found"
 
-                for candidate in self._candidate_modes(player, requested_mode):
+                for candidate in candidate_modes:
                     start = datetime.now(timezone.utc)
                     try:
                         candidate_response = client.fetch(player, candidate)

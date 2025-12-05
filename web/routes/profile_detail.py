@@ -4,23 +4,56 @@ from __future__ import annotations
 
 import json
 from fastapi import APIRouter, Request, Query, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import httpx
+from datetime import datetime
 
 from web.deps import require_user
 from web.services.profile_data import ProfileDataService
+from web.services.detect_mode import detect_mode
+from web.services.accounts import AccountService
+from database.connection import DatabaseConnection
 
 templates = Jinja2Templates(directory="web/templates")
 router = APIRouter()
 profile_data = ProfileDataService()
+db = DatabaseConnection()
+account_service = AccountService(db)
+
+
+def _can_manage_mode(user_id: int, rsn: str) -> tuple[bool, int | None]:
+    with db.get_connection() as conn:
+        acct = conn.execute("SELECT id FROM accounts WHERE name = ?", (rsn,)).fetchone()
+        if not acct:
+            return False, None
+        account_id = acct["id"]
+        linked = conn.execute(
+            "SELECT 1 FROM user_accounts WHERE user_id = ? AND account_id = ?",
+            (user_id, account_id),
+        ).fetchone()
+        if linked:
+            return True, account_id
+        clan_owner = conn.execute(
+            """
+            SELECT 1
+            FROM clans c
+            JOIN clan_members cm ON cm.clan_id = c.id
+            WHERE cm.account_id = ? AND c.owner_user_id = ?
+            LIMIT 1
+            """,
+            (account_id, user_id),
+        ).fetchone()
+        return (clan_owner is not None), account_id
 
 
 @router.get("/profiles/{rsn}", response_class=HTMLResponse)
 async def profile_detail(request: Request, rsn: str):
     user = require_user(request)
     data = profile_data.get_profile(rsn)
+    can_manage, _ = _can_manage_mode(user["id"], rsn)
+    mode_value = data["latest"]["resolved_mode"] if data.get("latest") else "—"
 
     return templates.TemplateResponse(
         "profile_detail.html",
@@ -31,6 +64,8 @@ async def profile_detail(request: Request, rsn: str):
             "latest": data["latest"],
             "snapshots": data["timeline"],
             "total_snapshots": data["total"],
+            "can_refresh_mode": can_manage,
+            "mode_value": mode_value,
         },
     )
 
@@ -52,6 +87,16 @@ async def profile_timeline(request: Request, rsn: str, page: int = Query(1, ge=1
             "page_size": page_size,
         },
     )
+
+
+@router.get("/profiles/{rsn}/series", response_class=JSONResponse)
+async def profile_series(request: Request, rsn: str, frm: str = "", to: str = "", limit: int = 500):
+    try:
+        user = require_user(request)
+    except Exception:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    series = profile_data.get_series(rsn, from_ts=frm or None, to_ts=to or None, limit=limit)
+    return JSONResponse(series)
 
 
 def _safe_read(path: Path) -> str:
@@ -114,13 +159,35 @@ async def profile_snapshot_detail(request: Request, rsn: str, snapshot_id: str, 
     )
 
 
+@router.post("/profiles/{rsn}/refresh-mode", response_class=HTMLResponse)
+async def profile_refresh_mode(request: Request, rsn: str):
+    user = require_user(request)
+    can_manage, account_id = _can_manage_mode(user["id"], rsn)
+    if not can_manage or not account_id:
+        raise HTTPException(status_code=403, detail="Not permitted to adjust mode")
+
+    result = detect_mode(rsn.strip(), requested_mode="auto", force=True)
+    mode = result.get("mode") if result.get("status") == "found" else None
+    if mode:
+        account_service.ensure_account(rsn.strip(), display_name=None, mode=mode, update_default_mode=True)
+
+    return templates.TemplateResponse(
+        "partials/profile_mode_status.html",
+        {
+            "request": request,
+            "mode": mode or "unknown",
+            "result": result,
+        },
+    )
+
+
 @router.delete("/profiles/{rsn}/snapshot", response_class=HTMLResponse)
 async def profile_snapshot_delete(
     request: Request,
     rsn: str,
     snapshot_id: str,
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=50),
+    page_size: int = Query(5, ge=1, le=50),
 ):
     require_user(request)
 
@@ -143,10 +210,14 @@ async def profile_snapshot_delete(
         raise HTTPException(status_code=500, detail=f"Failed to delete snapshot: {exc}")
 
     # Refresh timeline after deletion
+    # Re-page in case we deleted the last item on the page
+    total = profile_data.get_profile(rsn, limit=1, offset=0)["total"]
+    total_pages = max(1, (total // page_size) + (1 if total % page_size else 0))
+    page = min(page, total_pages)
     start = (page - 1) * page_size
     data = profile_data.get_profile(rsn, limit=page_size, offset=start)
     snapshots = data["timeline"]
-    return templates.TemplateResponse(
+    resp = templates.TemplateResponse(
         "partials/timeline.html",
         {
             "request": request,
@@ -158,3 +229,4 @@ async def profile_snapshot_delete(
             "refresh_snapshot_id": data["latest"]["snapshot_id"] if data.get("latest") else None,
         },
     )
+    return resp

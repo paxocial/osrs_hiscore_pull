@@ -1,0 +1,16 @@
+{% if not last %}
+  <div class="alert info">No clan snapshot run yet.</div>
+{% else %}
+  <div class="alert {{ 'success' if last.status == 'success' else ('error' if last.status == 'error' else 'info') }}">
+    Last run: {{ last.status }}{% if last.finished_at %} @ {{ last.finished_at }}{% endif %}{% if last.error %} · {{ last.error }}{% endif %}
+  </div>
+  <div class="list">
+    <div class="list-row">
+      <div class="list-title">Members processed</div>
+      <div class="list-sub">{{ last.success_count or 0 }} / {{ last.member_total or last.member_count or '—' }}</div>
+    </div>
+    {% if last.metadata %}
+      {% set md = last.metadata if last.metadata is mapping else last.metadata %}
+    {% endif %}
+  </div>
+{% endif %}

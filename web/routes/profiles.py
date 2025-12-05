@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -93,4 +93,34 @@ async def detect_profile_mode(request: Request, name: str = Form(...), csrf_toke
     return templates.TemplateResponse(
         "partials/detect_result.html",
         {"request": request, "result": result, "name": name},
+    )
+
+
+@router.post("/profiles/refresh-mode", response_class=HTMLResponse)
+async def refresh_profile_mode(
+    request: Request,
+    account_id: int = Form(...),
+    name: str = Form(...),
+    csrf_token: str = Form(...),
+):
+    user = require_user(request)
+    verify_csrf(request, csrf_token)
+
+    # Ensure the account belongs to the user
+    links = {link["id"] for link in account_service.list_user_accounts(user["id"])}
+    if account_id not in links:
+        raise HTTPException(status_code=403, detail="Account not linked to user")
+
+    result = detect_mode(name.strip(), requested_mode="auto", force=True)
+    mode = result.get("mode") if result.get("status") == "found" else None
+    if mode:
+        account_service.ensure_account(name.strip(), display_name=None, mode=mode, update_default_mode=True)
+    return templates.TemplateResponse(
+        "partials/mode_status.html",
+        {
+            "request": request,
+            "name": name,
+            "result": result,
+            "mode": mode,
+        },
     )

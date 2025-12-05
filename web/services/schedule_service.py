@@ -34,9 +34,13 @@ class ScheduleService:
             )
             return cursor.lastrowid
 
-    def add_clan_schedule(self, user_id: int, clan_id: int, cron_expr: str, mode: Optional[str] = None) -> int:
+    def add_clan_schedule(self, user_id: int, clan_id: int, cron_expr: str, mode: Optional[str] = None, max_daily_runs: int = 2) -> int:
+        # Enforce cap: allow only once or twice daily patterns
+        allowed = {"0 0 * * *", "0 12 * * *", "0 0,12 * * *"}
+        if cron_expr not in allowed:
+            raise ValueError("Cron expression not allowed for clan schedules")
         next_run = self._next_run(cron_expr)
-        metadata = {"mode": mode or "auto"}
+        metadata = {"mode": mode or "auto", "max_daily_runs": max_daily_runs}
         with self.db.get_connection() as conn:
             cursor = conn.execute(
                 """

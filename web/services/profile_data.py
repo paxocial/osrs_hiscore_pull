@@ -312,3 +312,55 @@ class ProfileDataService:
                 "timeline": timeline,
                 "total": total,
             }
+
+    def get_series(
+        self,
+        account_name: str,
+        *,
+        from_ts: Optional[str] = None,
+        to_ts: Optional[str] = None,
+        limit: int = 500,
+    ) -> Dict[str, Any]:
+        """Return time-series data for charts: total xp/level plus per-skill and activity snapshots."""
+        with self.db.get_connection() as conn:
+            account = conn.execute("SELECT * FROM accounts WHERE name = ?", (account_name,)).fetchone()
+            if not account:
+                return {"series": []}
+
+            params: List[Any] = [account["id"]]
+            where = "WHERE account_id = ?"
+            if from_ts:
+                where += " AND fetched_at >= ?"
+                params.append(from_ts)
+            if to_ts:
+                where += " AND fetched_at <= ?"
+                params.append(to_ts)
+
+            rows = conn.execute(
+                f"""
+                SELECT * FROM snapshots
+                {where}
+                ORDER BY fetched_at ASC
+                LIMIT ?
+                """,
+                (*params, limit),
+            ).fetchall()
+
+            series: List[Dict[str, Any]] = []
+            for r in rows:
+                rd = dict(r)
+                skills = conn.execute("SELECT name, level, xp FROM skills WHERE snapshot_id = ?", (r["id"],)).fetchall()
+                acts = conn.execute("SELECT name, score FROM activities WHERE snapshot_id = ?", (r["id"],)).fetchall()
+                series.append(
+                    {
+                        "snapshot_id": rd.get("snapshot_id"),
+                        "fetched_at": rd.get("fetched_at"),
+                        "total_xp": rd.get("total_xp"),
+                        "total_level": rd.get("total_level"),
+                        "resolved_mode": rd.get("resolved_mode"),
+                        "skills": [dict(s) for s in skills],
+                        "activities": [dict(a) for a in acts],
+                    }
+                )
+
+            return {"series": series}

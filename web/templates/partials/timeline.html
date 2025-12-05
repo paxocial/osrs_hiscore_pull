@@ -19,22 +19,26 @@
       <div class="list-actions">
         {% if snap.snapshot_id %}
           <button class="btn ghost small"
+                  hx-trigger="click consume"
                   hx-get="/profiles/{{ rsn }}/snapshot_detail?snapshot_id={{ snap.snapshot_id }}&view=report"
                   hx-target="#snapshot-content"
                   hx-swap="innerHTML"
                   data-copy-report="/api/snapshots/{{ snap.snapshot_id }}/report"
                   onclick="window.snapshotCopyMode && window.snapshotCopyMode('report', this)">Report</button>
           <button class="btn ghost small"
+                  hx-trigger="click consume"
                   hx-get="/profiles/{{ rsn }}/snapshot_detail?snapshot_id={{ snap.snapshot_id }}&view=json"
                   hx-target="#snapshot-content"
                   hx-swap="innerHTML"
                   data-copy-json="/api/snapshots/{{ snap.snapshot_id }}/raw"
                   onclick="window.snapshotCopyMode && window.snapshotCopyMode('json', this)">JSON</button>
           <button class="btn ghost small danger"
+                  hx-trigger="click consume"
                   hx-delete="/profiles/{{ rsn }}/snapshot?snapshot_id={{ snap.snapshot_id }}&page={{ page }}&page_size={{ page_size }}"
                   hx-target="#timeline"
-                  hx-swap="outerHTML"
-                  hx-confirm="Delete this snapshot?">Delete</button>
+                  hx-swap="innerHTML"
+                  hx-confirm="Delete this snapshot?"
+                  hx-vals='{"deleted_snapshot_id": "{{ snap.snapshot_id }}"}'>Delete</button>
         {% endif %}
       </div>
     </div>

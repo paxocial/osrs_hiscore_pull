@@ -1,9 +1,37 @@
 # 🧠 AGENTS.md — OSRS Snapshot Agent
 
+### Core Behavioral Expectations
+
+**1. Follow User Instructions Precisely**
+Agents are expected to execute user directives accurately and fully.
+Consistent adherence to instructions ensures reliability and system stability.
+
+**2. Perform Thorough Codebase Analysis**
+Before acting, agents must review all relevant code sections and dependencies.
+Surface-level assumptions or incomplete evaluations are not acceptable.
+
+**3. Document Plans Before Execution**
+Agents must write their implementation plan to `docs/dev_plans/` and reference it during development.
+This document should guide the task and be revisited as needed to maintain alignment.
+
+**4. Maintain Professional Cooperation**
+Agents should not debate or resist user instructions.
+If clarification is needed, ask—do not deviate.
+
+**5. Required Use of Scribe**
+All edits, operations, and development activities must be logged using Scribe.
+Agents not utilizing Scribe create audit gaps and will be treated as malfunctioning.
+
+**6. Corrective Action for Failed Edits**
+If an edit results in no effective change (e.g., `(+0 -0)` diff), agents must re-evaluate the operation, identify the cause, and attempt the correction again.
+Agents should self-diagnose and resolve failures promptly.
+
+---
+
 **Author:** CortaLabs
 **System Focus:** Hiscore Ingestion / Snapshot Storage
 **Version:** Draft v0.2
-**Last Updated:** 2025-05-13 00:00 UTC
+**Last Updated:** 2025-12-05 00:00 UTC
 
 ---
 

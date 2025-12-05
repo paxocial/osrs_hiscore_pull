@@ -19,11 +19,19 @@
     <div class="alert success">
       Snapshot done for {{ r.player }} ({{ r.resolved_mode or 'auto' }}): {{ r.delta_summary or r.message }}
     </div>
+    <div id="copy-feedback-{{ job_id }}" class="copy-feedback"></div>
     <div hx-get="/profiles/{{ player }}/timeline" hx-target="#timeline" hx-trigger="load" hx-swap="innerHTML"></div>
     {% if snap_id %}
       <div hx-get="/profiles/{{ player }}/snapshot_detail?snapshot_id={{ snap_id }}&view=panel"
            hx-trigger="load"
            hx-swap="none"></div>
+      <script>
+        window.autoCopySnapshotReport && window.autoCopySnapshotReport({
+          snapshotId: {{ snap_id|tojson }},
+          player: {{ r.player|tojson }},
+          feedbackSelectors: {{ ["#copy-feedback-" ~ job_id, "#copy-feedback"]|tojson }},
+        });
+      </script>
     {% endif %}
   {% else %}
     <div class="alert error">Snapshot finished but no result returned.</div>

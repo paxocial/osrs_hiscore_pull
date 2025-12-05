@@ -77,7 +77,7 @@ class HiscoreClient:
     def fetch(self, player: str, mode: str = "main") -> HiscoreResponse:
         url = self._build_url(player, mode)
         response = self._client.get(url)
-        if response.status_code == 404:
+        if response.status_code in (301, 302, 303, 307, 308, 404):
             raise PlayerNotFoundError(player)
         response.raise_for_status()
         return HiscoreResponse(data=response.json(), status_code=response.status_code, url=str(response.request.url))

@@ -43,7 +43,7 @@
         <div class="list-row">
           <div>
             <div class="list-title">{{ link.name }}</div>
-            <div class="list-sub">
+            <div class="list-sub" id="mode-display-{{ link.id }}">
               {{ link.display_name or '—' }}
               · Mode: {{ link.cached_mode or link.default_mode or 'main' }}
               {% if link.cached_mode %}<span class="pill soft">Detected</span>{% endif %}
@@ -65,6 +65,12 @@
               <input type="hidden" name="player" value="{{ link.name }}">
               <input type="hidden" name="mode" value="{{ link.cached_mode or link.default_mode or 'auto' }}">
               <button class="btn primary small" type="submit">Run snapshot</button>
+            </form>
+            <form hx-post="/profiles/refresh-mode" hx-target="#mode-display-{{ link.id }}" hx-swap="outerHTML">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="account_id" value="{{ link.id }}">
+              <input type="hidden" name="name" value="{{ link.name }}">
+              <button class="btn ghost small" type="submit">Refresh mode</button>
             </form>
             <form method="post" action="/profiles/remove">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
