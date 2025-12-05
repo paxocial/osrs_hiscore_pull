@@ -1,3 +1,4 @@
+{% import "partials/boss_clue_list.html" as bossclue %}
 {% set skill_icons = {
   "attack": "Attack_icon.png",
   "strength": "Strength_icon.png",
@@ -27,50 +28,6 @@
   "farming": "Farming_icon.png",
   "sailing": "Sailing_icon.png",
   "combat": "Combat.png",
-} %}
-
-{% set boss_icons = {
-  "tempoross": "game_icon_tempoross.png",
-  "wintertodt": "game_icon_wintertodt.png",
-  "vorkath": "game_icon_vorkath.png",
-  "zulrah": "game_icon_zulrah.png",
-  "thegauntlet": "game_icon_thegauntlet.png",
-  "thewhisperer": "game_icon_thewhisperer.png",
-  "theleviathan": "game_icon_theleviathan.png",
-  "vardorvis": "game_icon_vardorvis.png",
-  "barrowschests": "game_icon_barrows.png",
-  "chambersofxeric": "game_icon_chambersofxeric.png",
-  "chambersofxericchallengemode": "game_icon_chambersofxeric.png",
-  "theatreofblood": "game_icon_theatreofblood.png",
-  "theatreofbloodhardmode": "game_icon_theatreofblood.png",
-  "tombsofamasuct": "game_icon_tombsofamascut.png",
-  "tombsofamascutexpertmode": "game_icon_tombsofamascut.png",
-  "artio": "game_icon_artio.png",
-  "callisto": "game_icon_callisto.png",
-  "calvarion": "game_icon_calvarion.png",
-  "spindel": "game_icon_spindel.png",
-  "venenatis": "game_icon_venenatis.png",
-  "vetion": "game_icon_vetion.png",
-  "crazyarchaeologist": "game_icon_crazyarchaeologist.png",
-  "scorpia": "game_icon_scorpia.png",
-  "kingblackdragon": "game_icon_kingblackdragon.png",
-  "kraken": "game_icon_kraken.png",
-  "sarachnis": "game_icon_sarachnis.png",
-  "skotizo": "game_icon_skotizo.png",
-  "cerberus": "game_icon_cerberus.png",
-  "kalphitequeen": "game_icon_kalphitequeen.png",
-  "abyssalsire": "game_icon_abyssalsire.png",
-  "alchemicalhydra": "game_icon_alchemicalhydra.png",
-  "generalgraardor": "game_icon_general_graardor.png",
-  "kriltsutsaroth": "game_icon_kril.png",
-  "kreearra": "game_icon_kreearra.png",
-  "commanderzilyana": "game_icon_zilyana.png",
-  "nex": "game_icon_nex.png",
-  "zalcano": "game_icon_zalcano.png",
-  "hespori": "game_icon_hespori.png",
-  "obor": "game_icon_obor.png",
-  "bryophyta": "game_icon_bryophyta.png",
-  "grotesqueguardians": "game_icon_grotesqueguardians.png",
 } %}
 
 {% set latest = latest or None %}
@@ -132,9 +89,7 @@
     {% endif %}
     {% set latest_acts = latest.activities or [] %}
     {% set activity_list = activity_deltas|selectattr('score_delta', '>', 0)|list %}
-    {% if activity_list|length == 0 %}
-      {% set activity_list = latest_acts %}
-    {% endif %}
+    {% set activity_list = activity_list if activity_list|length > 0 else latest_acts %}
     <div class="card-grid">
       <div class="card control-card">
         <div class="card-header">
@@ -164,107 +119,27 @@
           {% endif %}
         </div>
       </div>
-      <div class="card control-card">
-        <div class="card-header">
-          <div>
-            <p class="eyebrow">Bosses</p>
-            <h4>Recent KC gains</h4>
-          </div>
-        </div>
-        <div class="list scrollable">
-          {% set has_boss = false %}
-          {% for ad in activity_list %}
-            {% set aname = ad.name if ad.name is defined else ad['name'] if ad['name'] is defined else '' %}
-            {% set delta = ad.score_delta if ad.score_delta is defined else ad['score_delta'] if ad['score_delta'] is defined else ad.score if ad.score is defined else ad['score'] if ad['score'] is defined else 0 %}
-            {% set lower = aname|lower %}
-            {% if delta > 0 and 'clue' not in lower %}
-              {% set key = aname|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':','') %}
-              {% set icon = boss_icons.get(key, 'game_icon_boss.png') %}
-              {% set has_boss = true %}
-              <div class="list-row">
-                <div class="list-title" style="display:flex; align-items:center; gap:8px;">
-                  <span class="chip-icon" style="background-image:url('/static/images/runescape/game/{{ icon }}');"></span>
-                  <span>{{ aname }}</span>
-                </div>
-                <div class="list-sub"><span class="chip small positive">+{{ delta }}</span></div>
-              </div>
-            {% endif %}
-          {% endfor %}
-          {% if not has_boss %}
-            <p class="ink-2">No boss gains recorded.</p>
-          {% endif %}
-        </div>
-      </div>
-      <div class="card control-card">
-        <div class="card-header">
-          <div>
-            <p class="eyebrow">Clues</p>
-            <h4>Recent clue gains</h4>
-          </div>
-        </div>
-        <div class="list scrollable">
-          {% set has_clue = false %}
-          {% for ad in activity_list %}
-            {% set aname = ad.name if ad.name is defined else ad['name'] if ad['name'] is defined else '' %}
-            {% set delta = ad.score_delta if ad.score_delta is defined else ad['score_delta'] if ad['score_delta'] is defined else ad.score if ad.score is defined else ad['score'] if ad['score'] is defined else 0 %}
-            {% if delta > 0 and 'clue' in aname|lower %}
-              {% set has_clue = true %}
-              <div class="list-row">
-                <div class="list-title">{{ aname }}</div>
-                <div class="list-sub"><span class="chip small positive">+{{ delta }}</span></div>
-              </div>
-            {% endif %}
-          {% endfor %}
-          {% if not has_clue %}
-            <p class="ink-2">No clue gains recorded.</p>
-          {% endif %}
-        </div>
-      </div>
+      {% set ns_build = namespace(items=[]) %}
+      {% for ad in activity_list %}
+        {% set aname = ad.name if ad.name is defined else ad['name'] if ad['name'] is defined else '' %}
+        {% set delta = ad.score_delta if ad.score_delta is defined else ad['score_delta'] if ad['score_delta'] is defined else ad.score if ad.score is defined else ad['score'] if ad['score'] is defined else 0 %}
+        {% set delta = delta|int %}
+        {% if aname and delta > 0 %}
+          {% set ns_build.items = ns_build.items + [{'name': aname, 'total': delta, 'top_member': member_name, 'top_value': delta}] %}
+        {% endif %}
+      {% endfor %}
+      {% set ns = namespace(boss_items=[], clue_items=[]) %}
+      {% for act in ns_build.items %}
+        {% if 'clue' in act.name|lower %}
+          {% set ns.clue_items = ns.clue_items + [act] %}
+        {% else %}
+          {% set ns.boss_items = ns.boss_items + [act] %}
+        {% endif %}
+      {% endfor %}
+      {{ bossclue.render_boss_clue_list(ns.boss_items, "Boss gains", False, False, False) }}
+      {{ bossclue.render_boss_clue_list(ns.clue_items, "Clue gains", True, False, False) }}
     </div>
   {% else %}
     <div class="alert warn">No snapshots found for this member yet.</div>
   {% endif %}
 </div>
-{% set boss_icons = {
-  "tempoross": "game_icon_tempoross.png",
-  "wintertodt": "game_icon_wintertodt.png",
-  "vorkath": "game_icon_vorkath.png",
-  "zulrah": "game_icon_zulrah.png",
-  "thegauntlet": "game_icon_thegauntlet.png",
-  "thewhisperer": "game_icon_thewhisperer.png",
-  "theleviathan": "game_icon_theleviathan.png",
-  "vardorvis": "game_icon_vardorvis.png",
-  "barrowschests": "game_icon_barrowschests.png",
-  "chambersofxeric": "game_icon_chambersofxeric.png",
-  "chambersofxericchallengemode": "game_icon_chambersofxeric.png",
-  "theatreofblood": "game_icon_theatreofblood.png",
-  "theatreofbloodhardmode": "game_icon_theatreofblood.png",
-  "tombsofamasuct": "game_icon_tombsofamascut.png",
-  "tombsofamascutexpertmode": "game_icon_tombsofamascut.png",
-  "artio": "game_icon_artio.png",
-  "callisto": "game_icon_callisto.png",
-  "calvarion": "game_icon_calvarion.png",
-  "spindel": "game_icon_spindel.png",
-  "venenatis": "game_icon_venenatis.png",
-  "vetion": "game_icon_vetion.png",
-  "crazyarchaeologist": "game_icon_crazyarchaeologist.png",
-  "scorpia": "game_icon_scorpia.png",
-  "kingblackdragon": "game_icon_kingblackdragon.png",
-  "kraken": "game_icon_kraken.png",
-  "sarachnis": "game_icon_sarachnis.png",
-  "skotizo": "game_icon_skotizo.png",
-  "cerberus": "game_icon_cerberus.png",
-  "kalphitequeen": "game_icon_kalphitequeen.png",
-  "abyssalsire": "game_icon_abyssalsire.png",
-  "alchemicalhydra": "game_icon_alchemicalhydra.png",
-  "generalgraardor": "game_icon_generalgraardor.png",
-  "kriltsutsaroth": "game_icon_kriltsutsaroth.png",
-  "kreearra": "game_icon_kreearra.png",
-  "commanderzilyana": "game_icon_commanderzilyana.png",
-  "nex": "game_icon_nex.png",
-  "zalcano": "game_icon_zalcano.png",
-  "hespori": "game_icon_hespori.png",
-  "obor": "game_icon_obor.png",
-  "bryophyta": "game_icon_bryophyta.png",
-  "grotesqueguardians": "game_icon_grotesqueguardians.png",
-} %}

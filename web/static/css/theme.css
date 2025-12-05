@@ -244,6 +244,13 @@ a:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
+  align-items: stretch;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.card-grid > .card {
+  height: 100%;
+  margin-top: 0 !important;
 }
 
 .tabs {
@@ -317,6 +324,14 @@ a:hover {
 .chip.small {
   padding: 4px 8px;
   font-size: 0.85rem;
+}
+
+.chip.trophy {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(255, 215, 0, 0.08));
+  border: 1px solid rgba(255, 215, 0, 0.55);
+  color: #f5d76e;
+  box-shadow: 0 4px 18px rgba(255, 215, 0, 0.18);
+  font-weight: 600;
 }
 
 .chip-icon {
@@ -737,6 +752,35 @@ a:hover {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.list-row.trophy-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.trophy-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px -12px -12px -12px;
+  padding: 6px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 235, 150, 0.28),
+    rgba(190, 150, 80, 0.22)
+  );
+  border-radius: 0 0 12px 12px;
+  border-top: 1px solid rgba(255, 245, 200, 0.45);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 220, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+  color: rgba(255, 230, 160, 0.9);
+}
+
+.trophy-footer .trophy-text {
+  color: inherit;
+}
+
 .list + .list {
   margin-top: 10px;
 }
@@ -774,6 +818,10 @@ a:hover {
   margin-top: 6px;
 }
 
+.control-card .list.scrollable {
+  flex: 1;
+  min-height: 0;
+}
 .control-card form {
   display: grid;
   gap: 8px;

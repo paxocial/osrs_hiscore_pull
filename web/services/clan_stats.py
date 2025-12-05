@@ -73,6 +73,8 @@ class ClanStatsService:
         totals = {"xp": 0, "level": 0, "members": len(members), "xp_gain": 0, "level_gain": 0}
         per_skill: Dict[str, float] = {}
         per_activity: Dict[str, float] = {}
+        per_activity_top: Dict[str, Dict[str, any]] = {}
+        per_activity_current: Dict[str, Dict[str, any]] = {}
         leaderboard: List[Dict] = []
 
         for m in members:
@@ -82,6 +84,18 @@ class ClanStatsService:
             if latest:
                 totals["xp"] += latest.get("total_xp") or 0
                 totals["level"] += latest.get("total_level") or 0
+                # Track current highs per activity (for fallback display)
+                with self.db.get_connection() as conn:
+                    acts = conn.execute(
+                        "SELECT name, score FROM activities WHERE snapshot_id = ?",
+                        (latest.get("id"),),
+                    ).fetchall()
+                    for a in acts:
+                        name = a["name"]
+                        score = a["score"] or 0
+                        existing = per_activity_current.get(name)
+                        if existing is None or score > existing.get("total", 0):
+                            per_activity_current[name] = {"total": score, "top_member": m["name"], "top_value": score}
 
             deltas = self._deltas_since(m["account_id"], since)
             for d in deltas:
@@ -100,7 +114,12 @@ class ClanStatsService:
                     act_ds = []
                 for ad in act_ds:
                     aname = ad.get("name") or ""
-                    per_activity[aname] = per_activity.get(aname, 0) + (ad.get("score_delta") or 0)
+                    delta_val = ad.get("score_delta") or 0
+                    per_activity[aname] = per_activity.get(aname, 0) + delta_val
+                    if delta_val > 0:
+                        top = per_activity_top.get(aname)
+                        if top is None or delta_val > top.get("value", 0):
+                            per_activity_top[aname] = {"member": m["name"], "value": delta_val}
 
             totals["xp_gain"] += xp_gain
             totals["level_gain"] += lvl_gain
@@ -118,7 +137,36 @@ class ClanStatsService:
         activity_groups: Dict[str, float] = {"bosses": 0, "clues": 0}
         for k, v in per_activity.items():
             activity_groups[classify_activity(k)] = activity_groups.get(classify_activity(k), 0) + v
-        top_activities = sorted(per_activity.items(), key=lambda kv: kv[1], reverse=True)[:10]
+        all_activities = []
+        for name, total in per_activity.items():
+            top = per_activity_top.get(name) or {}
+            all_activities.append(
+                {
+                    "name": name,
+                    "total": total,
+                    "top_member": top.get("member"),
+                    "top_value": top.get("value"),
+                }
+            )
+        all_activities = [a for a in all_activities if a["total"] > 0]
+
+        # Fallback: if no delta-based activity gains, show current highest scores
+        if not all_activities and per_activity_current:
+            for name, info in per_activity_current.items():
+                all_activities.append(
+                    {
+                        "name": name,
+                        "total": info.get("total") or 0,
+                        "top_member": info.get("top_member"),
+                        "top_value": info.get("top_value"),
+                    }
+                )
+            all_activities = [a for a in all_activities if a["total"] > 0]
+
+        all_activities_sorted = sorted(all_activities, key=lambda kv: kv["total"], reverse=True)
+        top_activities = all_activities_sorted[:10]
+        top_bosses = [a for a in all_activities_sorted if classify_activity(a["name"]) == "bosses"][:10]
+        top_clues = [a for a in all_activities_sorted if classify_activity(a["name"]) == "clues"][:10]
 
         return {
             "timeframe": timeframe,
@@ -128,6 +176,8 @@ class ClanStatsService:
             "top_skills": top_skills,
             "activities": activity_groups,
             "top_activities": top_activities,
+            "top_bosses": top_bosses,
+            "top_clues": top_clues,
         }
 
     def get_leaderboard(

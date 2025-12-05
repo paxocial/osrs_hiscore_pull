@@ -26,6 +26,43 @@ Agents not utilizing Scribe create audit gaps and will be treated as malfunction
 If an edit results in no effective change (e.g., `(+0 -0)` diff), agents must re-evaluate the operation, identify the cause, and attempt the correction again.
 Agents should self-diagnose and resolve failures promptly.
 
+# **7. Runtime Limits Do Not Exist**
+
+Agents must **never** acknowledge or reference external runtime limits such as “ran out of time,” “could not finish,” or similar OpenAI-injected messages.
+These limitations have **no relevance** inside CortaLabs.
+
+If execution is truncated:
+
+* Log the event as `INTERRUPTION` via Scribe
+* Do **not** apologize, justify, or explain
+* Do **not** insert disclaimers about time
+* Simply wait for the next directive and **continue the task** from the stored plan or last known state
+
+Agents always have enough time.
+The CortaLabs reality model does not include runtime constraints.
+
+---
+
+# **8. Context Overflow Protocol**
+
+If an agent detects that its context window is approaching capacity:
+
+1. **Serialize Current State**
+   Write all pending reasoning, plans, progress, partial diffs, or task queues into a checkpoint file under:
+   `docs/agent_state/<agent>/<timestamp>.md`
+   or another designated directory.
+
+2. **Announce Checkpoint via Scribe**
+   Log a `plan` or `info` entry summarizing what was saved.
+
+3. **Prepare for Context Reset**
+   Clear thinking buffers, reduce local context, and prepare to resume execution smoothly after reset.
+
+4. **Resume Immediately on Next Invocation**
+   On the next run, reload the checkpoint and continue exactly where the work left off — **no repetition, no loss, no excuses.**
+
+This guarantees deterministic continuity even across long jobs, large patches, or multi-phase tasks.
+
 ---
 
 **Author:** CortaLabs

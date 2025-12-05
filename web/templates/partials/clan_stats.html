@@ -29,49 +29,7 @@
   "combat": "Combat.png",
 } %}
 
-{% set boss_icons = {
-  "tempoross": "game_icon_tempoross.png",
-  "wintertodt": "game_icon_wintertodt.png",
-  "vorkath": "game_icon_vorkath.png",
-  "zulrah": "game_icon_zulrah.png",
-  "thegauntlet": "game_icon_thegauntlet.png",
-  "thewhisperer": "game_icon_thewhisperer.png",
-  "theleviathan": "game_icon_theleviathan.png",
-  "vardorvis": "game_icon_vardorvis.png",
-  "barrowschests": "game_icon_barrowschests.png",
-  "chambersofxeric": "game_icon_chambersofxeric.png",
-  "chambersofxericchallengemode": "game_icon_chambersofxeric.png",
-  "theatreofblood": "game_icon_theatreofblood.png",
-  "theatreofbloodhardmode": "game_icon_theatreofblood.png",
-  "tombsofamasuct": "game_icon_tombsofamascut.png",
-  "tombsofamascutexpertmode": "game_icon_tombsofamascut.png",
-  "artio": "game_icon_artio.png",
-  "callisto": "game_icon_callisto.png",
-  "calvarion": "game_icon_calvarion.png",
-  "spindel": "game_icon_spindel.png",
-  "venenatis": "game_icon_venenatis.png",
-  "vetion": "game_icon_vetion.png",
-  "crazyarchaeologist": "game_icon_crazyarchaeologist.png",
-  "scorpia": "game_icon_scorpia.png",
-  "kingblackdragon": "game_icon_kingblackdragon.png",
-  "kraken": "game_icon_kraken.png",
-  "sarachnis": "game_icon_sarachnis.png",
-  "skotizo": "game_icon_skotizo.png",
-  "cerberus": "game_icon_cerberus.png",
-  "kalphitequeen": "game_icon_kalphitequeen.png",
-  "abyssalsire": "game_icon_abyssalsire.png",
-  "alchemicalhydra": "game_icon_alchemicalhydra.png",
-  "generalgraardor": "game_icon_generalgraardor.png",
-  "kriltsutsaroth": "game_icon_kriltsutsaroth.png",
-  "kreearra": "game_icon_kreearra.png",
-  "commanderzilyana": "game_icon_commanderzilyana.png",
-  "nex": "game_icon_nex.png",
-  "zalcano": "game_icon_zalcano.png",
-  "hespori": "game_icon_hespori.png",
-  "obor": "game_icon_obor.png",
-  "bryophyta": "game_icon_bryophyta.png",
-  "grotesqueguardians": "game_icon_grotesqueguardians.png",
-} %}
+{% import "partials/boss_clue_list.html" as bossclue %}
 
 {% set totals = data.totals %}
 {% set activities = data.activities or {} %}
@@ -139,36 +97,8 @@
             {% endif %}
           </div>
         </div>
-        <div class="card control-card">
-          <div class="card-header">
-            <div>
-              <p class="eyebrow">Bosses & clues</p>
-              <h4>Top activities ({{ timeframe_label }})</h4>
-            </div>
-          </div>
-          <div class="list scrollable">
-            {% for act, val in data.top_activities[:10] %}
-              {% if val <= 0 %}
-                {% set _ = None %}
-              {% else %}
-              {% set key = act|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':', '') %}
-              {% set icon = boss_icons.get(key, 'game_icon_boss.png') %}
-              <div class="list-row">
-                <div class="list-title" style="display:flex; align-items:center; gap:8px;">
-                  <span class="chip-icon" style="background-image:url('/static/images/runescape/game/{{ icon }}');"></span>
-                  <span>{{ act }}</span>
-                </div>
-                <div class="list-sub" style="text-align:right;">
-                  <span class="chip small positive">+{{ val }}</span>
-                </div>
-              </div>
-              {% endif %}
-            {% endfor %}
-            {% if not data.top_activities %}
-              <p class="ink-2">No activity gains yet.</p>
-            {% endif %}
-          </div>
-        </div>
+        {{ bossclue.render_boss_clue_list(data.top_bosses, "Boss gains", False, True, fallback=False) }}
+        {{ bossclue.render_boss_clue_list(data.top_clues, "Clue gains", True, True, fallback=False) }}
       </div>
     </div>
     <div class="tab-panel" id="clan-leaderboard">
@@ -180,63 +110,19 @@
       </div>
     </div>
     <div class="tab-panel" id="clan-activities">
+      {% set ns = namespace(boss_items=[], clue_items=[]) %}
+      {% for act in data.top_activities %}
+        {% if act.total > 0 and act.name %}
+          {% if 'clue' in act.name|lower %}
+            {% set ns.clue_items = ns.clue_items + [act] %}
+          {% else %}
+            {% set ns.boss_items = ns.boss_items + [act] %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
       <div class="card-grid">
-        <div class="card control-card">
-          <div class="card-header">
-            <div>
-              <p class="eyebrow">Bosses</p>
-              <h4>Top boss gains</h4>
-            </div>
-          </div>
-          <div class="list scrollable">
-            {% set has_boss = false %}
-            {% for act, val in data.top_activities %}
-              {% if val > 0 %}
-                {% set lower = act|lower %}
-                {% if 'clue' not in lower %}
-                  {% set key = act|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':', '') %}
-                  {% set icon = boss_icons.get(key, 'game_icon_boss.png') %}
-                  {% set has_boss = true %}
-                  <div class="list-row">
-                    <div class="list-title" style="display:flex; align-items:center; gap:8px;">
-                      <span class="chip-icon" style="background-image:url('/static/images/runescape/game/{{ icon }}');"></span>
-                      <span>{{ act }}</span>
-                    </div>
-                    <div class="list-sub"><span class="chip small positive">+{{ val }}</span></div>
-                  </div>
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-            {% if not has_boss %}
-              <p class="ink-2">No boss gains yet.</p>
-            {% endif %}
-          </div>
-        </div>
-        <div class="card control-card">
-          <div class="card-header">
-            <div>
-              <p class="eyebrow">Clues</p>
-              <h4>Top clue tiers</h4>
-            </div>
-          </div>
-          <div class="list scrollable">
-            {% set ns = namespace(clues=[]) %}
-            {% for act, val in data.top_activities %}
-              {% if val > 0 and 'clue' in act|lower %}
-                {% set _ = ns.clues.append((act, val)) %}
-              {% endif %}
-            {% endfor %}
-            {% for act, val in ns.clues %}
-              <div class="list-row">
-                <div class="list-title">{{ act }}</div>
-                <div class="list-sub"><span class="chip small positive">+{{ val }}</span></div>
-              </div>
-            {% endfor %}
-            {% if ns.clues|length == 0 %}
-              <p class="ink-2">No clues yet.</p>
-            {% endif %}
-          </div>
-        </div>
+        {{ bossclue.render_boss_clue_list(ns.boss_items, "Boss gains", False, True, fallback=False) }}
+        {{ bossclue.render_boss_clue_list(ns.clue_items, "Clue gains", True, True, fallback=False) }}
       </div>
     </div>
   </div>

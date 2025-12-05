@@ -1,0 +1,67 @@
+{% set icon_overrides = {
+  "barrows": "game_icon_barrowschests.png",
+  "barrowschest": "game_icon_barrowschests.png",
+  "barrowschests": "game_icon_barrowschests.png",
+  "general_graardor": "game_icon_generalgraardor.png",
+  "generalgraardor": "game_icon_generalgraardor.png",
+  "graardor": "game_icon_generalgraardor.png",
+  "general": "game_icon_generalgraardor.png",
+  "kriltsutsaroth": "game_icon_kriltsutsaroth.png",
+  "kril": "game_icon_kriltsutsaroth.png",
+  "zilyana": "game_icon_commanderzilyana.png",
+  "commanderzilyana": "game_icon_commanderzilyana.png",
+  "tombsofamascut": "game_icon_tombsofamascut.png",
+  "tombsofamasuct": "game_icon_tombsofamascut.png",
+  "tombsofamascutexpertmode": "game_icon_tombsofamascutexpertmode.png",
+  "cluescrollsall": "game_icon_cluescrollsall.png",
+  "cluescrollsbeginner": "game_icon_cluescrollsbeginner.png",
+  "cluescrollseasy": "game_icon_cluescrollseasy.png",
+  "cluescrollsmedium": "game_icon_cluescrollsmedium.png",
+  "cluescrollshard": "game_icon_cluescrollshard.png",
+  "cluescrollselite": "game_icon_cluescrollselite.png",
+  "cluescrollsmaster": "game_icon_cluescrollsmaster.png",
+} %}
+{# Reusable boss/clue list #}
+{% macro render_boss_clue_list(items, title, show_clues=True, show_top=True, fallback=True) %}
+  <div class="card control-card">
+    <div class="card-header">
+      <div>
+        <p class="eyebrow">{{ title }}</p>
+        <h4>{{ title }}</h4>
+      </div>
+    </div>
+    <div class="list scrollable">
+      {% set has_any = false %}
+      {% for act in items %}
+        {% if act.total > 0 and act.name %}
+          {% set key = act.name|lower|replace(' ', '')|replace("'", '')|replace('-', '')|replace(':', '')|replace('_','')|replace('(', '')|replace(')', '') %}
+          {% set lower = act.name|lower %}
+          {% if show_clues or 'clue' not in lower %}
+            {% set icon_name = icon_overrides.get(key, "game_icon_" + key + ".png") %}
+            {% set has_any = true %}
+            <div class="list-row trophy-row">
+              <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <div class="list-title" style="display:flex; align-items:center; gap:8px;">
+                  <span class="chip-icon" style="width:18px; height:18px; background-image:url('/static/images/runescape/game/{{ icon_name }}');"></span>
+                  <span>{{ act.name }}</span>
+                </div>
+                <div class="list-sub">
+                  <span class="chip small positive">+{{ act.total }}</span>
+                </div>
+              </div>
+              {% if act.top_member and show_top %}
+                <div class="trophy-footer">
+                  <span aria-hidden="true">🏆</span>
+                  <span class="trophy-text">{{ act.top_member }} (+{{ act.top_value }})</span>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if fallback and not has_any %}
+        <p class="ink-2">No gains yet.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
