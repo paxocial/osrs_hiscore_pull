@@ -16,8 +16,9 @@ from fastapi.responses import JSONResponse
 
 from api.dependencies import rate_limiter
 from api.exceptions import setup_exception_handlers
-from api.endpoints import accounts, snapshots, analytics
+from api.endpoints import accounts, snapshots, analytics, runelite
 from api import test_accounts
+from config.settings import AppConfig
 
 # Configure logging
 logging.basicConfig(
@@ -98,13 +99,14 @@ app = FastAPI(
     }
 )
 
-# Add CORS middleware
+# Add CORS middleware - configuration validates environment vars at startup
+config = AppConfig()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=config.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Add Gzip compression for better performance
@@ -267,6 +269,13 @@ app.include_router(
     analytics.router,
     prefix="/analytics",
     tags=["Analytics"],
+    responses={404: {"description": "Not found"}}
+)
+
+app.include_router(
+    runelite.router,
+    prefix="",
+    tags=["RuneLite"],
     responses={404: {"description": "Not found"}}
 )
 

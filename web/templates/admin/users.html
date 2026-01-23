@@ -1,0 +1,93 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+  <h1>User Management</h1>
+  <p>Manage user accounts, roles, and permissions</p>
+</div>
+
+<div style="margin-bottom: 1.5rem;">
+  <form method="get" style="display: flex; gap: 0.5rem;">
+    <input type="text" name="search" value="{{ search }}" placeholder="Search by email..." style="flex: 1; padding: 0.5rem; border-radius: 4px; border: 1px solid var(--surface-3); background: var(--surface-2); color: var(--text-1);">
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+</div>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Email</th>
+      <th>Status</th>
+      <th>Role</th>
+      <th>Created</th>
+      <th>Failed Attempts</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.id }}</td>
+      <td>{{ user.email }}</td>
+      <td>
+        {% if user.locked_until and user.locked_until > now %}
+          <span class="badge badge-danger">🔒 Locked</span>
+        {% elif user.is_active %}
+          <span class="badge badge-success">✓ Active</span>
+        {% else %}
+          <span class="badge badge-warning">⏸ Disabled</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if user.is_admin %}
+          <span class="badge badge-info">👑 Admin</span>
+        {% else %}
+          <span class="badge">User</span>
+        {% endif %}
+      </td>
+      <td>{{ user.created_at[:10] }}</td>
+      <td>{{ user.failed_login_attempts }}</td>
+      <td>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-sm secondary"
+                  hx-post="/admin/users/{{ user.id }}/toggle-active"
+                  hx-swap="none"
+                  hx-on::after-request="location.reload()">
+            {% if user.is_active %}Disable{% else %}Enable{% endif %}
+          </button>
+          {% if user.id != admin.id %}
+          <button class="btn btn-sm secondary"
+                  hx-post="/admin/users/{{ user.id }}/toggle-admin"
+                  hx-swap="none"
+                  hx-on::after-request="location.reload()">
+            {% if user.is_admin %}Revoke Admin{% else %}Grant Admin{% endif %}
+          </button>
+          {% endif %}
+          {% if user.locked_until and user.locked_until > now %}
+          <button class="btn btn-sm primary"
+                  hx-post="/admin/users/{{ user.id }}/unlock"
+                  hx-swap="none"
+                  hx-on::after-request="location.reload()">
+            Unlock
+          </button>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}">← Previous</a>
+  {% endif %}
+  <span class="active">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

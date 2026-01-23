@@ -1,0 +1,62 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+  <h1>Rate Limit Management</h1>
+  <p>View and manage rate-limited IP addresses</p>
+</div>
+
+{% if blocked_ips|length > 0 %}
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>IP Address</th>
+      <th>Endpoint</th>
+      <th>Request Count</th>
+      <th>Window Start</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in blocked_ips %}
+    <tr>
+      <td><code>{{ entry.ip_address }}</code></td>
+      <td><code>{{ entry.endpoint }}</code></td>
+      <td>
+        <span class="badge {% if entry.request_count >= 10 %}badge-danger{% else %}badge-warning{% endif %}">
+          {{ entry.request_count }} requests
+        </span>
+      </td>
+      <td>{{ entry.window_start[:19] }}</td>
+      <td>
+        <form method="post" action="/admin/rate-limits/unblock" style="display: inline;">
+          <input type="hidden" name="ip_address" value="{{ entry.ip_address }}">
+          <button class="btn btn-sm primary" type="submit"
+                  onclick="return confirm('Unblock {{ entry.ip_address }}?')">
+            Unblock
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="background: var(--surface-2); padding: 2rem; border-radius: 8px; text-align: center;">
+  <p style="color: var(--text-2); font-size: 1.1rem;">✓ No rate-limited IPs in the last hour</p>
+  <p style="color: var(--text-3); font-size: 0.9rem; margin-top: 0.5rem;">
+    Rate limits are working correctly. IPs are automatically unblocked after the time window expires.
+  </p>
+</div>
+{% endif %}
+
+<div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px; margin-top: 2rem;">
+  <h3 style="margin-bottom: 1rem;">Current Rate Limit Configuration</h3>
+  <ul style="list-style: none; padding: 0;">
+    <li style="padding: 0.5rem 0;">Login: <code>5 requests/minute</code></li>
+    <li style="padding: 0.5rem 0;">Registration: <code>3 requests/hour</code></li>
+    <li style="padding: 0.5rem 0;">Password Reset: <code>3 requests/hour</code></li>
+    <li style="padding: 0.5rem 0;">API Token Generation: <code>10 requests/hour</code></li>
+  </ul>
+</div>
+{% endblock %}

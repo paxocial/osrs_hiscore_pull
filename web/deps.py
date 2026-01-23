@@ -45,5 +45,8 @@ def get_csrf_token(request: Request) -> str:
 
 def verify_csrf(request: Request, token: str) -> None:
     expected = request.session.get("csrf_token") if hasattr(request, "session") else None
-    if not expected or token != expected:
+    if not expected:
+        raise HTTPException(status_code=400, detail="Invalid CSRF token")
+    # Constant-time comparison prevents timing attacks
+    if not secrets.compare_digest(token, expected):
         raise HTTPException(status_code=400, detail="Invalid CSRF token")

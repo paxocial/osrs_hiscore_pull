@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from fastapi.responses import JSONResponse
 
 from api.dependencies import get_database_connection, parse_account_query_params
+from database.sql_utils import escape_like_pattern
 from api.schemas import (
     Account,
     AccountCreate,
@@ -50,7 +51,9 @@ async def list_accounts(
 
         if params.search:
             conditions.append("(name LIKE ? OR display_name LIKE ?)")
-            search_term = f"%{params.search}%"
+            # Escape LIKE wildcards to prevent SQL injection
+            escaped_search = escape_like_pattern(params.search)
+            search_term = f"%{escaped_search}%"
             params_list.extend([search_term, search_term])
 
         # Combine conditions
@@ -128,7 +131,9 @@ async def search_accounts(
                 ORDER BY name
                 LIMIT ?
             """
-            search_term = f"%{q}%"
+            # Escape LIKE wildcards to prevent SQL injection
+            escaped_q = escape_like_pattern(q)
+            search_term = f"%{escaped_q}%"
             accounts_data = conn.execute(search_query, (search_term, search_term, limit)).fetchall()
 
             accounts = []

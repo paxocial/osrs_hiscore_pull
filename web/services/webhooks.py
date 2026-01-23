@@ -53,7 +53,12 @@ class WebhookService:
             return cursor.lastrowid
 
     def list_webhooks(self, owner_user_id: int, target_type: Optional[str] = None) -> List[Dict]:
-        query = "SELECT * FROM webhooks WHERE owner_user_id = ?"
+        # Explicitly exclude 'secret' field from SELECT to prevent exposure in API responses
+        query = """
+            SELECT id, owner_user_id, target_type, target_id, provider, url, events, active, created_at, updated_at
+            FROM webhooks
+            WHERE owner_user_id = ?
+        """
         params = [owner_user_id]
         if target_type:
             query += " AND target_type = ?"
@@ -63,7 +68,11 @@ class WebhookService:
             return [dict(r) for r in rows]
 
     def dispatch(self, owner_user_id: int, target_type: Optional[str], target_id: Optional[int], event: str, payload: Dict) -> None:
-        hooks = self.list_webhooks(owner_user_id)
+        # Internal dispatch method needs secret field for signing/authentication
+        # Fetch directly instead of using list_webhooks() which excludes secret
+        with self.db.get_connection() as conn:
+            query = "SELECT * FROM webhooks WHERE owner_user_id = ? AND active = 1"
+            hooks = [dict(r) for r in conn.execute(query, (owner_user_id,)).fetchall()]
         for hook in hooks:
             if target_type and hook.get("target_type") != target_type:
                 continue

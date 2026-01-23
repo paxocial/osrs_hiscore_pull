@@ -619,6 +619,29 @@ a:hover {
   margin-top: 0;
 }
 
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  min-height: 280px;
+}
+
+.feature-card .feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  margin-bottom: 0.75rem;
+  color: var(--ink-1);
+}
+
+.feature-card p {
+  color: var(--ink-2);
+  flex-grow: 1;
+  margin-bottom: 1rem;
+}
+
 .card.steps ol {
   margin: 0;
   padding-left: 18px;

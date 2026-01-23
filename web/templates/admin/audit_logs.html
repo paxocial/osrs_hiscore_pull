@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+  <h1>Audit Logs</h1>
+  <p>View authentication and security events</p>
+</div>
+
+<div style="margin-bottom: 1.5rem;">
+  <form method="get" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <select name="event_type" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--surface-3); background: var(--surface-2); color: var(--text-1);">
+      <option value="">All Event Types</option>
+      {% for et in event_types %}
+        <option value="{{ et.event_type }}" {% if et.event_type == selected_event_type %}selected{% endif %}>
+          {{ et.event_type }}
+        </option>
+      {% endfor %}
+    </select>
+    <select name="days" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--surface-3); background: var(--surface-2); color: var(--text-1);">
+      <option value="1" {% if days == 1 %}selected{% endif %}>Last 24 hours</option>
+      <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+      <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+    </select>
+    <button type="submit" class="btn primary">Filter</button>
+  </form>
+</div>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>Event Type</th>
+      <th>User ID</th>
+      <th>Email</th>
+      <th>IP Address</th>
+      <th>User Agent</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for log in logs %}
+    <tr>
+      <td>{{ log.created_at[:19] }}</td>
+      <td>
+        {% if "success" in log.event_type %}
+          <span class="badge badge-success">{{ log.event_type }}</span>
+        {% elif "failure" in log.event_type or "denied" in log.event_type %}
+          <span class="badge badge-danger">{{ log.event_type }}</span>
+        {% elif "admin" in log.event_type %}
+          <span class="badge badge-info">{{ log.event_type }}</span>
+        {% else %}
+          <span class="badge">{{ log.event_type }}</span>
+        {% endif %}
+      </td>
+      <td>{{ log.user_id or "-" }}</td>
+      <td>{{ log.email or "-" }}</td>
+      <td>{{ log.ip_address or "-" }}</td>
+      <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        {{ log.user_agent or "-" }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="?page={{ page - 1 }}&event_type={{ selected_event_type }}&days={{ days }}">← Previous</a>
+  {% endif %}
+  <span class="active">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}&event_type={{ selected_event_type }}&days={{ days }}">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

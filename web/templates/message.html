@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card message-card">
+  <h2>{{ title }}</h2>
+  {% if success %}
+    <div class="alert success">{{ message }}</div>
+  {% elif error %}
+    <div class="alert error">{{ message }}</div>
+  {% else %}
+    <p class="lede">{{ message }}</p>
+  {% endif %}
+  <div class="form-actions">
+    <a class="btn primary" href="/">Home</a>
+    {% if not user %}
+      <a class="btn ghost" href="/auth/login">Log In</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

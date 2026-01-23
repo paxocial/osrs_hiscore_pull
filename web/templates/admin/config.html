@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+  <h1>System Configuration</h1>
+  <p>Current application settings (read-only)</p>
+</div>
+
+<div style="display: grid; gap: 1.5rem;">
+  <!-- Environment -->
+  <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+    <h3 style="margin-bottom: 1rem;">Environment</h3>
+    <p><strong>Mode:</strong> <span class="badge {% if config.environment == 'production' %}badge-success{% else %}badge-warning{% endif %}">{{ config.environment }}</span></p>
+  </div>
+
+  <!-- Security Settings -->
+  <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+    <h3 style="margin-bottom: 1rem;">Security Settings</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="padding: 0.5rem 0;"><strong>Session Max Age:</strong> {{ config.security.session_max_age }} seconds ({{ (config.security.session_max_age / 3600)|round(1) }} hours)</li>
+      <li style="padding: 0.5rem 0;"><strong>HTTPS Only:</strong> {{ "✓ Enabled" if config.security.https_only else "✗ Disabled" }}</li>
+      <li style="padding: 0.5rem 0;"><strong>SameSite:</strong> {{ config.security.same_site }}</li>
+    </ul>
+  </div>
+
+  <!-- Rate Limits -->
+  <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+    <h3 style="margin-bottom: 1rem;">Rate Limits</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="padding: 0.5rem 0;"><strong>Login:</strong> {{ config.rate_limits.login }}</li>
+      <li style="padding: 0.5rem 0;"><strong>Register:</strong> {{ config.rate_limits.register }}</li>
+      <li style="padding: 0.5rem 0;"><strong>Password Reset:</strong> {{ config.rate_limits.password_reset }}</li>
+      <li style="padding: 0.5rem 0;"><strong>API Token:</strong> {{ config.rate_limits.api_token }}</li>
+    </ul>
+  </div>
+
+  <!-- Password Policy -->
+  <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+    <h3 style="margin-bottom: 1rem;">Password Policy</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="padding: 0.5rem 0;"><strong>Minimum Length:</strong> {{ config.password.min_length }} characters</li>
+      <li style="padding: 0.5rem 0;"><strong>Require Uppercase:</strong> {{ "✓ Yes" if config.password.require_uppercase else "✗ No" }}</li>
+      <li style="padding: 0.5rem 0;"><strong>Require Lowercase:</strong> {{ "✓ Yes" if config.password.require_lowercase else "✗ No" }}</li>
+      <li style="padding: 0.5rem 0;"><strong>Require Digit:</strong> {{ "✓ Yes" if config.password.require_digit else "✗ No" }}</li>
+      <li style="padding: 0.5rem 0;"><strong>Require Special Char:</strong> {{ "✓ Yes" if config.password.require_special else "✗ No" }}</li>
+    </ul>
+  </div>
+
+  <!-- Account Security -->
+  <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+    <h3 style="margin-bottom: 1rem;">Account Security</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="padding: 0.5rem 0;"><strong>Lockout Threshold:</strong> {{ config.account.lockout_threshold }} failed attempts</li>
+      <li style="padding: 0.5rem 0;"><strong>Lockout Duration:</strong> {{ config.account.lockout_duration_minutes }} minutes</li>
+      <li style="padding: 0.5rem 0;"><strong>Email Verification Required:</strong> {{ "✓ Yes" if config.account.email_verification_required else "✗ No" }}</li>
+      <li style="padding: 0.5rem 0;"><strong>Verification Token Expiry:</strong> {{ config.account.verification_token_expiry_hours }} hours</li>
+    </ul>
+  </div>
+
+  <!-- Feature Flags -->
+  <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+    <h3 style="margin-bottom: 1rem;">Feature Flags</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="padding: 0.5rem 0;"><strong>Audit Logging:</strong> <span class="badge {% if config.features.audit_logging %}badge-success{% else %}badge-danger{% endif %}">{{ "Enabled" if config.features.audit_logging else "Disabled" }}</span></li>
+      <li style="padding: 0.5rem 0;"><strong>Rate Limiting:</strong> <span class="badge {% if config.features.rate_limiting %}badge-success{% else %}badge-danger{% endif %}">{{ "Enabled" if config.features.rate_limiting else "Disabled" }}</span></li>
+      <li style="padding: 0.5rem 0;"><strong>Email Verification:</strong> <span class="badge {% if config.features.email_verification %}badge-success{% else %}badge-danger{% endif %}">{{ "Enabled" if config.features.email_verification else "Disabled" }}</span></li>
+      <li style="padding: 0.5rem 0;"><strong>Admin UI:</strong> <span class="badge {% if config.features.admin_ui %}badge-success{% else %}badge-danger{% endif %}">{{ "Enabled" if config.features.admin_ui else "Disabled" }}</span></li>
+    </ul>
+  </div>
+</div>
+
+<div style="background: var(--surface-3); padding: 1rem; border-radius: 8px; margin-top: 2rem; color: var(--text-2); font-size: 0.9rem;">
+  <strong>Note:</strong> Configuration changes require application restart to take effect.
+  Modify environment variables and restart the application to update these settings.
+</div>
+{% endblock %}

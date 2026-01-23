@@ -1,0 +1,44 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+  <h1>Admin Dashboard</h1>
+  <p>System health and statistics overview</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_users }}</div>
+    <div class="stat-label">Total Users</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.active_users }}</div>
+    <div class="stat-label">Active Users</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.locked_accounts }}</div>
+    <div class="stat-label">Locked Accounts</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_clans }}</div>
+    <div class="stat-label">Total Clans</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.recent_logins }}</div>
+    <div class="stat-label">Logins (24h)</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.failed_logins_24h }}</div>
+    <div class="stat-label">Failed Logins (24h)</div>
+  </div>
+</div>
+
+<div style="background: var(--surface-2); padding: 1.5rem; border-radius: 8px;">
+  <h2 style="margin-bottom: 1rem;">Quick Actions</h2>
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+    <a href="/admin/users" class="btn primary">Manage Users</a>
+    <a href="/admin/audit-logs" class="btn secondary">View Audit Logs</a>
+    <a href="/admin/rate-limits" class="btn secondary">Check Rate Limits</a>
+  </div>
+</div>
+{% endblock %}

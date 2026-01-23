@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 
 from .connection import DatabaseConnection
 from .migrations import JSONMigrationManager
+from .sql_utils import escape_like_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -178,13 +179,15 @@ def search_accounts(query: str, limit: int = 10) -> list[Dict[str, Any]]:
         db = get_database()
 
         with db.get_connection() as conn:
+            # Escape LIKE wildcards to prevent SQL injection
+            escaped_query = escape_like_pattern(query)
             accounts = conn.execute("""
                 SELECT id, name, display_name, default_mode, created_at, updated_at, active
                 FROM accounts
                 WHERE name LIKE ? OR display_name LIKE ?
                 ORDER BY name
                 LIMIT ?
-            """, (f"%{query}%", f"%{query}%", limit)).fetchall()
+            """, (f"%{escaped_query}%", f"%{escaped_query}%", limit)).fetchall()
 
             return [dict(account) for account in accounts]
 

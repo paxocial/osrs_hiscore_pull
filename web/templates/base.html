@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ title or "OSRS Web Lab" }}</title>
+  <title>{{ title or "Catherby" }}</title>
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/clan.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
@@ -26,55 +26,62 @@
   <div class="page">
 <header class="topbar" data-nav-open="false">
   <div class="topbar-row">
-    <div class="brand">
-      <div class="brand-mark">⚔️</div>
+    <a href="/" class="brand" style="text-decoration: none;">
+      <div class="brand-mark">🎣</div>
       <div>
-        <div class="brand-title">OSRS Web Lab</div>
-        <div class="brand-sub">Snapshots · Clans · Analytics</div>
+        <div class="brand-title">Catherby</div>
+        <div class="brand-sub">OSRS Account Tracker & Tools</div>
       </div>
-    </div>
+    </a>
     <nav class="nav-links desktop-only" hx-boost="true">
       <a href="/" class="nav-link">Home</a>
-      <a href="/api/docs" class="nav-link">API Docs</a>
-      <a href="/api/health" class="nav-link ghost">API Health</a>
+      <a href="/profiles" class="nav-link">Account Tracker</a>
+      <a href="/clans" class="nav-link">Clans</a>
       {% if user %}
-        <a href="/profiles" class="nav-link">My Profiles</a>
         <a href="/auth/tokens" class="nav-link">API Tokens</a>
+        {% if request.session.get("is_admin") %}
+          <a href="/admin/" class="nav-link" style="color: #f59e0b;">Admin</a>
+        {% endif %}
       {% endif %}
     </nav>
     <div class="nav-actions desktop-only">
-      <button class="btn ghost">Disable 3D</button>
       {% if user %}
+        <span style="color: var(--text-muted); font-size: 0.875rem; margin-right: 0.5rem;">{{ user.email }}</span>
         <form method="post" action="/auth/logout">
-          <button class="btn primary" type="submit">Log Out</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn ghost" type="submit">Log Out</button>
         </form>
       {% else %}
-        <a class="btn primary" href="/auth/login">Log In</a>
+        <a class="btn ghost" href="/auth/login">Log In</a>
+        <a class="btn primary" href="/auth/register">Sign Up</a>
       {% endif %}
     </div>
     <button class="btn ghost icon mobile-only" id="mobile-nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav">
-      ☰ Menu
+      Menu
     </button>
   </div>
 
   <div class="nav-drawer mobile-only" id="mobile-nav">
     <nav class="nav-links vertical" hx-boost="true">
       <a href="/" class="nav-link">Home</a>
-      <a href="/api/docs" class="nav-link">API Docs</a>
-      <a href="/api/health" class="nav-link ghost">API Health</a>
+      <a href="/profiles" class="nav-link">Account Tracker</a>
+      <a href="/clans" class="nav-link">Clans</a>
       {% if user %}
-        <a href="/profiles" class="nav-link">My Profiles</a>
         <a href="/auth/tokens" class="nav-link">API Tokens</a>
+        {% if request.session.get("is_admin") %}
+          <a href="/admin/" class="nav-link">Admin</a>
+        {% endif %}
       {% endif %}
     </nav>
     <div class="nav-actions stacked">
-      <button class="btn ghost full">Disable 3D</button>
       {% if user %}
         <form method="post" action="/auth/logout" class="full">
-          <button class="btn primary full" type="submit">Log Out</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn ghost full" type="submit">Log Out</button>
         </form>
       {% else %}
-        <a class="btn primary full" href="/auth/login">Log In</a>
+        <a class="btn ghost full" href="/auth/login">Log In</a>
+        <a class="btn primary full" href="/auth/register">Sign Up</a>
       {% endif %}
     </div>
   </div>
@@ -85,10 +92,10 @@
     </main>
 
     <footer class="footer">
-      <div>Built with FastAPI + HTMX · Dark blue rune theme</div>
+      <div>Catherby &copy; 2025 &middot; Not affiliated with Jagex Ltd.</div>
       <div class="footer-links">
-        <a href="/api/redoc">ReDoc</a>
-        <a href="https://github.com/yourusername/osrs_hiscore_pull">Repo</a>
+        <a href="/api/docs">API</a>
+        <a href="https://github.com/austin/catherby">GitHub</a>
       </div>
     </footer>
   </div>

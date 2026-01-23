@@ -1,0 +1,47 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+  <h1>Clan Oversight</h1>
+  <p>View all clans and their owners</p>
+</div>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Clan Name</th>
+      <th>Owner Email</th>
+      <th>Members</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for clan in clans %}
+    <tr>
+      <td><strong>{{ clan.name }}</strong></td>
+      <td>{{ clan.owner_email }}</td>
+      <td>{{ clan.member_count or 0 }}</td>
+      <td>{{ clan.created_at[:10] }}</td>
+      <td>
+        <a href="/clans/{{ clan.name }}" class="btn btn-sm secondary" target="_blank">
+          View Clan →
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="?page={{ page - 1 }}">← Previous</a>
+  {% endif %}
+  <span class="active">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
