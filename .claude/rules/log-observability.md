@@ -1,0 +1,97 @@
+# Log Observability
+
+**Council provides unified log access across all managed processes.**
+
+## CLI Usage
+
+```bash
+# View recent logs (all sources)
+council logs
+
+# Tail specific source
+council logs --daemon          # Daemon logs only
+council logs --web             # Web UI logs only
+council logs --source <name>   # Named source
+
+# Filter and search
+council logs --level error     # Errors only
+council logs --since 5m        # Last 5 minutes
+council logs -n 100            # Last 100 lines
+
+# Live streaming
+council logs -f                # Stream all sources
+council logs -f --daemon       # Stream daemon only
+council logs -f --level error  # Stream errors only
+
+# Machine-readable output
+council logs --json            # JSON Lines output
+council logs --list            # List available sources
+```
+
+## Log Sources
+
+| Source | File | Description |
+|--------|------|-------------|
+| `daemon` | `daemon.log` | Council daemon stdout/stderr |
+| `web` | `web_ui.log` | Web UI stdout/stderr |
+
+Additional sources may be registered dynamically (SDK workers, plugins).
+
+## API Endpoints
+
+```
+GET /api/logs/sources              # List available log sources
+GET /api/logs?source=daemon&tail=50&level=error&since=5m  # Query logs
+GET /api/logs/stream?source=daemon  # SSE live stream
+```
+
+All endpoints require authentication (`Authorization: Bearer <token>`).
+
+Use `API.getAuthHeaders()` from `app.js` for browser-side requests (see `web-api-auth` rule).
+
+## Programmatic Access (LogManager)
+
+```python
+from council_mcp.log_manager import LogManager
+
+lm = LogManager()
+lm.discover_sources()
+
+# Read last 50 lines from daemon
+entries = lm.read_tail("daemon", 50)
+for entry in entries:
+    print(f"[{entry.timestamp}] [{entry.source}] {entry.level}: {entry.message}")
+
+# Read from all sources, merged and filtered
+entries = lm.read_all(n=100, level="error")
+
+# Read entries since a time
+entries = lm.read_since("daemon", "5m")
+
+# Stream new entries (async)
+async for entry in lm.stream("daemon"):
+    print(entry.message)
+```
+
+## Configuration
+
+Config section `council.logs` in `.council/council.yaml`:
+
+```yaml
+council:
+  logs:
+    log_dir: "."                    # Base directory for log discovery
+    default_tail_lines: 50          # Default --tail value
+    max_tail_lines: 5000            # Hard cap on tail reads
+    stream_poll_interval_ms: 500    # Live stream poll interval (ms)
+```
+
+Read config in code:
+
+```python
+from council_mcp.config import get_council_config
+
+cfg = get_council_config()
+logs_cfg = cfg.get("council", {}).get("logs", {})
+tail = logs_cfg.get("default_tail_lines", 50)
+```

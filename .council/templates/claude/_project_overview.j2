@@ -1,0 +1,27 @@
+{# Project overview - structure and recent activity (auto-generated) #}
+
+### Repository Layout
+
+**Repo Root**: `{{ repo_root }}`
+
+{% if key_directories %}
+| Path | Purpose |
+|------|---------|
+{% for dir in key_directories %}
+| `{{ dir.path }}` | {{ dir.description }} |
+{% endfor %}
+{% endif %}
+
+{% if recent_projects %}
+### Recent Scribe Activity
+
+| Project | Last Modified | Entries |
+|---------|---------------|---------|
+{% for proj in recent_projects %}
+| `{{ proj.name }}` | {{ proj.last_modified }} | {{ proj.entry_count }} |
+{% endfor %}
+{% else %}
+### Recent Scribe Activity
+
+*No Scribe projects found in `.scribe/docs/dev_plans/`.*
+{% endif %}

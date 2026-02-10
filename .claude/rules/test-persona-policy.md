@@ -1,0 +1,38 @@
+# Test Persona Policy
+
+**All tests MUST use the canonical `test-agent` fixture.**
+
+## Rules
+
+1. **ALWAYS** use the `test_agent` fixture from `tests/conftest.py`
+2. **NEVER** create unique persona profiles in test code
+3. **NEVER** hardcode persona IDs except `test-agent`
+
+## Why
+
+- Each unique test persona pollutes the database with records that never get cleaned up
+- We deleted 27 junk personas and 455 orphaned sessions from this exact problem
+- One canonical persona = clean state, fast tests, traceable logs
+
+## Correct
+
+```python
+def test_something(test_agent):
+    result = await some_function(persona_id=test_agent)
+    assert result["persona_id"] == "test-agent"
+```
+
+## Forbidden
+
+```python
+# Creates database pollution
+persona_id = f"test-persona-{timestamp}"
+models.upsert_persona_profile(slug=persona_id, ...)
+
+# Hardcoded unique names
+await query_memories(persona_id="decay-test-persona")
+```
+
+## Exception
+
+Tests that specifically test persona creation APIs are exempt but MUST clean up after themselves.

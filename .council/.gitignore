@@ -1,0 +1,18 @@
+# Runtime artifacts
+*.pid
+*.log
+session_bindings.json
+
+# Secrets
+.env
+api_key
+
+# Cache
+cache/
+
+# Database files
+db/*.db
+db/*.sqlite
+
+# FAISS indexes
+faiss/

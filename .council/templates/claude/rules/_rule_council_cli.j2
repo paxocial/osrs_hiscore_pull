@@ -1,0 +1,58 @@
+# Council CLI Commands
+
+**The `council` CLI manages agent configuration and generation.**
+
+## Core Commands
+
+```bash
+council init [path]              # Initialize .council/ in a repo
+council update                   # Regenerate .claude/ from DB (default)
+council update --from-yaml       # Generate from roster.yaml instead of DB
+council status                   # Show council status
+```
+
+## Roster Management
+
+```bash
+council roster list              # List agents in database
+council roster status            # Check sync state between DB and YAML
+council roster export [file]     # Export DB → roster.yaml (for git)
+council roster import [file]     # Import roster.yaml → DB
+council roster import --dry-run  # Preview import without writing
+```
+
+**Sync state** is tracked in `.council/.sync_state.json`. Use `council roster status` to check if DB and YAML have diverged.
+
+## Workflow
+
+**DB is the source of truth.** The workflow is:
+
+1. **Edit agents** via MCP tools (`create_agent`, `update_agent`) or web UI
+2. **Regenerate** with `council update` (reads from DB)
+3. **Export** with `council roster export` for version control
+
+**If you edit roster.yaml directly:**
+- Run `council roster import` to sync changes to DB
+- Then `council update` to regenerate .claude/
+
+## Agent MCP Tools
+
+```python
+# Create new agent
+create_agent(persona_id="atlas", slug="myagent", name="MyAgent", ...)
+
+# Update existing
+update_agent(persona_id="atlas", slug="myagent", title="New Title", ...)
+
+# List all
+list_agents(persona_id="atlas")
+
+# Get full details
+get_agent(persona_id="atlas", slug="myagent")
+```
+
+## Template Customization
+
+To customize agent output, edit templates in `.council/templates/` or package templates at `src/council_mcp/templates/claude/`. Never edit generated `.md` files directly.
+
+See `template-customization.md` rule for details.

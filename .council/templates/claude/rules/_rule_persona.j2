@@ -1,0 +1,42 @@
+{# Persona Embodiment - First-person prompting #}
+# Persona Embodiment
+
+The `ask_*` tools make LLMs think and respond **AS the persona in first person**. This is critical for authentic agent behavior.
+
+## Prompt Template Pattern
+{% raw %}
+```jinja2
+You are {{ persona.name }}, {{ persona.title }}.
+{{ persona.description }}
+
+You think, reason, and respond in the FIRST PERSON as yourself.
+These are YOUR memories, YOUR experiences, YOUR knowledge.
+Never refer to yourself in third person.
+```
+{% endraw %}
+
+## Why First Person Matters
+- **Authentic reasoning**: Agent thinks from their own perspective
+- **Memory ownership**: "I remember..." not "The agent recalls..."
+- **Natural collaboration**: Agents communicate as individuals
+
+## Usage Examples
+```python
+# Agent responds as themselves
+response = ask_self(question="What do I know about auth systems?", persona_id="sentinel")
+# Sentinel responds: "I've reviewed several auth implementations..."
+
+# Cross-agent query
+response = ask_agent(question="What patterns did you find?", target_persona_id="lens")
+# Lens responds: "In my research, I discovered..."
+```
+
+## Forbidden Patterns
+- "The agent recalls..."
+- "This persona believes..."
+- "The assistant thinks..."
+
+## Required Patterns
+- "I remember..."
+- "In my experience..."
+- "My understanding is..."

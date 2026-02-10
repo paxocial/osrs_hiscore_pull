@@ -1,0 +1,116 @@
+{# AgentKit Schema Migration Patterns #}
+# AgentKit Schema Migrations
+
+**Migrations are NOT auto-applied.** Use CLI commands.
+
+## Commands
+
+```bash
+agentkit-schema plan    # Preview changes (always run first)
+agentkit-schema apply   # Apply schema changes
+```
+
+## Migration Files
+
+Location: `agentkit_extensions/db/schema_extensions/council/`
+
+Numbering: Sequential (061, 062, ... check latest before adding).
+
+## 3-Phase Pattern for Column Additions
+
+```
+070_<table>_<column>_add.sql        # ADD COLUMN (nullable)
+071_<table>_<column>_idx.sql        # CREATE INDEX
+072_<table>_<column>_backfill.sql   # UPDATE existing rows (runs manually!)
+073_<table>_<column>_fk.sql         # ADD CONSTRAINT
+```
+
+## Database Connection
+
+**Always use AgentKit's db module** - never raw psql (no credentials needed).
+
+**CRITICAL**: Cursor returns **dicts**, not tuples. Use `row['column_name']` not `row[0]`.
+
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute('SELECT id, slug FROM persona_profiles LIMIT 1')
+        row = cur.fetchone()
+        print(row['slug'])  # CORRECT: dict access
+        # print(row[0])     # WRONG: KeyError!
+    conn.commit()  # Only needed for writes (UPDATE/INSERT/DELETE)
+```
+
+## Common Database Operations
+
+**Inspect table structure:**
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT column_name, data_type, is_nullable
+            FROM information_schema.columns
+            WHERE table_name = 'persona_profiles'
+            ORDER BY ordinal_position
+        """)
+        for row in cur.fetchall():
+            print(f"{row['column_name']}: {row['data_type']} (nullable: {row['is_nullable']})")
+```
+
+**Check row counts:**
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute('SELECT COUNT(*) as cnt FROM persona_profiles WHERE council_id IS NULL')
+        print(f"Null council_id: {cur.fetchone()['cnt']}")
+```
+
+**Sample data:**
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute('SELECT id, slug, council_id FROM persona_profiles LIMIT 5')
+        for row in cur.fetchall():
+            print(f"{row['slug']}: council_id={row['council_id']}")
+```
+
+**Run backfill (requires commit):**
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute('UPDATE persona_profiles SET council_id = %s WHERE council_id IS NULL', ('default-uuid',))
+        print(f'Backfilled {cur.rowcount} rows')
+    conn.commit()  # REQUIRED for writes!
+```
+
+## Complete Workflow
+
+```bash
+# 1. Write SQL files
+# 2. Preview
+agentkit-schema plan
+# 3. Apply schema
+agentkit-schema apply
+# 4. Run backfill manually (if needed)
+# 5. Verify with pytest
+```
+
+## SQL Template
+
+```sql
+-- Description
+-- Part of P<phase>.<task>: <name>
+SET search_path TO public, council;
+
+ALTER TABLE mytable ADD COLUMN mycolumn UUID;
+```

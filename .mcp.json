@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "council-v2": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /home/austin/projects/MCP_SPINE/council_mcp/.venv/bin/activate && export PYTHONPATH=/home/austin/projects/MCP_SPINE/council_mcp:${PYTHONPATH} && exec python -m council_mcp.ws_proxy --url ws://127.0.0.1:8016/mcp"
+      ],
+      "env": {
+        "PYTHONPATH": "/home/austin/projects/MCP_SPINE/council_mcp"
+      }
+    },
+    "scribe": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /home/austin/projects/MCP_SPINE/council_mcp/.venv/bin/activate && export PYTHONPATH=/home/austin/projects/MCP_SPINE:${PYTHONPATH} && exec python -m scribe_mcp.server"
+      ],
+      "env": {
+        "PYTHONPATH": "/home/austin/projects/MCP_SPINE",
+        "SCRIBE_ROOT": "/home/austin/projects/MCP_SPINE",
+        "SCRIBE_STORAGE_BACKEND": "sqlite"
+      }
+    }
+  }
+}

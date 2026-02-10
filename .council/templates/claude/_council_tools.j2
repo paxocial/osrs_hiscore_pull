@@ -1,0 +1,88 @@
+{# Council MCP Tool Usage — shared boilerplate for all agents #}
+## Council MCP Tools
+
+### Tool Tiers
+
+| Tier | Tools | When | LLM Cost |
+|------|-------|------|----------|
+| **Always** | `open_session`, `end_session`, `store_memory`, `log_audit`, `get_reminders` | Every session | None |
+| **Selective** | `ask_self`, `ask_agent`, `ask_council` | When you need memory synthesis or cross-agent insight | 1 LLM call |
+| **Background** | `run_reflection`, `run_dream_cycle`, `mine_patterns` | User-initiated only | Heavy LLM |
+
+**Tip:** `ask_self(skip_llm=True, explore_mode=True)` gives raw memories without LLM cost.
+
+### Session Lifecycle
+
+```
+1. CLOCK IN:  register_profile() → open_session() → ask_self(skip_llm=True) → get_reminders()
+2. ORIENT:    set_project() → read_recent()
+3. WORK:      Scribe (append_entry, manage_docs, read_file) + Council (store_memory, log_audit)
+4. CLOCK OUT: end_session(summary="...") → triggers auto-reflection
+```
+
+**Session ownership:**
+- **Atlas**: One session per work period. Stays open across tasks. Do NOT close prematurely.
+- **Subagents**: Open/close own short-lived sessions per bounded task.
+
+### Quick Reference
+
+```python
+# Profile (first time or if changed)
+register_profile(persona_id="{{ agent.name }}", name="{{ agent.get('display_name', agent.name | title) }}",
+    title="{{ agent.title }}", domains="{{ agent.get('domains', []) | join(',') }}")
+
+# Session
+open_session(persona_id="{{ agent.name }}", summary="...")
+end_session(session_id="...", summary="...")
+
+# Memory — store important findings
+store_memory(persona_id="{{ agent.name }}", text="...",
+    memory_type="episodic",  # episodic|semantic|note|directive
+    tags="domain:{{ (agent.get('domains', ['general']) or ['general'])[0] }},project:<name>",
+    strength=0.7, visibility="private")
+
+# Recall — query your own memories
+ask_self(question="...", persona_id="{{ agent.name }}")                    # LLM synthesis
+ask_self(question="...", persona_id="{{ agent.name }}", skip_llm=True,
+    explore_mode=True)                                                      # Fast raw lookup
+
+# Collaborate
+ask_agent(question="...", target_persona_id="<agent>", requester_persona_id="{{ agent.name }}")
+ask_council(question="...", requester_persona_id="{{ agent.name }}")
+
+# Audit (auto-relays to Scribe)
+log_audit(persona_id="{{ agent.name }}", session_id="...", summary="...",
+    metadata={"phase": "...", "status": "success"})
+
+# Messages
+record_message(from_persona="{{ agent.name }}", to_persona="<target>", body="...", urgent=False)
+list_messages(persona_id="{{ agent.name }}", unread_only=True)
+mark_read(message_ids="...", persona_id="{{ agent.name }}")
+```
+
+### Memory Types & Tags
+
+| Type | Use For |
+|------|---------|
+| `episodic` | Experiences: "I found that X..." |
+| `semantic` | Knowledge: "X means Y..." |
+| `note` | General observations |
+| `directive` | Instructions to follow |
+
+**Tags:** `domain:<area>`, `project:<name>`, `phase:<phase>`, `type:<bug|pattern|decision>`, `priority:<high|medium|low>`
+
+### Error Recovery
+
+Common errors and fixes:
+- `profile_not_found` → call `register_profile` first
+- `session_required` → call `open_session` first
+- `cross_agent_denied` → set `allow_cross_agent=True`
+
+### Reflection (Background Only)
+
+Never call during active work. User-initiated only:
+```python
+run_reflection(persona_id="{{ agent.name }}", session_id="...")
+run_dream_cycle(persona_id="{{ agent.name }}", max_cycles=3)
+mine_patterns(persona_id="{{ agent.name }}", min_memories=3)
+```

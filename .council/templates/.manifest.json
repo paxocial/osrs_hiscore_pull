@@ -1,0 +1,89 @@
+{
+  "claude/_project_overview.j2": {
+    "sha256": "3504253d9787d1f16b4482a6e189b3ab4cb2e0e79a466c02279af23e78a15f12"
+  },
+  "claude/council_member.md.j2": {
+    "sha256": "d89cb3d243ce5059ab74fe9ff4279beb54beab722fcd673a14770c10f42e1524"
+  },
+  "claude/_session_protocol.j2": {
+    "sha256": "16fe9f70916b56cdf21a0d513c3ed2fa23f09cf4e896943800b9fc572fd05440"
+  },
+  "claude/CLAUDE.md.j2": {
+    "sha256": "7672085d97982ba4c32dc7109ce73361a9ffdf0602f9bcb9151d2ce61b955ca3"
+  },
+  "claude/_agentkit_patterns.j2": {
+    "sha256": "34208fc0c7108254996fec4c20fc9999a02b20060b4493498c26a9fea4b44a5c"
+  },
+  "claude/_scribe_protocol.j2": {
+    "sha256": "5dfe8b77d969550a0f9362caa55fd92c1926ff482dd8c9dc90804abdb49c5830"
+  },
+  "claude/_dual_logging.j2": {
+    "sha256": "50e8f9f429ac5dcda24769b7a6c86c9866d2fdee11740a0a23f6252eb4d6308b"
+  },
+  "claude/_council_tools.j2": {
+    "sha256": "c9cfebe9d46ec67fedc81abdeb57d899094d6b0098888fbd3503736b723335ac"
+  },
+  "claude/agent_preview.md.j2": {
+    "sha256": "99da7c84c17f0db01763be5f736d247875f5861928b6f8cadfd505a154cedea0"
+  },
+  "claude/_persona_embodiment.j2": {
+    "sha256": "fa8892445c0a8be6cbb2a6a195cdc780fa19f34221c79a6b123e1578e83612e4"
+  },
+  "claude/rules/_rule_test_persona.j2": {
+    "sha256": "1a0fb534f2a9fd66d0fccbb59adac30228d2833435b4a63b4092ada3469fa610"
+  },
+  "claude/rules/_rule_council_cli.j2": {
+    "sha256": "28fe0d11f3efade176f07813720356cf12b6b1a43e19273bfab9982aea16e634"
+  },
+  "claude/rules/_rule_process_lifecycle.j2": {
+    "sha256": "426ce170212ac2fa26ccc65a10bde6f52d96616fa9aea709a6b1f23d16820786"
+  },
+  "claude/rules/_rule_multi_provider.j2": {
+    "sha256": "8ac7191f63be6422e47726dd9b86a8992994af29775a1f1a25b2023c39b6cf54"
+  },
+  "claude/rules/_rule_custom_pages.j2": {
+    "sha256": "299317856a1ab8cedc8c7a17214a6d7d71490aac4b1714d05adff85b4c0596b5"
+  },
+  "claude/rules/_rule_atlas_discipline.j2": {
+    "sha256": "5d34ff4c7bbc8013d22580ba1da68df78413c075e3d7e10241c1fe8e6b3e35a3"
+  },
+  "claude/rules/_rule_orchestration.j2": {
+    "sha256": "689b7210d37bcd006269ec6067386cf49579542d377300fc4085b21640d10de4"
+  },
+  "claude/rules/_rule_session.j2": {
+    "sha256": "1b481f47b59ff1f877b6557d694e80927b768b485f2781e17902d1c6c38adae7"
+  },
+  "claude/rules/_rule_root_cause.j2": {
+    "sha256": "52714d09814aa830b0d6564323d5959e28e9205f32801ee0c5975808163f3754"
+  },
+  "claude/rules/_rule_persona.j2": {
+    "sha256": "9c6f605f311edf412a3392d8761fbcc833558e63f61038fdf22f0f37aa2ca1ac"
+  },
+  "claude/rules/_rule_template_customization.j2": {
+    "sha256": "c7022892dd1c34a2fb769bc7917fe22537043908289970e325570581485d67ca"
+  },
+  "claude/rules/_rule_config_standards.j2": {
+    "sha256": "41441f56e34be557e759603e2de6f02cab080e0b3f46cbbfa7650a55cd30eb32"
+  },
+  "claude/rules/_rule_agentkit.j2": {
+    "sha256": "3a8521fc79452c45b63c31ce6410b70838408f181b398c3c0d6a7740c7bb964e"
+  },
+  "claude/rules/_rule_council_isolation.j2": {
+    "sha256": "9ac2a01dff185bbfe8a77434592ca2e986ebb6d62e57b199a4487a81e2791ddb"
+  },
+  "claude/rules/_rule_web_api_auth.j2": {
+    "sha256": "8441f32d29230000a86eadce450981128b55f5d6b0198e071dbc2255a7cd0ff4"
+  },
+  "claude/rules/_rule_log_observability.j2": {
+    "sha256": "02ed05e50843a305377a2b4084e0fb9e3fc3ade56e2ac481cfd0ba019f913e63"
+  },
+  "claude/rules/_rule_dual_logging.j2": {
+    "sha256": "456e69eab3ecba79de683d94700981e5f8687035f3c02c17eb27c47dc4db0328"
+  },
+  "claude/rules/_rule_pipeline_gates.j2": {
+    "sha256": "929c0327be25f2a5ac5beb06695103c655f56444a4680f6386d29cf6f20c5176"
+  },
+  "claude/rules/_rule_agentkit_schema.j2": {
+    "sha256": "9650b6b869ead235a0d4b9a56df52e7bb4b3e3cdbf42cbbd46098ce0c13d0d6d"
+  }
+}

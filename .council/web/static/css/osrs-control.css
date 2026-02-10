@@ -1,0 +1,464 @@
+.osrs-control {
+  color: var(--text-primary, #e4e4e7);
+  width: 100%;
+  max-width: 1520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+  font-family: var(--font-sans, "Outfit", sans-serif);
+  position: relative;
+  isolation: isolate;
+}
+
+.osrs-control::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 42% at 8% -6%, rgba(6, 182, 212, 0.13), transparent 72%),
+    radial-gradient(52% 36% at 92% 2%, rgba(14, 116, 144, 0.11), transparent 78%);
+}
+
+.osrs-control__header {
+  border: 1px solid var(--cyan-alpha-20, rgba(6, 182, 212, 0.2));
+  border-radius: var(--radius-xl, 1rem);
+  padding: var(--space-5, 1.25rem);
+  background:
+    radial-gradient(140% 130% at 90% -20%, var(--cyan-alpha-20, rgba(6, 182, 212, 0.2)), transparent 50%),
+    radial-gradient(120% 120% at -10% 120%, rgba(34, 211, 238, 0.12), transparent 45%),
+    linear-gradient(160deg, rgba(10, 16, 24, 0.95) 0%, rgba(13, 21, 34, 0.92) 100%);
+  box-shadow: var(--shadow-card, 0 4px 16px rgba(0, 0, 0, 0.3));
+}
+
+.osrs-control__title {
+  margin: 0;
+  font-family: var(--font-heading, "Space Grotesk", sans-serif);
+  font-size: clamp(1.3rem, 2.2vw, 2rem);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.01em;
+}
+
+.osrs-control__subtitle {
+  margin: var(--space-2, 0.5rem) 0 0;
+  color: var(--text-secondary, #a1a1aa);
+  line-height: var(--leading-normal, 1.5);
+  max-width: 92ch;
+}
+
+.osrs-control__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: var(--space-4, 1rem);
+}
+
+.osrs-panel {
+  border-radius: var(--radius-xl, 1rem);
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  background:
+    linear-gradient(170deg, rgba(19, 28, 43, 0.7) 0%, rgba(12, 18, 30, 0.8) 100%),
+    var(--noise-texture);
+  box-shadow:
+    inset 0 1px 0 rgba(34, 211, 238, 0.08),
+    var(--shadow-card, 0 4px 16px rgba(0, 0, 0, 0.3));
+  overflow: hidden;
+}
+
+.osrs-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-bottom: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  background: rgba(10, 16, 26, 0.55);
+}
+
+.osrs-panel__title {
+  margin: 0;
+  font-family: var(--font-heading, "Space Grotesk", sans-serif);
+  font-size: var(--text-base, 1rem);
+  font-weight: var(--font-semibold, 600);
+}
+
+.osrs-panel__body {
+  padding: var(--space-4, 1rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+}
+
+.osrs-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+}
+
+.osrs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+  align-items: flex-end;
+}
+
+.osrs-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+  min-width: 150px;
+}
+
+.osrs-field--grow {
+  flex: 1 1 260px;
+}
+
+.osrs-label {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-tertiary, #71717a);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.osrs-input,
+.osrs-select {
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-md, 0.5rem);
+  background: rgba(10, 16, 26, 0.72);
+  color: var(--text-primary, #e4e4e7);
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  font-size: var(--text-sm, 0.875rem);
+  min-height: 2.45rem;
+  transition: border-color var(--transition-fast, 100ms ease-in-out), box-shadow var(--transition-fast, 100ms ease-in-out);
+}
+
+.osrs-input:focus,
+.osrs-select:focus {
+  outline: none;
+  border-color: var(--cyan-500, #06b6d4);
+  box-shadow: 0 0 0 3px var(--cyan-glow, rgba(6, 182, 212, 0.15));
+}
+
+.osrs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1, 0.25rem);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  min-height: 2.45rem;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-medium, 500);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all var(--transition-fast, 100ms ease-in-out);
+}
+
+.osrs-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.osrs-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.osrs-btn--primary {
+  background: var(--gradient-cyan, linear-gradient(135deg, #0891b2 0%, #06b6d4 100%));
+  color: #f8feff;
+}
+
+.osrs-btn--primary:hover:not(:disabled) {
+  box-shadow: var(--shadow-cyan-lg, 0 0 24px rgba(6, 182, 212, 0.25));
+}
+
+.osrs-btn--secondary {
+  background: var(--bg-surface, #1c1f2a);
+  color: var(--text-primary, #e4e4e7);
+  border-color: var(--border-default, rgba(255, 255, 255, 0.12));
+}
+
+.osrs-btn--secondary:hover:not(:disabled) {
+  background: var(--bg-hover, #242836);
+  border-color: var(--cyan-700, #0e7490);
+}
+
+.osrs-btn--ghost {
+  background: transparent;
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, #a1a1aa);
+}
+
+.osrs-btn--ghost:hover:not(:disabled) {
+  background: var(--bg-hover, #242836);
+  border-color: var(--border-default, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #e4e4e7);
+}
+
+.osrs-btn--danger {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.osrs-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #f87171;
+  color: #fecaca;
+}
+
+.osrs-btn--small {
+  min-height: 2.1rem;
+  padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+  font-size: var(--text-xs, 0.75rem);
+}
+
+.osrs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--cyan-alpha-20, rgba(6, 182, 212, 0.2));
+  background: var(--cyan-alpha-8, rgba(6, 182, 212, 0.08));
+  color: var(--text-secondary, #a1a1aa);
+  font-size: var(--text-xs, 0.75rem);
+  padding: 0.3rem 0.55rem;
+}
+
+.osrs-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary, #71717a);
+}
+
+.osrs-dot--healthy {
+  background: var(--success, #10b981);
+}
+
+.osrs-dot--warning {
+  background: var(--warning, #f59e0b);
+}
+
+.osrs-dot--error {
+  background: var(--error, #ef4444);
+}
+
+.osrs-muted {
+  color: var(--text-secondary, #a1a1aa);
+}
+
+.osrs-inline-note {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary, #a1a1aa);
+}
+
+.osrs-note {
+  margin: 0;
+  padding: var(--space-3, 0.75rem);
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  background: rgba(8, 25, 38, 0.4);
+  color: var(--text-secondary, #a1a1aa);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: var(--leading-normal, 1.5);
+}
+
+.osrs-note code {
+  color: var(--text-primary, #e4e4e7);
+}
+
+.osrs-status {
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  background: rgba(10, 16, 26, 0.65);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--space-3, 0.75rem);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-primary, #e4e4e7);
+}
+
+.osrs-runtime-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.osrs-table-wrap {
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  border-radius: var(--radius-lg, 0.75rem);
+  overflow: auto;
+}
+
+.osrs-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+
+.osrs-table th,
+.osrs-table td {
+  padding: var(--space-2-5, 0.625rem) var(--space-3, 0.75rem);
+  text-align: left;
+  border-bottom: 1px solid var(--cyan-alpha-10, rgba(6, 182, 212, 0.1));
+  font-size: var(--text-sm, 0.875rem);
+  vertical-align: middle;
+}
+
+.osrs-table th {
+  background: rgba(10, 16, 26, 0.72);
+  color: var(--text-tertiary, #71717a);
+  font-size: var(--text-xs, 0.75rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.osrs-table tr:nth-child(odd) td {
+  background: rgba(13, 21, 34, 0.6);
+}
+
+.osrs-table tr:nth-child(even) td {
+  background: rgba(17, 28, 44, 0.58);
+}
+
+.osrs-table code {
+  color: #a5f3fc;
+  font-size: 0.8rem;
+}
+
+.osrs-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1, 0.25rem);
+}
+
+.osrs-results {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  border-radius: var(--radius-md, 0.5rem);
+  background: rgba(10, 16, 26, 0.62);
+  padding: var(--space-3, 0.75rem);
+}
+
+.osrs-result-row {
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  border-radius: var(--radius-md, 0.5rem);
+  background: rgba(11, 23, 36, 0.62);
+  padding: var(--space-3, 0.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+}
+
+.osrs-result-row + .osrs-result-row {
+  margin-top: var(--space-2, 0.5rem);
+}
+
+.osrs-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--cyan-alpha-20, rgba(6, 182, 212, 0.2));
+  background: rgba(6, 182, 212, 0.08);
+  font-size: var(--text-xs, 0.75rem);
+  padding: 0.2rem 0.5rem;
+  color: var(--text-secondary, #a1a1aa);
+}
+
+.osrs-tag--ok {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.osrs-tag--error {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.osrs-iframe-wrap {
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  border-radius: var(--radius-lg, 0.75rem);
+  overflow: hidden;
+  background: rgba(10, 16, 26, 0.62);
+}
+
+.osrs-iframe {
+  width: 100%;
+  min-height: 560px;
+  border: 0;
+  display: block;
+  background: #0a0a0f;
+}
+
+.osrs-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-2, 0.5rem);
+}
+
+.osrs-kv__item {
+  border: 1px solid var(--cyan-alpha-15, rgba(6, 182, 212, 0.15));
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--space-2-5, 0.625rem) var(--space-3, 0.75rem);
+  background: rgba(10, 16, 26, 0.52);
+}
+
+.osrs-kv__label {
+  color: var(--text-tertiary, #71717a);
+  font-size: var(--text-xs, 0.75rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.osrs-kv__value {
+  margin-top: var(--space-1, 0.25rem);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-primary, #e4e4e7);
+}
+
+.osrs-hidden {
+  display: none !important;
+}
+
+@media (max-width: 1120px) {
+  .osrs-control__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .osrs-iframe {
+    min-height: 460px;
+  }
+}
+
+@media (max-width: 700px) {
+  .osrs-control {
+    gap: var(--space-3, 0.75rem);
+  }
+
+  .osrs-control__header {
+    padding: var(--space-4, 1rem);
+  }
+
+  .osrs-panel__head {
+    flex-wrap: wrap;
+    padding: var(--space-3, 0.75rem);
+  }
+
+  .osrs-panel__body {
+    padding: var(--space-3, 0.75rem);
+  }
+
+  .osrs-table {
+    min-width: 460px;
+  }
+
+  .osrs-iframe {
+    min-height: 390px;
+  }
+}

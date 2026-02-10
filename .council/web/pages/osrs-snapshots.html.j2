@@ -1,0 +1,281 @@
+---
+nav_label: OSRS Snapshots
+nav_order: 3
+nav_group: Snapshot Ops
+nav_group_order: 1
+---
+{% extends "base.html" %}
+
+{% block title %}OSRS Snapshots{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/council-static/css/osrs-control.css">
+{% endblock %}
+
+{% block content %}
+<div
+  class="osrs-control"
+  data-osrs-control-root
+  data-view="snapshots"
+  data-default-backend-url="http://127.0.0.1:8001"
+>
+  <section class="osrs-control__header">
+    <h1 class="osrs-control__title">OSRS Snapshot Explorer</h1>
+    <p class="osrs-control__subtitle">
+      Review latest snapshot artifacts, trigger fresh pulls, and inspect account state from Council while preserving the existing storage/report pipeline.
+    </p>
+  </section>
+
+  <section class="osrs-panel">
+    <div class="osrs-panel__head">
+      <h2 class="osrs-panel__title">Backend Connection</h2>
+      <span class="osrs-chip">
+        <span id="backendStatusDot" class="osrs-dot"></span>
+        <span id="backendStatusLabel">Not checked</span>
+      </span>
+    </div>
+    <div class="osrs-panel__body">
+      <div class="osrs-row">
+        <label class="osrs-field osrs-field--grow">
+          <span class="osrs-label">Backend URL</span>
+          <input id="backendBaseUrlInput" class="osrs-input" type="text" placeholder="http://127.0.0.1:8001">
+        </label>
+        <div class="osrs-row">
+          <button id="saveBackendBtn" class="osrs-btn osrs-btn--primary" type="button">Save URL</button>
+          <button id="checkBackendBtn" class="osrs-btn osrs-btn--secondary" type="button">Health Check</button>
+          <button id="openBackendBtn" class="osrs-btn osrs-btn--ghost" type="button">Open Backend</button>
+        </div>
+      </div>
+      <div id="backendStatusDetail" class="osrs-status">Ready.</div>
+      <div id="lastHealthCheckedAt" class="osrs-inline-note">Last checked: never</div>
+      <div class="osrs-kv">
+        <div class="osrs-kv__item">
+          <div class="osrs-kv__label">Health</div>
+          <div id="kvHealthStatus" class="osrs-kv__value">-</div>
+        </div>
+        <div class="osrs-kv__item">
+          <div class="osrs-kv__label">Accounts</div>
+          <div id="kvAccountCount" class="osrs-kv__value">-</div>
+        </div>
+        <div class="osrs-kv__item">
+          <div class="osrs-kv__label">Snapshots</div>
+          <div id="kvSnapshotCount" class="osrs-kv__value">-</div>
+        </div>
+        <div class="osrs-kv__item">
+          <div class="osrs-kv__label">Schema Version</div>
+          <div id="kvSchemaVersion" class="osrs-kv__value">-</div>
+        </div>
+      </div>
+      <p class="osrs-note">
+        If API calls fail from Council, restart backend with Council origin in CORS:
+        <code id="corsCommandText"></code>
+        <button id="copyCorsCmdBtn" class="osrs-btn osrs-btn--ghost osrs-btn--small" type="button">Copy</button>
+        <span id="copyCorsCmdState" class="osrs-inline-note"></span>
+      </p>
+    </div>
+  </section>
+
+  <div class="osrs-control__grid">
+    <div class="osrs-stack">
+      <section class="osrs-panel" data-show-on="dashboard,snapshots">
+        <div class="osrs-panel__head">
+          <h2 class="osrs-panel__title">Accounts</h2>
+          <button id="refreshAccountsBtn" class="osrs-btn osrs-btn--ghost osrs-btn--small" type="button">Refresh</button>
+        </div>
+        <div class="osrs-panel__body">
+          <form id="accountCreateForm" class="osrs-row">
+            <label class="osrs-field">
+              <span class="osrs-label">RSN</span>
+              <input name="account_name" class="osrs-input" type="text" required placeholder="Austin_HCIM">
+            </label>
+            <label class="osrs-field">
+              <span class="osrs-label">Display Name</span>
+              <input name="display_name" class="osrs-input" type="text" placeholder="optional">
+            </label>
+            <label class="osrs-field">
+              <span class="osrs-label">Mode</span>
+              <select id="accountModeSelect" name="account_mode" class="osrs-select"></select>
+            </label>
+            <div class="osrs-row">
+              <button class="osrs-btn osrs-btn--primary" type="submit">Create Account</button>
+            </div>
+          </form>
+          <div id="accountActionStatus" class="osrs-inline-note">No account actions yet.</div>
+          <div class="osrs-table-wrap">
+            <table class="osrs-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Display</th>
+                  <th>Mode</th>
+                  <th>Snapshots</th>
+                  <th>Latest</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="accountsTableBody">
+                <tr><td colspan="6">Loading accounts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="osrs-panel" data-show-on="all">
+        <div class="osrs-panel__head">
+          <h2 class="osrs-panel__title">Run Snapshot</h2>
+        </div>
+        <div class="osrs-panel__body">
+          <form id="snapshotRunForm" class="osrs-row">
+            <label class="osrs-field">
+              <span class="osrs-label">Player</span>
+              <input name="snapshot_player" class="osrs-input" type="text" required placeholder="Austin_HCIM">
+            </label>
+            <label class="osrs-field">
+              <span class="osrs-label">Mode</span>
+              <select id="snapshotModeSelect" name="snapshot_mode" class="osrs-select"></select>
+            </label>
+            <div class="osrs-row">
+              <button class="osrs-btn osrs-btn--primary" type="submit">Run Now</button>
+            </div>
+          </form>
+          <div id="snapshotRunStatus" class="osrs-inline-note">No snapshot runs yet.</div>
+          <div id="snapshotRunResults" class="osrs-results">
+            <div class="osrs-inline-note">Results will appear here.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="osrs-panel" data-show-on="all">
+        <div class="osrs-panel__head">
+          <h2 class="osrs-panel__title">Latest Snapshots</h2>
+          <button id="refreshSnapshotsBtn" class="osrs-btn osrs-btn--ghost osrs-btn--small" type="button">Refresh</button>
+        </div>
+        <div class="osrs-panel__body">
+          <div class="osrs-table-wrap">
+            <table class="osrs-table">
+              <thead>
+                <tr>
+                  <th>Snapshot ID</th>
+                  <th>Account</th>
+                  <th>Mode</th>
+                  <th>Total Lvl</th>
+                  <th>Total XP</th>
+                  <th>Fetched</th>
+                  <th>Artifacts</th>
+                </tr>
+              </thead>
+              <tbody id="latestSnapshotsTableBody">
+                <tr><td colspan="7">Loading snapshots...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="osrs-stack">
+      <section class="osrs-panel" data-show-on="all">
+        <div class="osrs-panel__head">
+          <h2 class="osrs-panel__title">Embedded Backend UI</h2>
+        </div>
+        <div class="osrs-panel__body">
+          <div class="osrs-row">
+            <label class="osrs-field osrs-field--grow">
+              <span class="osrs-label">Embed Path</span>
+              <input id="embedPathInput" class="osrs-input" type="text" placeholder="/">
+            </label>
+            <div class="osrs-row">
+              <button id="loadEmbedBtn" class="osrs-btn osrs-btn--secondary" type="button">Load</button>
+            </div>
+          </div>
+          <div class="osrs-iframe-wrap">
+            <iframe id="embeddedBackendFrame" class="osrs-iframe" title="OSRS backend UI"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <section class="osrs-panel" data-show-on="all">
+        <div class="osrs-panel__head">
+          <h2 class="osrs-panel__title">Council Runtime Visibility</h2>
+          <div class="osrs-row">
+            <span class="osrs-chip">
+              <span id="runtimeStatusDot" class="osrs-dot"></span>
+              <span id="runtimeStatusLabel">Unknown</span>
+            </span>
+            <button id="runtimeRefreshBtn" class="osrs-btn osrs-btn--ghost osrs-btn--small" type="button">Runtime</button>
+            <button id="refreshProcessesBtn" class="osrs-btn osrs-btn--ghost osrs-btn--small" type="button">Processes</button>
+          </div>
+        </div>
+        <div class="osrs-panel__body">
+          <p class="osrs-inline-note">
+            Manage backend lifecycle via <code>/api/osrs/runtime/*</code> and verify Council process tracking with <code>/api/processes</code>.
+          </p>
+          <div class="osrs-runtime-actions">
+            <button id="startRuntimeBtn" class="osrs-btn osrs-btn--primary osrs-btn--small" type="button">Start Backend</button>
+            <button id="stopRuntimeBtn" class="osrs-btn osrs-btn--danger osrs-btn--small" type="button">Stop Backend</button>
+          </div>
+          <div id="runtimeActionStatus" class="osrs-inline-note">No runtime actions yet.</div>
+          <div id="runtimeStatusDetail" class="osrs-status">Runtime status not checked.</div>
+          <div class="osrs-kv">
+            <div class="osrs-kv__item">
+              <div class="osrs-kv__label">Runtime Port</div>
+              <div id="runtimePortValue" class="osrs-kv__value">-</div>
+            </div>
+            <div class="osrs-kv__item">
+              <div class="osrs-kv__label">Managed PID</div>
+              <div id="runtimePidValue" class="osrs-kv__value">-</div>
+            </div>
+            <div class="osrs-kv__item">
+              <div class="osrs-kv__label">Managed</div>
+              <div id="runtimeManagedValue" class="osrs-kv__value">-</div>
+            </div>
+            <div class="osrs-kv__item">
+              <div class="osrs-kv__label">Conflict</div>
+              <div id="runtimeConflictValue" class="osrs-kv__value">-</div>
+            </div>
+          </div>
+          <div class="osrs-table-wrap">
+            <table class="osrs-table">
+              <thead>
+                <tr>
+                  <th>PID</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Started</th>
+                  <th>Heartbeat</th>
+                  <th>Restarts</th>
+                </tr>
+              </thead>
+              <tbody id="processTableBody">
+                <tr><td colspan="6">Loading process list...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="osrs-panel" data-show-on="all">
+        <div class="osrs-panel__head">
+          <h2 class="osrs-panel__title">Operator Commands</h2>
+        </div>
+        <div class="osrs-panel__body">
+          <p class="osrs-note">
+            Recommended backend launch command:
+            <code id="startCommandText"></code>
+            <button id="copyStartCmdBtn" class="osrs-btn osrs-btn--ghost osrs-btn--small" type="button">Copy</button>
+            <span id="copyStartCmdState" class="osrs-inline-note"></span>
+          </p>
+          <p class="osrs-inline-note">
+            Use this page for artifact inspection and quick reruns. Keep embedded backend open for full workflow and account detail views.
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/council-static/js/osrs-control.js"></script>
+{% endblock %}

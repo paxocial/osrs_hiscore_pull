@@ -1,0 +1,99 @@
+{# Web API Authentication Headers - Pattern for authenticated fetch calls #}
+# Web API Authentication
+
+**All authenticated API endpoints require the Authorization header.**
+
+## Core Pattern
+
+Use `API.getAuthHeaders()` from `/static/js/app.js` in all fetch calls:
+
+```javascript
+// GET request
+const response = await fetch('/api/endpoint', {
+    headers: API.getAuthHeaders()
+});
+
+// POST request with body
+const response = await fetch('/api/endpoint', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        ...API.getAuthHeaders()
+    },
+    body: JSON.stringify(data)
+});
+```
+
+## How It Works
+
+`API.getAuthHeaders()` returns the session token from localStorage:
+
+```javascript
+getAuthHeaders() {
+    const token = localStorage.getItem('session_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+```
+
+## API Convenience Methods
+
+The `API` object provides helper methods that handle auth automatically:
+
+```javascript
+// These automatically include auth headers
+const data = await API.get('/api/agents');
+const result = await API.post('/api/agents', { name: 'MyAgent' });
+await API.delete('/api/agents/my-agent');
+```
+
+**Prefer these methods** when available - they handle auth, error responses, and 401 redirects.
+
+## Manual Fetch Patterns
+
+When you need manual fetch (e.g., custom options):
+
+### Simple GET
+```javascript
+const response = await fetch('/api/agents', {
+    headers: API.getAuthHeaders()
+});
+```
+
+### POST with JSON
+```javascript
+const response = await fetch('/api/agents', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        ...API.getAuthHeaders()
+    },
+    body: JSON.stringify({ name: 'MyAgent', slug: 'my-agent' })
+});
+```
+
+### PUT/PATCH
+```javascript
+const response = await fetch('/api/agents/my-agent', {
+    method: 'PUT',
+    headers: {
+        'Content-Type': 'application/json',
+        ...API.getAuthHeaders()
+    },
+    body: JSON.stringify(updatedData)
+});
+```
+
+## What Happens Without Auth
+
+Without the Authorization header, authenticated endpoints return **401 Unauthorized**.
+
+The `API.request()` method handles 401 responses by:
+1. Clearing the session token from localStorage
+2. Redirecting to `/login`
+
+## Checklist for New API Calls
+
+1. Verify `app.js` is included in your HTML template (should be in `base.html`)
+2. Use `API.getAuthHeaders()` for all fetch calls to `/api/*` endpoints
+3. Spread the headers when combining with Content-Type: `...API.getAuthHeaders()`
+4. Handle 401 responses (or use `API.request()` which handles them automatically)

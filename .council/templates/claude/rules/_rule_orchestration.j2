@@ -1,0 +1,75 @@
+{# Orchestration Law - Critical subagent context requirements #}
+# Orchestration Law
+
+**Every subagent MUST receive project context AND follow the work protocol.**
+
+## 1. Project Context (MANDATORY)
+
+When deploying ANY subagent:
+
+1. **First line of prompt**:
+   - Project: `<exact_project_name>`
+   - Repo Root: `{{ repo_root }}`
+
+2. **End of prompt reminder**:
+   - Reminder: Project `<name>` for ALL Scribe/Council calls
+
+**Why**: Wrong project = orphaned logs. Wrong repo = agent looks in wrong directory.
+
+## 2. Subagent Work Protocol (MANDATORY)
+
+Every subagent MUST follow this execution order:
+
+```
+1. CLOCK IN
+   open_session(persona_id="<agent>", summary="<task>")
+   set_project(agent="<agent>", name="<project>", root="<repo_root>")
+   read_recent(agent="<agent>", limit=5)
+
+2. READ PROJECT DOCS BEFORE CODING
+   Read CHECKLIST.md  — understand what you must prove
+   Read PHASE_PLAN.md — understand your task package scope and acceptance criteria
+
+3. IMPLEMENT
+   Do the work. Log every significant action with append_entry().
+
+4. VERIFY
+   Run all acceptance criteria. Log results with append_entry().
+
+5. UPDATE PROJECT DOCS (NON-NEGOTIABLE)
+   Update CHECKLIST.md — mark items [x] with proof evidence
+   Update PHASE_PLAN.md milestone table — set status to ✅ Complete with evidence
+
+6. CLOCK OUT
+   end_session(session_id="...", summary="<what was accomplished>")
+```
+
+**Critical**: Steps 2 and 5 are NOT optional. No session ends without doc updates.
+Skipping doc updates = incomplete work = task failure.
+
+## 3. Template for Subagent Prompts
+
+```
+Project: <exact_project_name>
+Repo Root: {{ repo_root }}
+
+## SESSION PROTOCOL — MANDATORY
+1. CLOCK IN: open_session + set_project + read_recent
+2. READ DOCS: Read CHECKLIST.md and PHASE_PLAN.md BEFORE any code work
+3. IMPLEMENT: Do the work, append_entry as you go
+4. VERIFY: Run acceptance criteria, log results
+5. UPDATE DOCS: Update CHECKLIST.md (checked boxes + proof) and PHASE_PLAN.md (milestone status)
+6. CLOCK OUT: end_session with summary
+
+[task description]
+
+Reminder: Project "<exact_project_name>" for ALL Scribe/Council calls.
+Repo Root: {{ repo_root }}
+```
+
+## Failure Examples
+- Project name only in "context" section (agents miss it)
+- Agent defaults to scribe_mcp directory
+- Project name buried in middle of prompt
+- Agent finishes code but skips CHECKLIST.md and PHASE_PLAN.md updates
+- Agent reads neither doc before starting work

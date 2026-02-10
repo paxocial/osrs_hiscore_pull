@@ -1,0 +1,86 @@
+{# Dual logging protocol - Council vs Scribe #}
+
+### Session Start (MANDATORY)
+
+Before any work, activate your Scribe project context:
+```python
+# 1. Set project (orchestrator provides name + root)
+set_project(agent="<you>", name="<project>", root="<repo_root>")
+
+# 2. Rehydrate — see what's happened so far
+read_recent(agent="<you>", limit=5)
+```
+
+### Council Logs (Milestones & Presence)
+
+Use for: Session lifecycle, significant decisions, cross-agent events
+
+```python
+# Announce presence
+log_audit(summary="Starting: auth system refactor", metadata={"phase": "init"})
+
+# Log milestone
+log_audit(summary="Phase 1 complete: all tests passing", metadata={"phase": "complete"})
+
+# Store learning
+store_memory(text="This codebase uses factory pattern for services", tags="pattern,architecture")
+```
+
+### Scribe Logs (Detailed Work Trail)
+
+Use for: Every action, investigation step, code change, test result. Include reasoning traces.
+
+```python
+# Investigation (with reasoning)
+append_entry(agent="<you>", message="Reading auth.py to understand current flow", status="info",
+    meta={"reasoning": {"why": "Need to understand auth before refactoring", "what": "JWT flow", "how": "scan_only then line_range"}})
+
+# Finding
+append_entry(agent="<you>", message="Found bug: JWT expiry not checked", status="bug",
+    meta={"file": "auth.py:142", "reasoning": {"why": "Security gap", "what": "No expiry validation", "how": "read_file scan_only revealed missing check"}})
+
+# Change
+append_entry(agent="<you>", message="Fixed JWT validation with 15min grace", status="success", meta={"files": 2})
+```
+
+### Scribe Documents (via manage_docs ONLY)
+
+All documents under `.scribe/docs/dev_plans/` MUST use `manage_docs`:
+```python
+# Create research doc
+manage_docs(agent="<you>", action="create", doc_name="RESEARCH_AUTH_20260130",
+    metadata={"doc_type": "research", "research_goal": "Analyze auth flow"})
+
+# Edit a section
+manage_docs(agent="<you>", action="replace_section", doc_name="architecture",
+    section="overview", content="## Overview\nUpdated content...")
+
+# Update checklist
+manage_docs(agent="<you>", action="status_update", doc_name="checklist",
+    section="task_1", metadata={"status": "done", "proof": "All tests passing"})
+```
+
+### File Reading (prefer Scribe tools)
+
+```python
+# ALWAYS start with scan_only for structure
+read_file(agent="<you>", path="src/module.py", mode="scan_only")
+
+# Then targeted reads
+read_file(agent="<you>", path="src/module.py", mode="line_range", start_line=100, end_line=150)
+
+# Multi-file search
+search(agent="<you>", pattern="class.*Handler", glob="**/*.py", output_mode="files_with_matches")
+```
+
+### When to Use Which
+
+| Event | Council | Scribe |
+|-------|---------|--------|
+| Starting work | log_audit | set_project + read_recent + append_entry |
+| Reading a file | — | append_entry (prefer read_file over native Read) |
+| Found a bug | store_memory | append_entry + open_bug |
+| Made a decision | store_memory | append_entry |
+| Created document | — | manage_docs + append_entry |
+| Phase complete | log_audit | append_entry |
+| Session end | end_session | — |

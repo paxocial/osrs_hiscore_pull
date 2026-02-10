@@ -1,0 +1,187 @@
+{# Config Standards - Config discipline and best practices #}
+# Config Standards
+
+**All behavioral values must come from config - never hardcode.**
+
+## Core Principles
+
+1. **No Hardcoding**: Thresholds, limits, timeouts, models, URLs → all in config
+2. **Dual Registration**: New keys must be added to BOTH `DEFAULT_CONFIG` and `templates/defaults/council.yaml`
+3. **Consistent Naming**: lowercase, underscores, grouped by section (e.g., `council.web.port`)
+4. **Always Fallback**: Every `config.get()` must have a fallback matching `DEFAULT_CONFIG`
+
+## Reading Config
+
+```python
+from council_mcp.config import get_council_config
+
+cfg = get_council_config()
+
+# Nested access with fallback
+value = cfg.get("council", {}).get("section", {}).get("key", default_value)
+
+# Example: Reading web port
+port = cfg.get("council", {}).get("web", {}).get("port", 8015)
+```
+
+**Specialized config loaders:**
+- `get_llm_config()` - LLM settings (council.llm)
+- `get_reasoning_config()` - Reasoning settings (council.reasoning)
+- `get_access_config()` - Access control (council.access)
+
+## Adding New Config Keys
+
+When adding a new configurable value:
+
+### 1. Add to DEFAULT_CONFIG (config.py)
+
+```python
+DEFAULT_CONFIG: dict[str, Any] = {
+    "council": {
+        "section": {
+            "new_key": default_value,  # Your new key here
+        }
+    }
+}
+```
+
+### 2. Add to Package Defaults (templates/defaults/council.yaml)
+
+```yaml
+council:
+  section:
+    new_key: default_value  # Must match DEFAULT_CONFIG
+```
+
+### 3. Use in Code
+
+```python
+# Read with fallback matching DEFAULT_CONFIG
+value = cfg.get("council", {}).get("section", {}).get("new_key", default_value)
+```
+
+## Config Scope
+
+| Scope | Location | Keys |
+|-------|----------|------|
+| **Global** | `~/.council/config.yaml` | web, daemon, ws_proxy, transport |
+| **Per-Council** | `.council/council.yaml` | Everything else |
+
+Global settings affect all councils on the system. Per-council settings are repo-specific.
+
+## Config Naming Conventions
+
+```yaml
+council:
+  web:
+    host: "0.0.0.0"           # lowercase, underscore
+    port: 8015                # numbers as values
+    reload: true              # boolean lowercase
+
+  llm:
+    openai_model: "gpt-5-mini"  # strings in quotes
+    temperature: 0.7            # float precision
+    max_response_tokens: 1024   # int values
+
+  sessions:
+    stale_cleanup_interval_seconds: 1800  # descriptive, with units
+```
+
+**Rules:**
+- Use underscores (not hyphens or camelCase)
+- Include units in key names when relevant (`_seconds`, `_minutes`, `_limit`)
+- Group related settings under sections
+- Boolean values: lowercase `true`/`false`
+- Strings: quote them in YAML
+
+## Common Patterns
+
+### Pattern 1: Simple Value
+```python
+# In config.py DEFAULT_CONFIG
+"max_retries": 3
+
+# In code
+retries = cfg.get("council", {}).get("section", {}).get("max_retries", 3)
+```
+
+### Pattern 2: Nested Dict
+```python
+# In config.py DEFAULT_CONFIG
+"pools": {
+    "personal": {"tokens": 4000},
+    "domain": {"tokens": 4000}
+}
+
+# In code - extract correctly
+pools = cfg.get("council", {}).get("prompts", {}).get("budget", {}).get("pools", {})
+personal_tokens = pools.get("personal", {}).get("tokens", 4000)
+```
+
+### Pattern 3: List Values
+```python
+# In config.py DEFAULT_CONFIG
+"reserved_personas": ["operator", "system", "ALL"]
+
+# In code
+reserved = cfg.get("council", {}).get("access", {}).get("reserved_personas", [])
+```
+
+### Pattern 4: Function Signature Defaults
+```python
+# DON'T: Hardcode in signature
+def query(limit=20):
+    ...
+
+# DO: Use None with config read inside
+def query(limit=None):
+    cfg = get_council_config()
+    if limit is None:
+        limit = cfg.get("council", {}).get("queries", {}).get("default_limit", 20)
+    ...
+```
+
+## Config Update Command
+
+Users can update their config with new package defaults:
+
+```bash
+council update --config-only         # Merge new keys only
+council update --config-only --dry-run  # Preview changes
+```
+
+The system uses `deep_merge()`: package defaults as base, user config wins on conflicts.
+
+## Anti-Patterns
+
+**Wrong** - Hardcoded values:
+```python
+timeout = 30  # Should be in config
+```
+
+**Right** - Config-driven:
+```python
+timeout = cfg.get("council", {}).get("requests", {}).get("timeout", 30)
+```
+
+**Wrong** - Missing fallback:
+```python
+model = cfg["llm"]["openai_model"]  # Crashes if key missing
+```
+
+**Right** - Safe access:
+```python
+model = cfg.get("council", {}).get("llm", {}).get("openai_model", "gpt-5-mini")
+```
+
+**Wrong** - Inconsistent defaults:
+```python
+# DEFAULT_CONFIG has 8015, code uses 8000
+port = cfg.get("council", {}).get("web", {}).get("port", 8000)
+```
+
+**Right** - Matching defaults:
+```python
+# DEFAULT_CONFIG has 8015, code also uses 8015
+port = cfg.get("council", {}).get("web", {}).get("port", 8015)
+```

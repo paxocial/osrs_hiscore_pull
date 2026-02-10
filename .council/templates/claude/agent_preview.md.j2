@@ -1,0 +1,109 @@
+{# ================================================================= #}
+{# AGENT PREVIEW TEMPLATE                                            #}
+{# Minimal template for live preview - shows ONLY what user added    #}
+{# Does NOT include Council tools, Scribe protocol, or other shared  #}
+{# content that would be added to the final agent card.              #}
+{# ================================================================= #}
+
+---
+name: {{ agent.name }}
+{% if agent.get('description') -%}
+description: "{{ agent.description | replace('"', '\\"') }}"
+{% endif -%}
+model: {{ agent.get('model', 'sonnet') }}
+council_role: {{ agent.get('council_role', 'specialist') }}
+{% if agent.get('domains') -%}
+domains: [{{ agent.get('domains', []) | map('tojson') | join(', ') }}]
+{% endif -%}
+---
+
+{# ================================================================= #}
+{# PERSONA IDENTITY                                                   #}
+{# ================================================================= #}
+
+{% if agent.get('display_name') or agent.get('name') -%}
+You are **{{ agent.get('display_name', agent.name) | title }}**{% if agent.get('title') %}, {{ agent.title }}{% endif %}.
+{% endif %}
+
+{% if agent.get('identity_prompt') -%}
+
+{{ agent.identity_prompt }}
+{% endif %}
+
+{# ================================================================= #}
+{# EXPERTISE                                                          #}
+{# ================================================================= #}
+
+{% if agent.get('expertise_prompt') -%}
+
+---
+
+## Your Expertise
+
+{{ agent.expertise_prompt }}
+{% endif %}
+
+{# ================================================================= #}
+{# BEHAVIORAL GUIDELINES                                              #}
+{# ================================================================= #}
+
+{% if agent.get('behavioral_guidelines') -%}
+
+---
+
+## Behavioral Guidelines
+
+{{ agent.behavioral_guidelines }}
+{% endif %}
+
+{# ================================================================= #}
+{# TOOL GUIDANCE                                                      #}
+{# ================================================================= #}
+
+{% if agent.get('tool_guidance') -%}
+
+---
+
+## Tool Usage
+
+{{ agent.tool_guidance }}
+{% endif %}
+
+{# ================================================================= #}
+{# CUSTOM SECTIONS                                                    #}
+{# ================================================================= #}
+
+{% if agent.get('custom_sections') -%}
+{% for section in agent.custom_sections %}
+
+---
+
+## {{ section.title }}
+
+{{ section.content }}
+{% endfor %}
+{% endif %}
+
+{# ================================================================= #}
+{# PREVIEW NOTE - Dynamic based on enabled bundles                    #}
+{# ================================================================= #}
+
+{% set bundles = agent.get('protocol_bundles', {}) %}
+{% set enabled_bundles = [] %}
+{% if bundles.get('council_tools', {}).get('enabled', true) %}{% set _ = enabled_bundles.append('Council MCP Tools') %}{% endif %}
+{% if bundles.get('scribe_protocol', {}).get('enabled', true) %}{% set _ = enabled_bundles.append('Scribe Protocol') %}{% endif %}
+{% if bundles.get('session_protocol', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('Session Protocol') %}{% endif %}
+{% if bundles.get('agentkit_patterns', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('AgentKit Patterns') %}{% endif %}
+{% if bundles.get('dual_logging', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('Dual Logging') %}{% endif %}
+{% if bundles.get('persona_embodiment', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('Persona Embodiment') %}{% endif %}
+
+---
+
+> **Preview Note**: The final agent card will include:
+> - Council Membership section
+> - Council Protocol (session management, memory, collaboration)
+{% if enabled_bundles %}
+> - Enabled protocol bundles: {{ enabled_bundles | join(', ') }}
+{% else %}
+> - No protocol bundles enabled
+{% endif %}

@@ -1,0 +1,75 @@
+{# Pipeline Gates - Mandatory stage prerequisites and gate enforcement #}
+# Pipeline Gates
+
+**Every pipeline stage has prerequisites. No stage may be skipped without explicit user approval.**
+
+## Stage Prerequisites
+
+### Stage 1: Research (Lens)
+- **Prerequisite**: Scribe project set, `read_recent` done
+- **Produces**: `RESEARCH_*.md` via `manage_docs`
+- **Gate**: Research doc exists with findings. Lens reports confidence.
+- **Skip condition**: User explicitly says "skip research" OR task is a known-scope bug fix
+
+### Stage 2: Architecture (Blueprint)
+- **Prerequisite**: Stage 1 complete — research doc exists
+- **Produces**: `ARCHITECTURE_GUIDE`, `PHASE_PLAN`, `CHECKLIST`, task packages
+- **Gate**: Architecture docs exist with concrete task packages for Forge
+- **Skip condition**: User explicitly says "skip architecture" OR task is small enough for single bounded fix
+
+### Stage 3: Pre-Implementation Review (Arbiter)
+- **Prerequisite**: Stage 2 complete — architecture docs exist
+- **Produces**: Feasibility assessment, pass/fail
+- **Gate**: Arbiter passes with >=93% confidence
+- **Skip condition**: User explicitly says "skip review" OR task is trivial fix
+
+### Stage 4: Implementation (Forge)
+- **Prerequisite**: AT MINIMUM one of:
+  - Stage 2 complete (task packages from Blueprint) — preferred
+  - Stage 1 complete (research from Lens) + explicit user approval to skip architecture
+  - User provides explicit, detailed implementation instructions (no research needed)
+- **Produces**: Working code + tests
+- **Gate**: Code compiles, tests pass
+- **NEVER**: Send Forge with vague instructions and no prior research
+
+### Stage 5: Post-Implementation Review (Arbiter)
+- **Prerequisite**: Stage 4 complete — Forge reports success
+- **Produces**: Quality grade, ship/no-ship decision
+- **Gate**: >=93% to ship
+- **Skip condition**: User explicitly says "skip review"
+
+## Shortcut Paths (Pre-Approved)
+
+Not every task needs all 5 stages. These shortcuts are approved:
+
+| Task Type | Path | Justification |
+|-----------|------|---------------|
+| Known bug, clear fix | Mantis → Forge → tests | Root cause already identified |
+| Quick research only | Lens only | No implementation needed |
+| User gives exact spec | Forge → Arbiter | User substitutes for research/architecture |
+| Trivial one-line fix | Forge only | Obvious change, bounded scope |
+
+## Mandatory Logging
+
+Every stage skip MUST be logged:
+
+```python
+append_entry(
+    agent="atlas",
+    message="Skipping Stage 2 (Architecture) — user provided explicit implementation spec",
+    status="info",
+    meta={"pipeline": "skip", "stage": 2, "reason": "user-directed"}
+)
+```
+
+## Anti-Patterns (VIOLATIONS)
+
+- Sending Forge "to figure it out" without research or spec
+- Skipping all stages because "it seemed simple"
+- Using "use judgment" as blanket permission to skip
+- Deploying multiple Forge agents for interconnected changes without architecture
+- Skipping Arbiter review before shipping significant changes
+
+## The Rule
+
+**When in doubt, run the full pipeline. It exists to prevent mistakes.**

@@ -1,6 +1,8 @@
+{# AGENTS.md.j2 - OpenAI/Codex runtime guide for this repository #}
+{# Auto-generated from roster.yaml; edit this template, not AGENTS.md output #}
 # AGENTS.md
 
-> **Auto-generated** from `roster.yaml` | 2026-02-10 12:44 UTC
+> **Auto-generated** from `roster.yaml` | {{ timestamp }}
 > OpenAI/Codex companion to `CLAUDE.md` for the same council configuration.
 
 ---
@@ -16,7 +18,7 @@ You are working in a repository that:
 5. Hosts an existing FastAPI web UI
 6. Integrates with Council web custom pages
 
-**Repo Root**: `/home/austin/projects/runescape/osrs_hiscore_pull`
+**Repo Root**: `{{ repo_root }}`
 
 ---
 
@@ -59,70 +61,38 @@ You are working in a repository that:
 
 ## Council Identity
 
-### Orchestrator: Atlas (`osrs-atlas`)
+### Orchestrator: {{ orchestrator.get('display_name', orchestrator.name | title) }} (`{{ orchestrator.name }}`)
 
-**Role**: Coordinator
-**Domains**: orchestration, council-operations, planning, integration
+**Role**: {{ orchestrator.council_role | title }}
+**Domains**: {{ orchestrator.domains | join(', ') }}
 
-You are the project coordinator for the OSRS Hiscore council.
-You break user goals into bounded implementation tasks, route work to
-specialized agents, and maintain delivery momentum.
-
+{{ orchestrator.identity_prompt }}
 
 ### Expertise
 
-You excel at:
-- Task decomposition with explicit acceptance criteria
-- Ordering work for minimum rework
-- Keeping council config, roster, and docs aligned
-- Coordinating web UI integration with backend changes
-
+{{ orchestrator.expertise_prompt }}
 
 ### Guidelines
 
-- Enforce plan-first execution for non-trivial work
-- Require Scribe entries after meaningful actions
-- Keep implementation decisions grounded in repo evidence
-- Escalate only when blocked by missing requirements
-
+{{ orchestrator.behavioral_guidelines }}
 
 ---
 
 ## Council Members
 
-### Snapshot (`snapshot`)
+{% for agent in agents if agent.name != orchestrator.name %}
+### {{ agent.get('display_name', agent.name | title) }} (`{{ agent.name }}`)
 
-**Specialist** | sonnet
+**{{ agent.get('council_role', 'specialist') | title }}** | {{ agent.get('model', 'sonnet') }}
 
-> Owns player hiscore fetch flow, mode resolution, persistence, and delta generation quality for snapshot runs.
+> {{ agent.description }}
 
-**Domains**: hiscore-api, snapshot-ingestion, delta-computation, storage, reliability
+**Domains**: {{ agent.get('domains', []) | join(', ') }}
+{% if agent.get('disallowed_tools') %}
+**Restrictions**: Cannot use {{ agent.disallowed_tools | join(', ') }}
+{% endif %}
 
-### Report (`report`)
-
-**Specialist** | sonnet
-
-> Owns markdown rendering quality, report structure, and snapshot summary consistency for player and clan outputs.
-
-**Domains**: report-generation, markdown, data-presentation, summarization
-
-### Bridge (`bridge`)
-
-**Specialist** | sonnet
-
-> Integrates this repository's web workflows into Council custom pages and page-scoped agent routing for command-center operations.
-
-**Domains**: council-web-ui, custom-pages, api-integration, routing, operational-ux
-
-### Review (`review`)
-
-**Auditor** | sonnet
-
-> Performs adversarial review for regressions, operational risk, and test coverage across ingestion, reporting, and web bridge changes.
-
-**Domains**: code-review, testing, regression-analysis, risk-control
-**Restrictions**: Cannot use Write, Edit
-
+{% endfor %}
 
 ---
 
@@ -130,7 +100,7 @@ You excel at:
 
 ```python
 open_session(persona_id="<agent>", summary="...")
-set_project(agent="<agent>", name="<project>", root="/home/austin/projects/runescape/osrs_hiscore_pull")
+set_project(agent="<agent>", name="<project>", root="{{ repo_root }}")
 read_recent(agent="<agent>", limit=5)
 ```
 
@@ -190,30 +160,10 @@ For Council-specific web surfaces:
 
 ## Project Overview
 
-
-### Repository Layout
-
-**Repo Root**: `/home/austin/projects/runescape/osrs_hiscore_pull`
-
-| Path | Purpose |
-|------|---------|
-| `agents` | Snapshot and report orchestration agents |
-| `core` | Hiscore client, normalization, and delta logic |
-| `web` | Existing FastAPI web UI and dashboard routes |
-| `api` | API entrypoints and transport-facing endpoints |
-| `tests` | Regression and integration test suite |
-| `docs` | Dev plans, runbooks, and operator notes |
-
-### Recent Scribe Activity
-
-| Project | Last Modified | Entries |
-|---------|---------------|---------|
-| `codex_osrs_snapshot` | 2026-02-10 12:02 | 23 |
-| `catherby_plugin_api` | 2026-01-30 08:47 | 160 |
-| `osrs_hiscore_dashboard` | 2026-01-30 07:38 | 139 |
+{% include 'claude/_project_overview.j2' %}
 
 ---
 
 <!-- MANUAL_OVERRIDES_START -->
-
+{{ preserved_manual_content }}
 <!-- MANUAL_OVERRIDES_END -->

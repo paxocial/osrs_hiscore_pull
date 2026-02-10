@@ -1,0 +1,42 @@
+# Multi-Provider Agents
+
+Council supports agents powered by different LLM providers.
+
+## Available Providers
+
+| Slug | Provider | Default Model | Use Case |
+|------|----------|---------------|----------|
+| `anthropic` | Anthropic | claude-sonnet-4 | Deep reasoning, safety |
+| `openai` | OpenAI | gpt-4o | Fast iteration, code gen |
+| `google` | Google | gemini-1.5-pro | 1M context, multimodal |
+| `mistral` | Mistral | mistral-large | European, code specialist |
+| `groq` | Groq | llama-3.3-70b | Ultra-fast inference |
+| `together` | Together AI | Llama-3.3-70B | Open-source at scale |
+| `ollama` | Ollama | llama3.2 | Local, private |
+
+## Agent Configuration
+
+In `roster.yaml`:
+```yaml
+agents:
+  - name: myagent
+    llm_provider: openai    # Provider slug
+    model: gpt-4o           # Model name
+```
+
+## Query Providers
+
+```sql
+-- List all providers
+SELECT slug, name, default_model FROM llm_providers;
+
+-- Find agents by provider
+SELECT slug, name FROM persona_profiles WHERE llm_provider = 'openai';
+
+-- View agent-provider mapping
+SELECT * FROM v_agent_providers;
+```
+
+## Documentation
+
+Full guide: `.council/docs/MULTI_PROVIDER_AGENTS.md`
