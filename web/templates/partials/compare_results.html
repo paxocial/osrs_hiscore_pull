@@ -1,0 +1,294 @@
+{% from "macros/skill_icons.html" import skill_icon_url %}
+{% if data and data.players|length == 2 %}
+  {% set pa = data.players[0] %}
+  {% set pb = data.players[1] %}
+  {% set a_wins = pa.total_xp > pb.total_xp %}
+
+  <!-- Summary cards -->
+  <div class="compare-summary">
+    <div class="compare-player-card {{ 'winner' if a_wins else '' }}">
+      <div class="compare-player-name">{{ pa.name }}</div>
+      <div class="compare-player-mode">{{ pa.mode }}</div>
+      <div class="compare-stats-row">
+        <div class="compare-stat">
+          <div class="compare-stat-label">Total XP</div>
+          <div class="compare-stat-value">{{ "{:,}".format(pa.total_xp) }}</div>
+          <div class="compare-stat-gain {{ 'zero' if pa.xp_gain == 0 else '' }}">
+            {% if pa.xp_gain > 0 %}+{% endif %}{{ "{:,}".format(pa.xp_gain) }}
+          </div>
+        </div>
+        <div class="compare-stat">
+          <div class="compare-stat-label">Total Level</div>
+          <div class="compare-stat-value">{{ "{:,}".format(pa.total_level) }}</div>
+          <div class="compare-stat-gain {{ 'zero' if pa.level_gain == 0 else '' }}">
+            {% if pa.level_gain > 0 %}+{% endif %}{{ pa.level_gain }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-player-card {{ 'winner' if not a_wins else '' }}">
+      <div class="compare-player-name">{{ pb.name }}</div>
+      <div class="compare-player-mode">{{ pb.mode }}</div>
+      <div class="compare-stats-row">
+        <div class="compare-stat">
+          <div class="compare-stat-label">Total XP</div>
+          <div class="compare-stat-value">{{ "{:,}".format(pb.total_xp) }}</div>
+          <div class="compare-stat-gain {{ 'zero' if pb.xp_gain == 0 else '' }}">
+            {% if pb.xp_gain > 0 %}+{% endif %}{{ "{:,}".format(pb.xp_gain) }}
+          </div>
+        </div>
+        <div class="compare-stat">
+          <div class="compare-stat-label">Total Level</div>
+          <div class="compare-stat-value">{{ "{:,}".format(pb.total_level) }}</div>
+          <div class="compare-stat-gain {{ 'zero' if pb.level_gain == 0 else '' }}">
+            {% if pb.level_gain > 0 %}+{% endif %}{{ pb.level_gain }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skills comparison -->
+  <section class="card" style="margin-top:16px;">
+    <h3>Skills</h3>
+    <table class="compare-skills">
+      <thead>
+        <tr>
+          <th class="left">{{ pa.name }}</th>
+          <th class="center">Skill</th>
+          <th class="right">{{ pb.name }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set skills_b_map = {} %}
+        {% for sk in pb.skills %}
+          {% set _ = skills_b_map.update({sk.name: sk}) %}
+        {% endfor %}
+        {% for sk_a in pa.skills %}
+          {% set sk_b = skills_b_map.get(sk_a.name, {"level": 0, "xp": 0, "xp_gain": 0, "level_gain": 0}) %}
+          {% set a_xp = sk_a.xp or 0 %}
+          {% set b_xp = sk_b.xp or 0 %}
+          {% set max_xp = [a_xp, b_xp]|max %}
+          {% set a_pct = (a_xp / max_xp * 100)|round if max_xp > 0 else 0 %}
+          {% set b_pct = (b_xp / max_xp * 100)|round if max_xp > 0 else 0 %}
+          {% set a_leads = a_xp > b_xp %}
+          {% set b_leads = b_xp > a_xp %}
+          <tr>
+            <td class="left {{ 'winner' if a_leads else '' }}">
+              <div class="compare-bar" style="--fill:{{ a_pct }}%">
+                <span class="compare-dir {{ 'up' if a_leads else ('down' if b_leads else '') }}">{{ '▲' if a_leads else ('▼' if b_leads else '—') }}</span>
+                {{ sk_a.level }} · {{ "{:,}".format(a_xp) }}
+                <span class="compare-skill-gain {{ 'zero' if (sk_a.xp_gain or 0) == 0 else '' }}">
+                  {% if (sk_a.xp_gain or 0) > 0 %}+{{ "{:,}".format(sk_a.xp_gain) }} xp{% endif %}
+                </span>
+              </div>
+            </td>
+            <td class="center">
+              <span class="compare-skill-icon" style="background-image:url('{{ skill_icon_url(sk_a.name) }}')"></span>
+              {{ sk_a.name }}
+            </td>
+            <td class="right {{ 'winner' if b_leads else '' }}">
+              <div class="compare-bar" style="--fill:{{ b_pct }}%">
+                {{ sk_b.level or 0 }} · {{ "{:,}".format(b_xp) }}
+                <span class="compare-skill-gain {{ 'zero' if (sk_b.xp_gain or 0) == 0 else '' }}">
+                  {% if (sk_b.xp_gain or 0) > 0 %}+{{ "{:,}".format(sk_b.xp_gain) }} xp{% endif %}
+                </span>
+                <span class="compare-dir {{ 'up' if b_leads else ('down' if a_leads else '') }}">{{ '▲' if b_leads else ('▼' if a_leads else '—') }}</span>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Activities comparison -->
+  <section class="card" style="margin-top:16px;">
+    <h3>Activities & Bosses</h3>
+    <div class="compare-activities">
+      <div>
+        <h4 style="color:var(--ink-2);margin-bottom:8px;">{{ pa.name }}</h4>
+        <div class="compare-act-list">
+          {% for act in pa.activities %}
+            {% if (act.score or 0) > 0 %}
+              <div class="compare-act-row">
+                <span class="compare-act-name">{{ act.name }}</span>
+                <span class="compare-act-score">
+                  {{ "{:,}".format(act.score or 0) }}
+                  {% if (act.score_gain or 0) > 0 %}
+                    <span class="gain">+{{ "{:,}".format(act.score_gain) }}</span>
+                  {% endif %}
+                </span>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <h4 style="color:var(--ink-2);margin-bottom:8px;">{{ pb.name }}</h4>
+        <div class="compare-act-list">
+          {% for act in pb.activities %}
+            {% if (act.score or 0) > 0 %}
+              <div class="compare-act-row">
+                <span class="compare-act-name">{{ act.name }}</span>
+                <span class="compare-act-score">
+                  {{ "{:,}".format(act.score or 0) }}
+                  {% if (act.score_gain or 0) > 0 %}
+                    <span class="gain">+{{ "{:,}".format(act.score_gain) }}</span>
+                  {% endif %}
+                </span>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- XP Chart overlay -->
+  <section class="card compare-chart-section" style="margin-top:16px;">
+    <div class="card-header">
+      <div>
+        <p class="eyebrow">Trends</p>
+        <h3>XP Over Time</h3>
+      </div>
+      <div class="form inline">
+        <label>Skill
+          <select id="chart-skill-filter">
+            <option value="" selected>Total XP</option>
+            {% for sk in pa.skills %}
+              <option value="{{ sk.name }}">{{ sk.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+    </div>
+    <canvas id="compare-chart"></canvas>
+  </section>
+
+  <script>
+  (async function() {
+    async function loadScript(src) {
+      if (document.querySelector('script[src="' + src + '"]')) return;
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    await loadScript('/static/js/vendor/chart.umd.min.js');
+
+    const resp = await fetch('/compare/data?a={{ pa.name|urlencode }}&b={{ pb.name|urlencode }}&timeframe={{ timeframe }}');
+    if (!resp.ok) return;
+    const data = await resp.json();
+
+    const rawA = data.series['{{ pa.name }}'] || [];
+    const rawB = data.series['{{ pb.name }}'] || [];
+
+    function buildChart(skillName) {
+      const allTimes = new Set();
+      rawA.forEach(s => allTimes.add(s.fetched_at));
+      rawB.forEach(s => allTimes.add(s.fetched_at));
+      const labels = [...allTimes].sort();
+
+      function mapSeries(series) {
+        const byTime = {};
+        series.forEach(s => {
+          if (skillName) {
+            const sk = (s.skills || []).find(k => k.name === skillName);
+            byTime[s.fetched_at] = sk ? (sk.xp || 0) : null;
+          } else {
+            byTime[s.fetched_at] = s.total_xp || 0;
+          }
+        });
+        return labels.map(t => byTime[t] ?? null);
+      }
+
+      const yLabel = skillName ? skillName + ' XP' : 'Total XP';
+
+      return {
+        labels: labels.map(t => {
+          try { return new Date(t).toISOString().slice(0, 16).replace('T', ' '); }
+          catch(e) { return t; }
+        }),
+        datasetsData: [mapSeries(rawA), mapSeries(rawB)],
+        yLabel,
+      };
+    }
+
+    const ctx = document.getElementById('compare-chart');
+    if (!ctx) return;
+
+    let chart = null;
+
+    function renderChart(skillName) {
+      const { labels, datasetsData, yLabel } = buildChart(skillName);
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: '{{ pa.name }}',
+              data: datasetsData[0],
+              borderColor: '#5ad1ff',
+              backgroundColor: 'rgba(90, 209, 255, 0.1)',
+              fill: false, tension: 0.25, spanGaps: true,
+            },
+            {
+              label: '{{ pb.name }}',
+              data: datasetsData[1],
+              borderColor: '#f5d06b',
+              backgroundColor: 'rgba(245, 208, 107, 0.1)',
+              fill: false, tension: 0.25, spanGaps: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y?.toLocaleString() || 0) + ' XP'
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Time' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+            y: { title: { display: true, text: yLabel }, grid: { color: 'rgba(255,255,255,0.06)' } }
+          }
+        }
+      });
+    }
+
+    renderChart('');
+
+    const filter = document.getElementById('chart-skill-filter');
+    if (filter) {
+      filter.addEventListener('change', () => renderChart(filter.value));
+    }
+  })();
+  </script>
+
+{% elif data and data.players|length == 1 %}
+  <div class="card compare-empty" style="margin-top:16px;">
+    <h3>Player not found</h3>
+    <p>One of the players has no snapshot data. Make sure both accounts have been snapshotted at least once.</p>
+  </div>
+{% elif data and data.players|length == 0 %}
+  <div class="card compare-empty" style="margin-top:16px;">
+    <h3>No data</h3>
+    <p>Neither player was found. Check the RSNs and try again.</p>
+  </div>
+{% elif not player_a and not player_b %}
+  <div class="card compare-empty" style="margin-top:16px;">
+    <h3>Pick two players</h3>
+    <p>Enter two RSNs above to compare their stats, skills, and progression side-by-side.</p>
+  </div>
+{% endif %}

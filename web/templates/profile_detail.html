@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/skill_icons.html" import skill_icon_url %}
 {% block content %}
 <section class="card">
   <div class="card-header">
@@ -155,41 +156,28 @@
     <div>
       <p class="eyebrow">Skills</p>
       <h3>Skill overview</h3>
-      <p class="lede">Each card leaves space for icons; add assets later.</p>
     </div>
+  </div>
+  <div class="skill-controls">
+    <label class="skill-control-label">Sort by
+      <select id="skill-sort" class="skill-control-select">
+        <option value="default">Default</option>
+        <option value="name">Name</option>
+        <option value="level-desc">Level ↓</option>
+        <option value="level-asc">Level ↑</option>
+        <option value="xp-desc">XP ↓</option>
+        <option value="xp-asc">XP ↑</option>
+        <option value="gain-desc">XP Gain ↓</option>
+        <option value="gain-asc">XP Gain ↑</option>
+      </select>
+    </label>
+    <label class="skill-control-checkbox">
+      <input type="checkbox" id="skill-filter-gains">
+      <span>Only skills with gains</span>
+    </label>
   </div>
   <div class="skill-grid" id="skills-grid">
     {% if latest and latest.skills %}
-      {% set skill_icons = {
-        "attack": "Attack_icon.png",
-        "strength": "Strength_icon.png",
-        "defence": "Defence_icon.png",
-        "defense": "Defence_icon.png",
-        "ranged": "Ranged_icon.png",
-        "prayer": "Prayer_icon.png",
-        "magic": "Magic_icon.png",
-        "runecraft": "Runecraft_icon.png",
-        "runecrafting": "Runecraft_icon.png",
-        "construction": "Construction_icon.png",
-        "hitpoints": "Hitpoints_icon.png",
-        "hitpoint": "Hitpoints_icon.png",
-        "agility": "Agility_icon.png",
-        "herblore": "Herblore_icon.png",
-        "thieving": "Thieving_icon.png",
-        "crafting": "Crafting_icon.png",
-        "fletching": "Fletching_icon.png",
-        "slayer": "Slayer_icon.png",
-        "hunter": "Hunter_icon.png",
-        "mining": "Mining_icon.png",
-        "smithing": "Smithing_icon.png",
-        "fishing": "Fishing_icon.png",
-        "cooking": "Cooking_icon.png",
-        "firemaking": "Firemaking_icon.png",
-        "woodcutting": "Woodcutting_icon.png",
-        "farming": "Farming_icon.png",
-        "sailing": "Sailing_icon.png",
-        "combat": "Combat.png",
-      } %}
       {% set delta_map = {} %}
       {% if latest.delta and latest.delta.skill_deltas %}
         {% set ns = namespace(map={}) %}
@@ -199,13 +187,11 @@
         {% set delta_map = ns.map %}
       {% endif %}
       {% for sk in latest.skills %}
-        {% set skill_key = sk.name|lower|replace(' ', '')|replace('_','')|replace('-','') %}
-        {% set icon_name = skill_icons.get(skill_key, 'Combat.png') %}
         {% set delta = delta_map.get(sk.name) %}
         {% set xp_delta = delta.xp_delta if delta else 0 %}
         {% set level_delta = delta.level_delta if delta else 0 %}
-        <div class="skill-card">
-          <div class="skill-icon" style="background-image: url('/static/images/runescape/skills/{{ icon_name }}');"></div>
+        <div class="skill-card{% if sk.level == 99 %} skill-99{% endif %}" data-name="{{ sk.name }}" data-level="{{ sk.level }}" data-xp="{{ sk.xp }}" data-gain="{{ xp_delta|int }}">
+          <div class="skill-icon" style="background-image: url('{{ skill_icon_url(sk.name) }}');"></div>
           <div class="skill-name">{{ sk.name }}</div>
           <div class="skill-value">LVL {{ sk.level }} · XP {{ "{:,}".format(sk.xp) }}</div>
           {% if xp_delta or level_delta %}
@@ -213,10 +199,10 @@
             {% if xp_delta < 0 %}{% set chip_class = 'delta-chip negative' %}{% elif xp_delta == 0 and level_delta == 0 %}{% set chip_class = 'delta-chip neutral' %}{% endif %}
             <div class="{{ chip_class }}">
               {% if level_delta %}
-                {% if level_delta > 0 %}+{% endif %}{{ level_delta }} lvl
+                {% if level_delta > 0 %}+{% endif %}{{ level_delta|int }} lvl
               {% endif %}
               {% if xp_delta %}
-                {% if xp_delta > 0 %}+{% endif %}{{ "{:,}".format(xp_delta) }} xp
+                {% if xp_delta > 0 %}+{% endif %}{{ "{:,}".format(xp_delta|int) }} xp
               {% endif %}
             </div>
           {% endif %}

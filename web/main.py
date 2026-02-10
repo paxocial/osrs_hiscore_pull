@@ -17,6 +17,7 @@ from web.routes.profile_detail import router as profile_detail_router
 from web.routes.jobs import router as jobs_router
 from web.routes.webhooks import router as webhooks_router
 from web.routes.admin import router as admin_router
+from web.routes.compare import router as compare_router
 from web.services.job_worker import JobWorker
 from database.connection import DatabaseConnection
 from web.services.scheduler import Scheduler
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(profile_detail_router)
     app.include_router(jobs_router)
     app.include_router(webhooks_router)
+    app.include_router(compare_router)
     app.include_router(admin_router)  # Admin routes (protected by @require_admin)
 
     # Ensure DB initialized and jobs table present before starting worker

@@ -13,6 +13,7 @@ from web.services.clans import ClanService
 from web.services.jobs import JobService
 from web.services.clan_stats import ClanStatsService
 from web.services.profile_data import ProfileDataService
+from web.services.comparison import ComparisonService
 
 templates = Jinja2Templates(directory="web/templates")
 router = APIRouter()
@@ -21,6 +22,7 @@ account_service = AccountService()
 jobs = JobService()
 clan_stats = ClanStatsService()
 profile_data = ProfileDataService()
+comparison_service = ComparisonService()
 
 
 def slugify(name: str) -> str:
@@ -223,5 +225,26 @@ async def clan_members(request: Request, slug: str, offset: int = 0, limit: int 
             "offset": page.get("offset", 0),
             "limit": page.get("limit", limit),
             "csrf_token": get_csrf_token(request),
+        },
+    )
+
+
+@router.get("/clans/{slug}/compare", response_class=HTMLResponse)
+async def clan_compare(
+    request: Request, slug: str, timeframe: str = "7d", metric: str = "xp"
+):
+    require_user(request)
+    clan = clan_service.get_clan_by_slug(slug)
+    if not clan:
+        return HTMLResponse("<div class='alert error'>Clan not found</div>", status_code=404)
+    data = comparison_service.roster_compare(clan["id"], timeframe=timeframe, metric=metric)
+    return templates.TemplateResponse(
+        "partials/clan_comparison.html",
+        {
+            "request": request,
+            "clan": clan,
+            "members": data.get("members", []),
+            "timeframe": timeframe,
+            "metric": metric,
         },
     )

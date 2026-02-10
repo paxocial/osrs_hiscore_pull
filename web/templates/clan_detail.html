@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/compare.css">
+{% endblock %}
 {% block content %}
 <section class="card">
   <div class="card-header">
@@ -52,6 +55,27 @@
 <section class="card">
   <h3>Members</h3>
   <div id="clan-members" hx-get="/clans/{{ clan.slug }}/members" hx-trigger="load" hx-swap="innerHTML"></div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Roster</p>
+      <h3>Compare Members</h3>
+      <p class="lede">Full roster comparison. Click a row for detail, select two for head-to-head.</p>
+    </div>
+    <div class="form inline">
+      <label>Timeframe
+        <select id="compare-timeframe" hx-get="/clans/{{ clan.slug }}/compare" hx-target="#clan-compare" hx-swap="innerHTML" name="timeframe">
+          <option value="7d" selected>Last 7d</option>
+          <option value="30d">Last 30d</option>
+          <option value="mtd">Month to date</option>
+          <option value="all">All time</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div id="clan-compare" hx-get="/clans/{{ clan.slug }}/compare" hx-trigger="load" hx-swap="innerHTML"></div>
 </section>
 
 <div class="advanced-toggle-row">

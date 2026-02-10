@@ -1,0 +1,35 @@
+{# Shared skill icon mapping — single source of truth #}
+{% macro skill_icon_url(name) -%}
+{%- set skill_icons = {
+  "attack": "Attack_icon.png",
+  "strength": "Strength_icon.png",
+  "defence": "Defence_icon.png",
+  "defense": "Defence_icon.png",
+  "ranged": "Ranged_icon.png",
+  "prayer": "Prayer_icon.png",
+  "magic": "Magic_icon.png",
+  "runecraft": "Runecraft_icon.png",
+  "runecrafting": "Runecraft_icon.png",
+  "construction": "Construction_icon.png",
+  "hitpoints": "Hitpoints_icon.png",
+  "hitpoint": "Hitpoints_icon.png",
+  "agility": "Agility_icon.png",
+  "herblore": "Herblore_icon.png",
+  "thieving": "Thieving_icon.png",
+  "crafting": "Crafting_icon.png",
+  "fletching": "Fletching_icon.png",
+  "slayer": "Slayer_icon.png",
+  "hunter": "Hunter_icon.png",
+  "mining": "Mining_icon.png",
+  "smithing": "Smithing_icon.png",
+  "fishing": "Fishing_icon.png",
+  "cooking": "Cooking_icon.png",
+  "firemaking": "Firemaking_icon.png",
+  "woodcutting": "Woodcutting_icon.png",
+  "farming": "Farming_icon.png",
+  "sailing": "Sailing_icon.png",
+  "combat": "Combat.png",
+} -%}
+{%- set key = name|lower|replace(' ', '')|replace('_','')|replace('-','') -%}
+/static/images/runescape/skills/{{ skill_icons.get(key, 'Combat.png') }}
+{%- endmacro %}

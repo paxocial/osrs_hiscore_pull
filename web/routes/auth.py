@@ -107,7 +107,7 @@ async def login_submit(request: Request, email: str = Form(...), password: str =
     if not user:
         return templates.TemplateResponse(
             "auth_login.html",
-            {"request": request, "error": "Invalid credentials.", "user": None},
+            {"request": request, "error": "Invalid credentials.", "user": None, "csrf_token": get_csrf_token(request)},
             status_code=401,
         )
     # Regenerate session to prevent fixation attacks

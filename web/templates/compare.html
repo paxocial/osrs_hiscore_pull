@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/compare.css">
+{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow">Compare</p>
+      <h2>Head-to-Head</h2>
+      <p class="lede">Compare two accounts side-by-side.</p>
+    </div>
+  </div>
+
+  <form method="get" action="/compare" class="compare-picker"
+        hx-get="/compare/results" hx-target="#compare-results" hx-swap="innerHTML"
+        hx-push-url="/compare" hx-indicator="#compare-spinner">
+    <label>
+      Player A
+      <div class="autocomplete-wrapper">
+        <input type="text" name="a" value="{{ player_a }}" placeholder="Enter RSN..." required
+               id="input-a" autocomplete="off">
+        <div class="autocomplete-list" id="ac-list-a"></div>
+      </div>
+    </label>
+    <div class="compare-vs">VS</div>
+    <label>
+      Player B
+      <div class="autocomplete-wrapper">
+        <input type="text" name="b" value="{{ player_b }}" placeholder="Enter RSN..." required
+               id="input-b" autocomplete="off">
+        <div class="autocomplete-list" id="ac-list-b"></div>
+      </div>
+    </label>
+    <div>
+      <label>Timeframe
+        <select name="timeframe">
+          <option value="7d" {% if timeframe == '7d' %}selected{% endif %}>Last 7 days</option>
+          <option value="30d" {% if timeframe == '30d' %}selected{% endif %}>Last 30 days</option>
+          <option value="mtd" {% if timeframe == 'mtd' %}selected{% endif %}>Month to date</option>
+          <option value="all" {% if timeframe == 'all' %}selected{% endif %}>All time</option>
+        </select>
+      </label>
+      <button class="btn primary" type="submit" style="margin-top:8px;width:100%;">Compare</button>
+      <span class="htmx-indicator" id="compare-spinner" style="margin-left:8px;color:var(--ink-2);">Loading...</span>
+    </div>
+  </form>
+</section>
+
+<div id="compare-results">
+{% include "partials/compare_results.html" %}
+</div><!-- /compare-results -->
+
+<script>
+// Autocomplete for player inputs
+(function() {
+  let debounce = null;
+
+  function setupAutocomplete(inputId, listId) {
+    const input = document.getElementById(inputId);
+    const list = document.getElementById(listId);
+    if (!input || !list) return;
+
+    input.addEventListener('input', function() {
+      clearTimeout(debounce);
+      const q = this.value.trim();
+      if (q.length < 2) { list.classList.remove('open'); return; }
+      debounce = setTimeout(async () => {
+        const resp = await fetch('/compare/search?q=' + encodeURIComponent(q));
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data.results.length) { list.classList.remove('open'); return; }
+        list.innerHTML = data.results.map(r =>
+          '<div class="autocomplete-item">' + r + '</div>'
+        ).join('');
+        list.classList.add('open');
+      }, 200);
+    });
+
+    list.addEventListener('click', function(e) {
+      const item = e.target.closest('.autocomplete-item');
+      if (!item) return;
+      input.value = item.textContent;
+      list.classList.remove('open');
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!input.contains(e.target) && !list.contains(e.target)) {
+        list.classList.remove('open');
+      }
+    });
+  }
+
+  setupAutocomplete('input-a', 'ac-list-a');
+  setupAutocomplete('input-b', 'ac-list-b');
+})();
+</script>
+{% endblock %}

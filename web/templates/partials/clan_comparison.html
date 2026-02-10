@@ -1,0 +1,159 @@
+{% if members %}
+<div class="roster-compare-actions">
+  <button class="btn primary small" id="roster-h2h-btn" disabled>Compare Selected (0/2)</button>
+</div>
+<table class="roster-table">
+  <thead>
+    <tr>
+      <th class="rank-col">#</th>
+      <th><input type="checkbox" id="roster-select-all" style="margin-right:6px;">Name</th>
+      <th data-sort="mode">Mode</th>
+      <th data-sort="total_xp" data-type="num">Total XP</th>
+      <th data-sort="total_level" data-type="num">Total Level</th>
+      <th data-sort="xp_gain" data-type="num">XP Gain</th>
+      <th data-sort="level_gain" data-type="num">Level Gain</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in members %}
+      <tr class="roster-row" data-name="{{ m.name }}" data-mode="{{ m.mode }}" data-total_xp="{{ m.total_xp }}" data-total_level="{{ m.total_level }}" data-xp_gain="{{ m.xp_gain }}" data-level_gain="{{ m.level_gain }}">
+        <td class="rank-col">{{ loop.index }}</td>
+        <td>
+          <input type="checkbox" class="roster-check" value="{{ m.name }}" style="margin-right:6px;">
+          <a href="/profiles/{{ m.name }}">{{ m.name }}</a>
+        </td>
+        <td>{{ m.mode }}</td>
+        <td>{{ "{:,}".format(m.total_xp) }}</td>
+        <td>{{ "{:,}".format(m.total_level) }}</td>
+        <td style="color: {{ 'var(--success)' if m.xp_gain > 0 else 'var(--ink-2)' }}">
+          {% if m.xp_gain > 0 %}+{% endif %}{{ "{:,}".format(m.xp_gain) }}
+        </td>
+        <td style="color: {{ 'var(--success)' if m.level_gain > 0 else 'var(--ink-2)' }}">
+          {% if m.level_gain > 0 %}+{% endif %}{{ m.level_gain }}
+        </td>
+      </tr>
+      <tr class="roster-expand-panel" id="expand-{{ loop.index }}">
+        <td colspan="7">
+          <div class="roster-expand-grid">
+            <div>
+              <h4>Top Skills (by XP gain)</h4>
+              {% set top_skills = m.skills|sort(attribute='xp_gain', reverse=true) %}
+              {% for sk in top_skills[:5] %}
+                {% if sk.xp_gain > 0 %}
+                  <div class="compare-act-row">
+                    <span class="compare-act-name">{{ sk.name }}</span>
+                    <span class="compare-act-score">+{{ "{:,}".format(sk.xp_gain) }} xp</span>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+            <div>
+              <h4>Top Activities (by score gain)</h4>
+              {% set top_acts = m.activities|sort(attribute='score_gain', reverse=true) %}
+              {% for act in top_acts[:5] %}
+                {% if act.score_gain > 0 %}
+                  <div class="compare-act-row">
+                    <span class="compare-act-name">{{ act.name }}</span>
+                    <span class="compare-act-score">+{{ "{:,}".format(act.score_gain) }}</span>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+(function() {
+  // Column sorting
+  const table = document.querySelector('.roster-table');
+  if (table) {
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    let sortCol = null, sortAsc = false;
+
+    thead.querySelectorAll('th[data-sort]').forEach(th => {
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', function() {
+        const key = this.dataset.sort;
+        const isNum = this.dataset.type === 'num';
+        if (sortCol === key) { sortAsc = !sortAsc; } else { sortCol = key; sortAsc = false; }
+
+        // Update sort indicators
+        thead.querySelectorAll('th[data-sort]').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+        this.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+
+        // Collect row pairs (data row + expand panel)
+        const pairs = [];
+        const rows = tbody.querySelectorAll('tr.roster-row');
+        rows.forEach(row => {
+          const panel = row.nextElementSibling;
+          pairs.push({ row, panel, val: row.dataset[key] || '' });
+        });
+
+        pairs.sort((a, b) => {
+          let va = a.val, vb = b.val;
+          if (isNum) { va = parseFloat(va) || 0; vb = parseFloat(vb) || 0; }
+          if (va < vb) return sortAsc ? -1 : 1;
+          if (va > vb) return sortAsc ? 1 : -1;
+          return 0;
+        });
+
+        pairs.forEach((p, i) => {
+          tbody.appendChild(p.row);
+          tbody.appendChild(p.panel);
+          p.row.querySelector('.rank-col').textContent = i + 1;
+        });
+      });
+    });
+  }
+
+  // Row click to expand
+  document.querySelectorAll('.roster-row').forEach((row, idx) => {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
+      const panel = this.nextElementSibling;
+      if (panel && panel.classList.contains('roster-expand-panel')) panel.classList.toggle('open');
+    });
+  });
+
+  // Checkbox logic for head-to-head
+  const checks = document.querySelectorAll('.roster-check');
+  const btn = document.getElementById('roster-h2h-btn');
+  const selectAll = document.getElementById('roster-select-all');
+
+  function updateBtn() {
+    const selected = document.querySelectorAll('.roster-check:checked');
+    const count = selected.length;
+    btn.textContent = 'Compare Selected (' + count + '/2)';
+    btn.disabled = count !== 2;
+  }
+
+  checks.forEach(cb => cb.addEventListener('change', function() {
+    const selected = document.querySelectorAll('.roster-check:checked');
+    if (selected.length > 2) { this.checked = false; }
+    updateBtn();
+  }));
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      checks.forEach((cb, i) => { cb.checked = i < 2 && this.checked; });
+      updateBtn();
+    });
+  }
+
+  btn.addEventListener('click', function() {
+    const selected = [...document.querySelectorAll('.roster-check:checked')].map(cb => cb.value);
+    if (selected.length === 2) {
+      window.location.href = '/compare?a=' + encodeURIComponent(selected[0]) + '&b=' + encodeURIComponent(selected[1]);
+    }
+  });
+})();
+</script>
+{% else %}
+<p class="ink-2">No member data available. Run a clan snapshot first.</p>
+{% endif %}

@@ -308,7 +308,7 @@ async def admin_clans(request: Request, page: int = 1):
         clans = conn.execute("""
             SELECT c.*, u.email as owner_email
             FROM clans c
-            JOIN users u ON c.user_id = u.id
+            JOIN users u ON c.owner_user_id = u.id
             ORDER BY c.created_at DESC
             LIMIT ? OFFSET ?
         """, (page_size, offset)).fetchall()
