@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import sqlite3
 from pathlib import Path
 from typing import Optional, Generator
-from fastapi import Depends, HTTPException, status, Query
+from fastapi import Depends, HTTPException, status, Query, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from api.schemas import (
@@ -45,6 +46,75 @@ def get_optional_auth(
     if credentials:
         return credentials.credentials
     return None
+
+
+async def require_plugin_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    conn: sqlite3.Connection = Depends(get_database_connection)
+) -> dict:
+    """
+    Require valid API token with 'plugin' scope.
+
+    Args:
+        x_api_key: API key from X-API-Key header
+        conn: Database connection
+
+    Returns:
+        Dict with token metadata: {id, user_id, scopes, label}
+
+    Raises:
+        HTTPException: 401 if token missing/invalid/revoked, 403 if missing plugin scope
+    """
+    # Check if API key is provided
+    if not x_api_key:
+        logger.warning("Plugin API request missing X-API-Key header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing API key. Include X-API-Key header."
+        )
+
+    # Hash the token using SHA-256 (matching pattern from web/services/auth.py)
+    token_hash = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
+
+    # Query api_tokens table for matching non-revoked token
+    token_row = conn.execute(
+        """
+        SELECT id, user_id, scopes, label
+        FROM api_tokens
+        WHERE token_hash = ? AND revoked_at IS NULL
+        """,
+        (token_hash,)
+    ).fetchone()
+
+    # Check if token exists and is valid
+    if not token_row:
+        logger.warning(f"Invalid or revoked API token attempted")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or revoked API key"
+        )
+
+    token = dict(token_row)
+
+    # Validate that token has 'plugin' scope
+    scopes = token.get("scopes", "")
+    if "plugin" not in scopes:
+        logger.warning(f"API token {token['id']} lacks 'plugin' scope (has: {scopes})")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key does not have 'plugin' scope"
+        )
+
+    # Update last_used_at timestamp
+    conn.execute(
+        "UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (token["id"],)
+    )
+    conn.commit()
+
+    logger.info(f"Plugin API access authorized for token {token['id']} (user {token['user_id']})")
+
+    return token
 
 
 def parse_account_query_params(
@@ -254,3 +324,41 @@ class RateLimiter:
 
 # Global rate limiter instance
 rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
+
+
+class TokenRateLimiter:
+    """Per-token rate limiter using sliding window."""
+
+    def __init__(self, max_requests: int, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.requests: dict[int, list[float]] = {}
+
+    def is_allowed(self, token_id: int) -> bool:
+        """Check if token is allowed to make a request."""
+        import time
+
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        # Clean old entries
+        if token_id in self.requests:
+            self.requests[token_id] = [
+                req_time for req_time in self.requests[token_id]
+                if req_time > window_start
+            ]
+        else:
+            self.requests[token_id] = []
+
+        # Check if under limit
+        if len(self.requests[token_id]) >= self.max_requests:
+            return False
+
+        # Add current request
+        self.requests[token_id].append(now)
+        return True
+
+
+# Global token rate limiter instances for plugin endpoints
+plugin_rate_limiter = TokenRateLimiter(max_requests=30, window_seconds=60)
+batch_rate_limiter = TokenRateLimiter(max_requests=10, window_seconds=60)

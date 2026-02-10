@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 
 from api.dependencies import rate_limiter
 from api.exceptions import setup_exception_handlers
-from api.endpoints import accounts, snapshots, analytics, runelite
+from api.endpoints import accounts, snapshots, analytics, runelite, plugin
 from api import test_accounts
 from config.settings import AppConfig
 
@@ -276,6 +276,13 @@ app.include_router(
     runelite.router,
     prefix="",
     tags=["RuneLite"],
+    responses={404: {"description": "Not found"}}
+)
+
+app.include_router(
+    plugin.router,
+    prefix="/api/v1/plugin",
+    tags=["Plugin"],
     responses={404: {"description": "Not found"}}
 )
 
