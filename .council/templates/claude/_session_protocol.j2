@@ -20,7 +20,7 @@
 ```
 
 **Who Opens/Closes Sessions:**
-- **Orchestrator (Atlas)**: Opens once per work period. Keeps it open for hours — does NOT close after each task. Only close when the user ends the work period.
+- **Orchestrator (Coordinator)**: Opens once per work period. Keeps it open for hours — does NOT close after each task. Only close when the user ends the work period.
 - **Subagents**: Open their own session when dispatched, close it when their bounded task completes.
 
 **Why Sessions Matter:**

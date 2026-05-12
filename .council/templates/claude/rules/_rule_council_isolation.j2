@@ -1,4 +1,7 @@
-{# Council Isolation - Mandatory council_id scoping for all web API endpoints #}
+---
+description: Every web API endpoint touching council-scoped data must filter by active council_id
+priority: critical
+---
 # Council Isolation
 
 **Every web API endpoint that touches council-scoped data MUST filter by the active council_id.**

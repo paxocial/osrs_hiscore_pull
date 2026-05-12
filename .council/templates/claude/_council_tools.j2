@@ -1,4 +1,5 @@
 {# Council MCP Tool Usage — shared boilerplate for all agents #}
+{% set subject = agent if agent is defined else orchestrator if orchestrator is defined else {'name': 'coordinator', 'display_name': 'Coordinator', 'title': 'Coordinator', 'domains': ['general']} %}
 ## Council MCP Tools
 
 ### Tool Tiers
@@ -21,43 +22,49 @@
 ```
 
 **Session ownership:**
-- **Atlas**: One session per work period. Stays open across tasks. Do NOT close prematurely.
+- **Coordinator**: One session per work period. Stays open across tasks. Do NOT close prematurely.
 - **Subagents**: Open/close own short-lived sessions per bounded task.
 
 ### Quick Reference
 
 ```python
 # Profile (first time or if changed)
-register_profile(persona_id="{{ agent.name }}", name="{{ agent.get('display_name', agent.name | title) }}",
-    title="{{ agent.title }}", domains="{{ agent.get('domains', []) | join(',') }}")
+register_profile(persona_id="{{ subject.name }}", name="{{ subject.get('display_name', subject.name | title) }}",
+    title="{{ subject.title }}", domains="{{ subject.get('domains', []) | join(',') }}")
 
 # Session
-open_session(persona_id="{{ agent.name }}", summary="...")
-end_session(session_id="...", summary="...")
+open_session(persona_id="{{ subject.name }}", summary="...")
+# Optional: session_type, mode, metadata_json, client_id, workspace, reuse_existing
+end_session(session_id="...", persona_id="{{ subject.name }}", summary="...")
+# Optional: skip_reflection, ended_reason, mode_ended
 
 # Memory — store important findings
-store_memory(persona_id="{{ agent.name }}", text="...",
-    memory_type="episodic",  # episodic|semantic|note|directive
-    tags="domain:{{ (agent.get('domains', ['general']) or ['general'])[0] }},project:<name>",
+store_memory(persona_id="{{ subject.name }}", text="...",
+    memory_type="episodic",  # episodic|semantic|abstract|synthesis|note|raw
+    tags="domain:{{ (subject.get('domains', ['general']) or ['general'])[0] }},project:<name>",
     strength=0.7, visibility="private")
+# Optional: project_id, session_id, metadata_json, generate_micro_reflections
 
 # Recall — query your own memories
-ask_self(question="...", persona_id="{{ agent.name }}")                    # LLM synthesis
-ask_self(question="...", persona_id="{{ agent.name }}", skip_llm=True,
+ask_self(question="...", persona_id="{{ subject.name }}")                    # LLM synthesis
+ask_self(question="...", persona_id="{{ subject.name }}", skip_llm=True,
     explore_mode=True)                                                      # Fast raw lookup
+# Optional: memory_types, since, limit, search_mode, governance_mode, skip_reasoning_chain, temperature, bias
 
 # Collaborate
-ask_agent(question="...", target_persona_id="<agent>", requester_persona_id="{{ agent.name }}")
-ask_council(question="...", requester_persona_id="{{ agent.name }}")
+ask_agent(question="...", target_persona_id="<agent>", requester_persona_id="{{ subject.name }}")
+# Optional: tags, memory_types, since, limit, search_mode, skip_reasoning_chain
+ask_council(question="...", requester_persona_id="{{ subject.name }}")
+# Optional: target_persona_ids, tags, memory_types, since, limit, search_mode, skip_reasoning_chain
 
 # Audit (auto-relays to Scribe)
-log_audit(persona_id="{{ agent.name }}", session_id="...", summary="...",
+log_audit(persona_id="{{ subject.name }}", session_id="...", summary="...",
     metadata={"phase": "...", "status": "success"})
 
 # Messages
-record_message(from_persona="{{ agent.name }}", to_persona="<target>", body="...", urgent=False)
-list_messages(persona_id="{{ agent.name }}", unread_only=True)
-mark_read(message_ids="...", persona_id="{{ agent.name }}")
+record_message(from_persona="{{ subject.name }}", to_persona="<target>", body="...", urgent=False)
+list_messages(persona_id="{{ subject.name }}", unread_only=True)
+mark_read(message_ids="...", persona_id="{{ subject.name }}")
 ```
 
 ### Memory Types & Tags
@@ -66,8 +73,10 @@ mark_read(message_ids="...", persona_id="{{ agent.name }}")
 |------|---------|
 | `episodic` | Experiences: "I found that X..." |
 | `semantic` | Knowledge: "X means Y..." |
+| `abstract` | High-level patterns and principles |
+| `synthesis` | Combined insights across memories |
 | `note` | General observations |
-| `directive` | Instructions to follow |
+| `raw` | Unprocessed data |
 
 **Tags:** `domain:<area>`, `project:<name>`, `phase:<phase>`, `type:<bug|pattern|decision>`, `priority:<high|medium|low>`
 
@@ -78,11 +87,47 @@ Common errors and fixes:
 - `session_required` → call `open_session` first
 - `cross_agent_denied` → set `allow_cross_agent=True`
 
+### Full Parameter Reference
+
+Complete list of parameters for key Council tools:
+
+| Tool | Required | Key Optional |
+|------|----------|-------------|
+| `open_session` | `persona_id` | `summary`, `session_type`, `mode`, `metadata_json`, `client_id`, `workspace`, `reuse_existing` |
+| `end_session` | `session_id`, `persona_id` | `summary`, `skip_reflection`, `ended_reason`, `mode_ended` |
+| `store_memory` | `persona_id`, `text` | `memory_type`, `strength`, `visibility`, `tags`, `project_id`, `session_id`, `metadata_json`, `generate_micro_reflections` |
+| `ask_self` | `question`, `persona_id` | `tags`, `memory_types`, `since`, `limit`, `search_mode`, `governance_mode`, `skip_reasoning_chain`, `temperature`, `bias`, `explore_mode`, `skip_llm`, `offset` |
+| `ask_agent` | `question`, `target_persona_id`, `requester_persona_id` | `tags`, `memory_types`, `since`, `limit`, `search_mode`, `skip_reasoning_chain`, `temperature`, `bias`, `explore_mode`, `skip_llm`, `offset` |
+| `ask_council` | `question`, `requester_persona_id` | `target_persona_ids`, `tags`, `memory_types`, `since`, `limit`, `search_mode`, `skip_reasoning_chain`, `temperature`, `bias`, `explore_mode`, `skip_llm`, `offset` |
+
+**Parameter Details:**
+
+- **session_type**: Type of session (default: "general")
+- **mode**: Session mode for specialized contexts
+- **metadata_json**: JSON string with additional metadata
+- **reuse_existing**: If True, reuse active session instead of creating new (default: True)
+- **skip_reflection**: If True, skip automatic reflection on session end (default: False)
+- **memory_type**: `episodic|semantic|abstract|synthesis|note|raw`
+- **visibility**: `private|council|shared|public`
+- **generate_micro_reflections**: Auto-generate semantic/abstract micro-reflections (default: False)
+- **memory_types**: Comma-separated memory types to filter retrieval
+- **since**: Time filter (e.g., "7d", "2024-01-01", "last week")
+- **limit**: Max memories to retrieve (default: 12)
+- **search_mode**: `hybrid` (default), `semantic`, or `keyword`
+- **governance_mode**: When to run governance pass (`auto`, `always`, `never`)
+- **skip_reasoning_chain**: Skip multi-pass reasoning for faster results
+- **temperature**: LLM temperature 0.0-1.0 (default: 0.7)
+- **bias**: LLM response bias (`balanced`, `optimistic`, `analytical`, etc.)
+- **explore_mode**: Include raw memories + pagination in response
+- **skip_llm**: Skip LLM synthesis, return raw memories only (fastest)
+- **offset**: Pagination offset for explore mode
+- **target_persona_ids**: Comma-separated persona IDs (empty = all personas in council)
+
 ### Reflection (Background Only)
 
 Never call during active work. User-initiated only:
 ```python
-run_reflection(persona_id="{{ agent.name }}", session_id="...")
-run_dream_cycle(persona_id="{{ agent.name }}", max_cycles=3)
-mine_patterns(persona_id="{{ agent.name }}", min_memories=3)
+run_reflection(persona_id="{{ subject.name }}", session_id="...")
+run_dream_cycle(persona_id="{{ subject.name }}", max_cycles=3)
+mine_patterns(persona_id="{{ subject.name }}", min_memories=3)
 ```

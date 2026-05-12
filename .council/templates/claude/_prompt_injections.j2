@@ -1,0 +1,7 @@
+{% set _sections = agent_prompt_injection_sections | default(orchestrator_prompt_injection_sections | default([])) %}
+{% for section in _sections %}
+### {{ section.title }}
+
+{{ section.content }}
+
+{% endfor %}

@@ -1,0 +1,444 @@
+---
+description: Council MCP on Hetzner CCX23 VPS; SSH read-only, all deploys via CI/CD, Tailscale networking
+priority: high
+---
+# Hetzner Deployment
+
+**Council MCP runs on a Hetzner CCX23 VPS (16GB RAM, 4 vCPU) connected via Tailscale mesh.**
+
+## SSH Access
+
+Claude Code can SSH directly to the server:
+
+```bash
+ssh council-hub                    # Interactive shell
+ssh council-hub "command"          # Run a command remotely
+ssh council-hub "cd /opt/council_mcp && git pull"  # Pull latest code
+```
+
+**No password needed** — SSH keys are pre-configured over Tailscale. Use this for:
+- Deploying changes (git pull + docker compose restart)
+- Checking service health (`docker compose ps`)
+- Viewing logs (`docker compose logs --tail 50 council-daemon`)
+- Running backups
+- Any server-side operation
+
+## Directory Layout
+
+**CRITICAL**: Dev PC and Hetzner have DIFFERENT directory structures. Never confuse them.
+
+```
+Dev PC (WSL2)                          Hetzner VPS (council-hub)
+~/projects/MCP_SPINE/                  /opt/
+├── council_mcp/                       ├── council_mcp/
+├── scribe_mcp/                        ├── scribe_mcp/
+├── corta_store/                       ├── corta_store/
+└── ...                                └── backups/council/
+```
+
+- **Dev PC**: All repos under `~/projects/MCP_SPINE/` (parent dir is `MCP_SPINE`)
+- **Hetzner**: All repos directly under `/opt/` (NO `MCP_SPINE` wrapper dir)
+- **docker-compose.yaml** uses relative paths (`../../scribe_mcp`, `../../corta_store`) which resolve correctly from `council_mcp/deploy/` on BOTH layouts
+
+**Tailscale hostname**: `council-hub`
+**Secrets**: `/opt/council_mcp/secrets/*.txt` (chmod 600)
+**Backups**: `/opt/backups/council/`
+
+## Infrastructure Overview
+
+```
+Dev PC (WSL2)                          Hetzner CCX23 (council-hub)
+┌──────────────────┐                   ┌──────────────────────────────┐
+│ Claude Code      │                   │ Docker Compose Stack         │
+│   .mcp.json ─────┼── Tailscale ───→  │   postgres       :5432      │
+│                  │   (encrypted)     │   council-daemon  :8016      │
+│ SSH ─────────────┼── Tailscale ───→  │   council-web     :8015      │
+│                  │                   │   scribe          :8200      │
+│ Ray Worker ──────┼── Tailscale ───→  │   corta-store     :8201      │
+│   (GPU: RTX 4070)│   (port 6379)    │   ray-head        :6379,:8265│
+│                  │                   │                              │
+│ council_mcp/     │                   │                              │
+└──────────────────┘                   └──────────────────────────────┘
+```
+
+## Docker Compose Stack
+
+All services defined in `deploy/docker-compose.yaml`:
+
+| Service | Container | Port | CPU | Memory | Volume |
+|---------|-----------|------|-----|--------|--------|
+| postgres | council-postgres | 5432 | 1.0 | 4GB | `pg_data` |
+| council-daemon | council-daemon | 8016 | 1.5 | 2GB | `scribe_data` |
+| council-web | council-web | 8015 | 1.5 | 1.5GB | — |
+| scribe | scribe-mcp | 8200 | 1.0 | 2GB | `scribe_data` |
+| corta-store | corta-store | 8201 | 0.5 | 512MB | `corta_store_data` |
+| ray-head | ray-head | 6379, 8265 | 1.5 | 3GB | — |
+
+Total CPU allocation: 7.0 vCPU on 4 vCPU host (overcommit OK — Ray head is idle unless dispatching tasks).
+
+**Port binding**: All ports bind to `${TAILSCALE_IP:-127.0.0.1}` from `deploy/.env`. **NEVER use `0.0.0.0`** — Docker bypasses UFW, so `0.0.0.0` exposes to the public internet.
+
+**GHCR images**: `council-daemon` and `council-web` have `image: ghcr.io/cortalabs/mcp_spine/<service>:${DOCKER_IMAGE_TAG:-latest}`. When `DOCKER_IMAGE_TAG` is unset, `docker compose build` builds locally. When set (by CI/CD), `docker compose pull` fetches pre-built images.
+
+## Database
+
+- **Single database**: `agentkit` on postgres
+- **User**: `council` (superuser)
+- **Schemas**: `public` (AgentKit tables), `council` (council extensions), `scribe` (Scribe tables), `knowledge` (knowledge MCP)
+- **Password**: Docker secret at `/run/secrets/pg_password`
+- **Connection string**: `postgresql://council:<password>@postgres:5432/agentkit`
+
+### Local Council DB Targeting (Hetzner)
+
+When running Council locally but targeting Hetzner Postgres, prefer Scribe's
+known-good remote connection variables:
+
+```bash
+COUNCIL_PREFER_SCRIBE_DB_URL=true
+SCRIBE_DB_URL=postgresql://council:<password>@council-hub:5432/agentkit
+```
+
+With this flag enabled, Council promotes `SCRIBE_DB_URL` to `DATABASE_URL` and
+mirrors `SCRIBE_POSTGRES_*` into `POSTGRES_*` at startup/update time.
+
+### Shared DB Repo Path Profiles
+
+When local and Hetzner share one council registry, `repo_path` must be resolved
+per machine. Use profile-aware paths plus optional prefix remapping:
+
+```bash
+# Local dev machine
+ENVIRONMENT=dev
+COUNCIL_REPO_PATH_PROFILE=dev
+COUNCIL_LOCAL_REPO_ROOTS=~/projects,~/oss
+COUNCIL_REPO_DISCOVERY_MAX_DEPTH=5
+COUNCIL_AUTO_TRACK_REPO_PATHS=true
+```
+
+Store both paths in council metadata:
+- `metadata.repo_paths.dev=/home/austin/projects/MCP_SPINE/<repo>`
+- `metadata.repo_paths.prod=/opt/<repo>`
+
+Council resolves `repo_path` using:
+1. `metadata.repo_paths[COUNCIL_REPO_PATH_PROFILE]` (or `ENVIRONMENT`)
+2. Fallback to stored `repo_path`
+3. Auto-discover by repo name under `COUNCIL_LOCAL_REPO_ROOTS`
+4. Optional `COUNCIL_REPO_PATH_MAP` prefix remap override
+
+## Docker Secrets
+
+Secrets are files at `/opt/council_mcp/secrets/` mounted into containers at `/run/secrets/<name>`:
+
+| Secret File | Container Env Var | Purpose |
+|-------------|-------------------|---------|
+| `pg_password.txt` | `POSTGRES_PASSWORD` | Postgres superuser password |
+| `database_url.txt` | `DATABASE_URL` | AgentKit connection string |
+| `api_key.txt` | `COUNCIL_API_KEY` | Council web UI auth (starts with `ck_`) |
+| `openai_api_key.txt` | `OPENAI_API_KEY` | LLM provider key |
+| `scribe_db_url.txt` | `SCRIBE_DB_URL` | Scribe Postgres connection |
+| `store_hmac_key.txt` | `STORE_HMAC_KEY` | CortaStore HMAC signing secret |
+
+The `docker-entrypoint.sh` reads these files and exports as env vars before starting the app.
+
+## MCP Connections (from Dev PC)
+
+`.mcp.json` on the dev PC points to Hetzner over Tailscale:
+
+```json
+{
+  "mcpServers": {
+    "council-v2": {
+      "command": "python",
+      "args": ["-m", "council_mcp.ws_proxy", "--url", "ws://council-hub:8016/mcp"]
+    },
+    "scribe": {
+      "type": "sse",
+      "url": "http://council-hub:8200/sse"
+    }
+  }
+}
+```
+
+## Ray Distributed Compute Cluster
+
+The Ray head node runs on Hetzner. Local PCs with GPUs join as workers over Tailscale.
+
+### Architecture
+
+- **Head node**: `ray-head` container on Hetzner (coordinator only, no GPU)
+- **Workers**: Local PCs join via `council connect start` (GPU + CPU resources)
+- **Ray version**: 2.49.2 (must match exactly between head and workers)
+- **Python version**: 3.11.13 (must match exactly — Ray enforces at connect time)
+- **Dashboard**: `http://council-hub:8265` (monitoring, task inspection)
+- **GCS port**: 6379 (worker connection point)
+
+### Worker Management
+
+```bash
+# Connect local PC as Ray worker
+council connect start                  # Join cluster (background mode)
+council connect start --foreground     # Join cluster (foreground, Ctrl+C to stop)
+council connect status                 # Show cluster: nodes, CPUs, GPUs, memory
+council connect stop                   # Disconnect from cluster
+```
+
+### Version Contract
+
+Ray enforces **exact** Python patch version matching (3.11.13 != 3.11.14). Both `PYTHON_VERSION` and `RAY_VERSION` are build args in `deploy/docker-compose.yaml`. To update:
+
+1. Check local Python: `python --version`
+2. Edit `PYTHON_VERSION` in `deploy/docker-compose.yaml` (ray-head build args)
+3. Rebuild: `docker compose -f deploy/docker-compose.yaml build ray-head`
+4. Restart: `docker compose -f deploy/docker-compose.yaml up -d ray-head`
+
+### Operating Modes
+
+Use two explicit STM/control-plane operating modes and do not blur them:
+
+- `local_default`
+  - Local developer control plane / same-node workflow only.
+  - `context.stm.backend: memory`
+  - `context.stm.mirror.primary: memory`
+  - No Redis service in the topology.
+- `distributed_stateful`
+  - Hetzner-backed or other multi-node distributed control plane.
+  - `context.stm.backend: redis`
+  - `context.stm.mirror.primary: redis`
+  - Redis is required before claiming distributed-stateful readiness.
+
+**Redis failure semantics for `distributed_stateful`:**
+- If Redis is unavailable, stale, or failing health checks, treat the topology as degraded.
+- Fail closed for distributed stateful coordination and STM-backed flows until Redis health is restored.
+- Do **not** silently fall back to local memory or report the distributed control plane as healthy while Redis is down.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `deploy/Dockerfile.ray-head` | Ray head image (python:3.11.13-slim + Ray + council) |
+| `src/council_mcp/cli/connect_cmd.py` | `council connect` CLI (start/stop/status) |
+| `src/council_mcp/compute/dispatcher.py` | ComputeDispatcher (Ray GPU + CPU fallback) |
+| `src/council_mcp/compute/embeddings.py` | Embedding bridge (routes to GPU when available) |
+| `src/council_mcp/compute/tasks.py` | Ray remote task definitions |
+
+### Config (`council.compute.*`)
+
+```yaml
+council:
+  compute:
+    ray_enabled: false              # Toggle Ray dispatch (false = CPU-only)
+    ray_address: "auto"             # Ray head address (or "auto" for config lookup)
+    gpu_fallback_to_cpu: true       # Fall back to CPU when GPU unavailable
+    dispatch_timeout_seconds: 30    # Max wait for Ray task completion
+    faiss:
+      verify_on_serve_start: true
+      rebuild_on_verify_failure: true
+      storage_root_candidates:       # first readable+writable path wins
+        - "/mnt/council-faiss"       # shared local/remote mount when available
+        - "memory/agentkit/faiss"    # local fallback
+      create_storage_root_if_missing: true
+```
+
+### FAISS + pgvector Operating Mode
+
+Use a split architecture:
+- **Postgres/pgvector on Hetzner is canonical** (source of truth).
+- **FAISS shards are acceleration caches** (local workstation and/or Hetzner).
+- Retrieval should use FAISS candidates, then hydrate canonical details from Postgres.
+
+`council connect serve` resolves `storage_root_candidates` and exports
+`AGENTKIT_FAISS__STORAGE_ROOT` at startup, then runs verify/rebuild checks.
+
+```bash
+# Verify selected FAISS root and startup checks
+council connect serve --local
+
+# Manual FAISS checks from repo root
+python -m agentkit.cli.faiss verify
+python -m agentkit.cli.faiss rebuild --yes
+```
+
+## Deploy Workflow
+
+### Quick Deploy (from Dev PC via SSH)
+
+The fastest way to deploy changes — run from Claude Code or local terminal:
+
+```bash
+# One-liner: push, pull on server, restart
+git push origin master && ssh council-hub "cd /opt/council_mcp && git pull && docker compose -f deploy/docker-compose.yaml up -d"
+```
+
+### Full Deploy (with backup and health check)
+
+```bash
+# 1. Push changes
+git push origin master
+
+# 2. Backup + pull + rebuild + restart + verify (on Hetzner)
+ssh council-hub "cd /opt/council_mcp && \
+  ./deploy/scripts/backup-postgres.sh && \
+  git pull && \
+  docker compose -f deploy/docker-compose.yaml build && \
+  docker compose -f deploy/docker-compose.yaml up -d --remove-orphans && \
+  ./deploy/scripts/health-check.sh"
+```
+
+### CI/CD Deploy (GitHub Actions)
+
+On push to master, GitHub Actions runs `.github/workflows/platform.yml`:
+1. **Test**: Fast pytest subset
+2. **Build**: Docker images pushed to GHCR with commit SHA tags
+3. **Deploy**: SSH via Tailscale, runs `deploy/scripts/deploy.sh` with secrets
+
+### Deploy Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `deploy/scripts/deploy.sh` | Main orchestrator: writes secrets, sets image tag, pulls, starts, health-checks, auto-rollbacks on failure |
+| `deploy/scripts/health-check.sh` | Checks all 5 services in dependency order with configurable timeouts |
+| `deploy/scripts/rollback.sh` | Reverts to previous image tag and verifies health |
+
+### Health-Check Hang Triage
+
+- If deploy health checks appear stuck, inspect container state and logs first:
+  `docker compose -f deploy/docker-compose.yaml ps` and
+  `docker compose -f deploy/docker-compose.yaml logs --tail=200 <service>`.
+- Treat `Restarting` (especially on `council-daemon`) as a startup crash signal.
+  A timeout in this state is a symptom, not the root cause.
+- Current health-check polling already exits as soon as services report healthy.
+  Increasing timeout is not the first fix when a service never stabilizes.
+- Rollback caution: some older GHCR tags published before the vendored AgentKit
+  wheel refresh may be invalid rollback targets. Validate candidate tags before
+  rollback selection when debugging deployment regressions.
+
+### Multi-Repo Deploy
+
+When scribe_mcp or corta_store also changed:
+
+```bash
+ssh council-hub "cd /opt/scribe_mcp && git pull"
+ssh council-hub "cd /opt/corta_store && git pull"
+ssh council-hub "cd /opt/council_mcp && \
+  docker compose -f deploy/docker-compose.yaml build && \
+  docker compose -f deploy/docker-compose.yaml up -d --remove-orphans"
+```
+
+## Volume Safety
+
+All data volumes are declared `external: true` in docker-compose.yaml. This means:
+
+- `docker compose down -v` **cannot remove them** — Docker refuses to delete external volumes
+- Only explicit `docker volume rm <name>` can remove them
+- Volumes must be pre-created before first `docker compose up` (setup-hetzner.sh handles this)
+
+```bash
+# These are safe — external volumes survive everything:
+docker compose down              # Stops containers, volumes untouched
+docker compose down -v           # Stops containers, external volumes STILL untouched
+docker compose up -d --build     # Rebuilds and restarts, volumes untouched
+
+# This is the ONLY way to delete data (intentional, explicit):
+docker volume rm deploy_pg_data  # Permanent — requires backup first
+```
+
+**WARNING — Volume Name Matching**: Docker Compose prefixes volume names with the project name
+(e.g. `deploy_pg_data` if the compose file is in `deploy/`). When switching volumes to `external: true`,
+the names in docker-compose.yaml MUST match what `docker volume ls` shows on the server.
+Always run `docker volume ls | grep -E "pg_data|scribe_data"` BEFORE changing volume config.
+
+## Backup & Restore
+
+```bash
+# Backup (creates timestamped gzip, keeps last 7)
+ssh council-hub "/opt/council_mcp/deploy/scripts/backup-postgres.sh"
+
+# Restore from backup
+ssh council-hub "gunzip -c /opt/backups/council/agentkit_YYYYMMDD_HHMMSS.sql.gz \
+    | docker compose -f /opt/council_mcp/deploy/docker-compose.yaml exec -T postgres \
+        psql -U council -d agentkit"
+```
+
+## Useful Commands (via SSH)
+
+```bash
+# Check service health
+ssh council-hub "docker compose -f /opt/council_mcp/deploy/docker-compose.yaml ps"
+
+# View logs
+ssh council-hub "docker compose -f /opt/council_mcp/deploy/docker-compose.yaml logs --tail 50 council-daemon"
+
+# Shell into a container
+ssh council-hub "docker compose -f /opt/council_mcp/deploy/docker-compose.yaml exec council-daemon bash"
+
+# Direct psql access
+ssh council-hub "docker compose -f /opt/council_mcp/deploy/docker-compose.yaml exec postgres psql -U council -d agentkit"
+
+# Restart a single service (no rebuild)
+ssh council-hub "docker compose -f /opt/council_mcp/deploy/docker-compose.yaml restart council-web"
+
+# Rebuild + restart a single service
+ssh council-hub "docker compose -f /opt/council_mcp/deploy/docker-compose.yaml up -d --build council-web"
+
+# Run health check
+ssh council-hub "cd /opt/council_mcp && ./deploy/scripts/health-check.sh"
+```
+
+## Docker Build Caching
+
+The Dockerfile uses a two-layer pip install strategy:
+
+1. **Layer 1** (cached): PyPI dependencies parsed from `pyproject.toml` (excluding agentkit). Cached until `pyproject.toml` changes.
+2. **Layer 2** (rebuilt on code changes): Local packages — agentkit wheel from `vendor/` + council_mcp source.
+
+This means code-only changes rebuild in ~5 seconds instead of re-downloading all packages.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `deploy/docker-compose.yaml` | Full stack definition (GHCR images + local build) |
+| `deploy/Dockerfile` | Multi-stage build (base -> daemon, web) |
+| `deploy/Dockerfile.ray-head` | Ray head node image (Python + Ray + council) |
+| `deploy/docker-entrypoint.sh` | Secret loading, auto-bootstrap |
+| `deploy/.env` | `TAILSCALE_IP` and `DOCKER_IMAGE_TAG` |
+| `deploy/scripts/deploy.sh` | CI/CD deploy orchestrator |
+| `deploy/scripts/health-check.sh` | Post-deploy service verification |
+| `deploy/scripts/rollback.sh` | Image tag rollback with health check |
+| `deploy/scripts/backup-postgres.sh` | Pre-deploy database backup |
+| `deploy/scripts/setup-hetzner.sh` | Initial server provisioning |
+| `deploy/scripts/migrate-data.sh` | Local -> Hetzner data migration |
+| `.github/workflows/platform.yml` | GitHub Actions CI/CD pipeline |
+
+## Anti-Patterns
+
+**Wrong** — Exposing ports publicly:
+```yaml
+ports: ["0.0.0.0:8015:8015"]  # NEVER — bypasses UFW
+```
+
+**Right** — Tailscale-only binding:
+```yaml
+ports: ["${TAILSCALE_IP:-127.0.0.1}:8015:8015"]
+```
+
+**Wrong** — Rebuilding with `--no-cache`:
+```bash
+docker compose build --no-cache  # Wastes time, re-downloads everything
+```
+
+**Right** — Normal build (layer cache handles it):
+```bash
+docker compose build  # Only rebuilds changed layers
+```
+
+**Wrong** — Trying to delete volumes without backup:
+```bash
+docker volume rm deploy_pg_data  # PERMANENT — no undo
+```
+
+**Right** — Backup first, then explicit removal if needed:
+```bash
+ssh council-hub "/opt/council_mcp/deploy/scripts/backup-postgres.sh"
+docker volume rm deploy_pg_data  # Only after verified backup
+```

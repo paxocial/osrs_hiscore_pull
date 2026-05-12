@@ -1,3 +1,7 @@
+---
+description: "Council process tree ownership boundaries; head vs worker vs web vs daemon responsibilities"
+priority: high
+---
 # Process Lifecycle
 
 **Council runs as a process tree. Understanding ownership prevents cross-process bugs.**
@@ -124,6 +128,93 @@ Stage 4: Verify health
 | `web/app.py` | Web lifespan (startup/shutdown), SDK fallback init |
 | `process_manager.py` | ProcessManager, ProcessType enum, SQLite registry |
 | `web/mcp_client.py` | MCP client pool, ScribeProxyClient, `start_scribe()` |
+
+## ProcessManager Patterns
+
+### Spawn Pattern
+Always use `pm.spawn()` for new processes. Never write directly to the SQLite registry.
+
+**Right** — Using spawn:
+```python
+config = ProcessConfig(
+    process_type=ProcessType.PLUGIN,
+    command=["python", "-m", "my_process"],
+    metadata={"name": "my-plugin"},
+)
+entry = await pm.spawn(ProcessType.PLUGIN, config)
+pid = entry.pid
+```
+
+**Wrong** — Direct registry write:
+```python
+# Bypasses validation, orphan tracking, health monitoring
+cur.execute("INSERT INTO processes ...")
+```
+
+### External Registration
+For processes spawned by external systems (MCPClient, CLI), use `await pm.register_external(pid, process_type, config)`.
+
+```python
+# Process already spawned by external system
+proc = subprocess.Popen([...])
+await pm.register_external(
+    pid=proc.pid,
+    process_type=ProcessType.MCP_SERVER,
+    config=ProcessConfig(
+        process_type=ProcessType.MCP_SERVER,
+        command=["scribe-mcp", "start"],
+        metadata={"name": "scribe-mcp"},
+    ),
+)
+```
+
+### Spawn Budget Contract (Extensibility)
+When building new worker/plugin launch paths, reuse ProcessManager spawn limits
+instead of introducing local hard-coded environment truncation policies.
+
+```python
+from council_mcp.process_manager import ProcessType
+
+limits = pm.get_spawn_budget_limits(ProcessType.SDK_SESSION)
+max_env_bytes = int(limits.get("max_env_bytes", 65536))
+max_value_bytes = int(limits.get("max_single_env_value_bytes", 8192))
+```
+
+Why this matters:
+- Keeps spawn behavior consistent across daemon/web/SDK paths.
+- Prevents E2BIG regressions from oversized env payloads.
+- Centralizes policy changes in one place (`process_manager.py`).
+
+### Shutdown Order Maintenance
+When adding a new ProcessType to the enum, **ALWAYS add it to `_SHUTDOWN_ORDER` in process_manager.py**. The list determines the order for `pm.stop_all(ordered=True)`. Forgetting this causes orphaned processes.
+
+```python
+# In process_manager.py
+_SHUTDOWN_ORDER = [
+    ProcessType.SDK_SESSION,
+    ProcessType.PLUGIN,
+    ProcessType.WEB_UI,
+    ProcessType.MCP_SERVER,
+    ProcessType.SCRIBE_MCP,  # Most critical — stop last
+    # Add new types here in priority order
+]
+```
+
+### Dual PM Awareness
+The daemon owns the primary PM (manages all process types). The web UI creates a lightweight PM for SDK workers only. Never use the web PM to manage daemon-owned processes.
+
+| PM Instance | Owner | Manages | Use Case |
+|-------------|-------|---------|----------|
+| Primary PM | Daemon | All process types | Full lifecycle control |
+| Lightweight PM | Web UI | SDK workers only | Worker spawn/stop for sessions |
+
+### SQLite Shared Access
+The process registry SQLite file is accessed by daemon PM, web PM, and CLI commands concurrently. WAL mode and busy_timeout are configured to handle this, but minimize write frequency.
+
+**Configured settings** (in ProcessManager._init_db()):
+- WAL mode: Write-Ahead Logging for concurrent readers
+- busy_timeout: 5000ms (wait up to 5s for lock)
+- timeout: 5.0s (connection timeout)
 
 ## Common Pitfalls
 

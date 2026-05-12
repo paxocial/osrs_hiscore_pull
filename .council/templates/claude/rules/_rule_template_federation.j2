@@ -1,0 +1,159 @@
+---
+rule_slug: template-federation
+artifact_urn: urn:council:rule:template-federation
+version: 1.0.0
+target_scope: council
+priority: medium
+channels: [claude]
+source_package_name: council-mcp
+source_package_version: 1.0.0
+description: Cross-package template discovery via Python entry points; visibility filtering for external skills
+---
+# Template Federation
+
+**Cross-package template discovery via Python entry points. External MCP packages own and ship rules/skills to consuming councils.**
+
+## How It Works
+
+1. External packages declare a `council.templates` entry point in `pyproject.toml`
+2. The entry point points to a manifest function returning `{package_name, package_version, rules_dir, skills_dir}`
+3. `council update` calls `collect_template_providers()` to discover all registered providers
+4. Provider rule dirs are merged into the search path — package rules become available alongside project rules
+5. Provider skill dirs are merged with visibility filtering — `internal` skills from external packages are skipped
+
+## Precedence (Highest → Lowest)
+
+1. **Local `.council/templates/`** — Project overrides always win
+2. **council_mcp package defaults** — Shipped with the `council_mcp` package itself
+3. **External providers** — `scribe-council`, `knowledge_mcp`, and other installed packages
+
+## Declaring an External Provider
+
+### 1. Add entry point to `pyproject.toml`
+
+```toml
+[project.entry-points."council.templates"]
+scribe-council = "scribe_council.council_templates:get_council_templates"
+```
+
+### 2. Implement the manifest function
+
+```python
+# packages/scribe_council/src/scribe_council/council_templates/__init__.py
+from pathlib import Path
+
+def get_council_templates() -> dict:
+    """Return manifest for council template federation."""
+    pkg_root = Path(__file__).parent
+    return {
+        "package_name": "scribe-council",
+        "package_version": "1.0.0",
+        "rules_dir": str(pkg_root / "rules"),
+        "skills_dir": str(pkg_root / "skills"),
+    }
+```
+
+### 3. Directory structure
+
+```text
+packages/
+└── scribe_council/
+    └── src/
+        └── scribe_council/
+            └── council_templates/
+                ├── __init__.py          # Manifest function lives here
+                ├── rules/
+                │   └── _rule_my_rule.j2   # Rule templates
+                └── skills/
+                    └── my-skill/
+                        └── SKILL.md.j2    # Skill template with frontmatter
+```
+
+Legacy shim note: `scribe_mcp.council_templates:get_council_templates` is deprecated and secondary compatibility only. Keep `scribe-council` as the primary publisher contract.
+
+## Skill Visibility Model
+
+Skills from external providers use frontmatter to control visibility:
+
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `visibility` | `exported` (default) | Available to all consuming councils |
+| `visibility` | `internal` | Only for the owning package's own repo |
+| `owner` | `<package-name>` | Which package owns this skill |
+
+When `council update` processes external providers, **internal skills are silently filtered out** — they never appear in consuming councils.
+
+### Skill frontmatter example
+
+```markdown
+---
+name: My Exported Skill
+slug: my-skill
+description: A skill shipped to all councils
+visibility: exported
+owner: scribe-council
+domains: [research, documentation]
+---
+```
+
+```markdown
+---
+name: Internal Dev Skill
+slug: internal-skill
+description: Only for use within scribe-council's own council
+visibility: internal
+owner: scribe-council
+domains: [development]
+---
+```
+
+## Adding Rules from a Provider
+
+Place `.j2` files in your package's `council_templates/rules/` directory. Rules follow the same naming convention as project rules:
+
+```
+_rule_<slug>.j2  →  slug: <slug>  →  output: .claude/rules/<slug>.md
+```
+
+Rules from external providers appear in the consuming council's `.claude/rules/` directory after `council update`. Local `.council/templates/` overrides always take precedence.
+
+## Adding Skills from a Provider
+
+Place `SKILL.md.j2` files in `council_templates/skills/<slug>/`:
+
+```
+council_templates/skills/my-skill/SKILL.md.j2
+```
+
+The skill frontmatter MUST include `visibility` and `owner`:
+
+```markdown
+---
+name: My Skill
+slug: my-skill
+description: What this skill does
+visibility: exported
+owner: my-package
+domains: [domain1, domain2]
+allowed_tools: [Read, Grep, Glob]
+---
+```
+
+## `source_type: package`
+
+Skills from external providers are stored in the DB with `source_type: "package"`. Filter with:
+
+```bash
+council skills list --source package
+council skills list --owner <package-name>
+```
+
+Source type ranking (for conflict resolution): `project=1`, `manual=2`, `plugin=3`, `package=4`, `personal=5`. Lower rank wins.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `{{ repo_root }}/src/council_mcp/services/template_federation.py` | Discovery service — `collect_template_providers()`, `peek_frontmatter_visibility()` |
+| `{{ repo_root }}/src/council_mcp/agents/generate.py` | Integration points (6 sites) — wires provider dirs into rule/skill generation |
+| `{{ repo_root }}/src/council_mcp/services/skills.py` | `source_type` handling, `owner` filter in `list_skills()` |

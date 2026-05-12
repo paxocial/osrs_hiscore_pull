@@ -1,0 +1,159 @@
+---
+description: Strict startup/shutdown ordering; `_RUNTIME_CONTEXT` is process-local; daemon state rules
+priority: high
+---
+{# FastAPI Lifecycle - Startup, shutdown, and sentinel patterns for Council MCP web app #}
+# FastAPI Lifecycle
+
+**Web lifespan follows a strict startup/shutdown order. `_RUNTIME_CONTEXT` is process-local. Never access daemon state from web.**
+
+## Lifespan Pattern
+
+The web app uses `@asynccontextmanager` for startup/shutdown:
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage MCP client lifecycle (startup/shutdown)."""
+    # --- Startup (ordered) ---
+    await mcp_pool.start_council()   # 1. MCP pool connects to daemon
+    await mcp_pool.start_scribe()    # 2. Scribe client (non-fatal if unavailable)
+    await _sync_personas_on_startup() # 3. Sync .claude/agents/ to DB
+
+    # Daemon-owned services — web uses sentinels (None)
+    app.state.process_manager = None  # Daemon owns PM; web reads SQLite directly
+    app.state.system_health = None    # Daemon owns health; web calls MCP tools
+
+    yield  # App is running
+
+    # --- Shutdown (reverse order) ---
+    await mcp_pool.stop_all()         # Disconnect MCP clients cleanly
+```
+
+## Startup Order
+
+```
+1. mcp_pool.start_council()   → WebSocket to daemon on port 8016
+2. mcp_pool.start_scribe()    → Scribe MCP (via daemon proxy or direct spawn)
+3. _sync_personas_on_startup() → .claude/agents/*.md → persona_profiles in DB
+4. app.state.process_manager = None  → sentinel (daemon-owned)
+5. app.state.system_health = None    → sentinel (daemon-owned)
+6. LogManager init             → log file discovery
+7. SDK init (if configured)    → ProviderRegistry → WorkerPool → SessionManager
+```
+
+## Shutdown Order
+
+```
+1. SDK SessionManager.shutdown()  → end active sessions, stop workers
+2. SDK ProcessManager.shutdown()  → stop health loop, close SQLite
+3. mcp_pool.stop_all()            → close WebSocket connections
+```
+
+## Sentinel Pattern
+
+The web process is a **separate OS process** from the daemon. `app.state.process_manager = None` is a sentinel — not the actual daemon PM. The daemon owns:
+- `ProcessManager` (primary — manages all process types)
+- `SystemHealthMonitor`
+- `_RUNTIME_CONTEXT` dict in `server.py`
+
+The web process creates a **lightweight PM** only for SDK worker lifecycle:
+
+```python
+# In web lifespan — lightweight PM for SDK workers only
+from council_mcp.process_manager import ProcessManager
+
+sdk_pm = ProcessManager()   # Lightweight instance, shares SQLite
+await sdk_pm.start()        # Inits SQLite, adopts orphans, health loop
+pool = WorkerPool(process_manager=sdk_pm)
+```
+
+## `_RUNTIME_CONTEXT` is Process-Local
+
+`_RUNTIME_CONTEXT` in `server.py` is a Python dict. It is populated by the daemon process. When the web UI imports `server.py`, it gets an **empty dict** — the web process is separate.
+
+```python
+# WRONG — _RUNTIME_CONTEXT is always empty in web process
+from council_mcp.server import _RUNTIME_CONTEXT
+sdk_mgr = _RUNTIME_CONTEXT.get("sdk_session_manager")  # Returns None!
+
+# RIGHT — web initializes SDK directly
+from council_mcp.sdk.session_manager import SessionManager
+session_mgr = SessionManager(worker_pool=pool, stream_bridge=bridge)
+await session_mgr.startup()
+```
+
+## Web Reload Sentinel
+
+`council reload --web` uses a sentinel file to distinguish reload from shutdown:
+
+```python
+# In web shutdown hook
+RELOAD_SENTINEL = Path(".council/.web_reloading")
+
+if RELOAD_SENTINEL.exists():
+    RELOAD_SENTINEL.unlink()
+    # Soft disconnect — WebSocket only, leave Scribe/daemon alive
+    await mcp_pool.disconnect_all()
+else:
+    # Full teardown — SDK → PM → all MCP clients
+    await sdk_session_manager.shutdown()
+    await sdk_process_manager.shutdown()
+    await mcp_pool.stop_all()
+```
+
+## WebSocket Close Codes
+
+| Code | Meaning | Client Behavior |
+|------|---------|-----------------|
+| `4010` | Daemon restarting | Reconnect with backoff |
+| `4011` | Full shutdown | Stop reconnecting |
+| `4012` | Web UI reloading | Fast reconnect (0.5s) |
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/council_mcp/web/app.py` | Web lifespan, FastAPI app factory |
+| `src/council_mcp/server.py` | Daemon main, `_RUNTIME_CONTEXT`, MCP server |
+| `src/council_mcp/web/mcp_client.py` | MCP client pool, Scribe proxy |
+| `src/council_mcp/process_manager.py` | ProcessManager, SQLite registry |
+| `src/council_mcp/sdk/session_manager.py` | SDK session orchestrator |
+
+For the full process tree and shutdown ordering, see the `process-lifecycle` rule.
+
+## Anti-Patterns
+
+**Wrong** — accessing `_RUNTIME_CONTEXT` from web:
+```python
+from council_mcp.server import _RUNTIME_CONTEXT
+sdk = _RUNTIME_CONTEXT.get("sdk_session_manager")  # ALWAYS None in web process
+```
+
+**Wrong** — assuming `app.state.process_manager` is usable:
+```python
+pm = app.state.process_manager  # Sentinel = None
+pm.get_status()  # AttributeError!
+```
+
+**Right** — check for sentinel and use lightweight PM:
+```python
+pm = getattr(app.state, "process_manager", None)
+if pm is None:
+    # Web creates its own lightweight PM for SDK workers
+    pm = ProcessManager()
+    await pm.start()
+```
+
+**Wrong** — stopping Scribe from web shutdown:
+```python
+await scribe_client.stop()  # Kills daemon's subprocess!
+```
+
+**Right** — disconnect only:
+```python
+await mcp_pool.disconnect_all()  # Close WS, leave subprocess alive (daemon owns it)
+```

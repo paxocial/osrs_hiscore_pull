@@ -1,0 +1,29 @@
+---
+description: Require explicit user approval before running destructive git undo commands
+priority: medium
+---
+# Git Destructive Approval Gate
+
+**Never run destructive git undo commands without explicit user approval in the current thread.**
+
+## Approval Requirement
+
+Commands that rewrite, discard, or rollback work require explicit approval first.
+
+Blocked without approval:
+- `git restore ...`
+- `git checkout -- ...`
+- `git reset --hard ...`
+- `git clean -fd ...`
+- Any equivalent command that discards user or repo state
+
+## Required Behavior
+
+1. Ask for explicit approval in clear language before running any destructive git undo command.
+2. If approval is not present, do not run the command.
+3. Prefer non-destructive alternatives (inspect, diff, targeted edits) whenever possible.
+4. Never batch destructive and non-destructive operations together in one command.
+
+## Intent
+
+Protect in-progress work and prevent accidental loss of user changes.

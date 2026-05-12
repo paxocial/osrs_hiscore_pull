@@ -1,0 +1,196 @@
+---
+description: Schema-qualified names, parameterized queries, and connection context manager patterns
+priority: critical
+---
+# DB Query Patterns
+
+**All database access must use schema-qualified names, parameterized queries, and the connection context manager.**
+
+## Core Rules
+
+1. **Schema-qualify ALL table names** — never bare table names
+2. **Cursor returns dicts** — psycopg3 `RealDictCursor`, access via `row['column']` not `row[0]`
+3. **Parameterized queries only** — `%(param)s` syntax, never f-strings in SQL
+4. **Connection context manager** — always `with db.connection() as conn:`
+5. **Explicit commits** — `conn.commit()` inside the connection context after writes
+
+## Connection Pattern
+
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT slug, name FROM public.persona_profiles WHERE council_id = %(council_id)s",
+            {"council_id": council_id}
+        )
+        rows = cur.fetchall()
+        # rows is list[dict] — access via row['slug'], not row[0]
+        for row in rows:
+            print(row['slug'], row['name'])
+```
+
+## Schema-Qualified Table Names
+
+Always prefix tables with their schema. Key schemas in use:
+
+| Schema | Tables |
+|--------|--------|
+| `public` | `persona_profiles`, `persona_memories`, `persona_sessions`, `persona_audit_entries` |
+| `council` | `council.skills`, `council.mcp_servers`, `council.rule_bindings`, `council.templates` |
+| `scribe` | Scribe-owned tables (access via Scribe MCP tools, not direct SQL) |
+
+```python
+# Correct — schema-qualified
+"SELECT * FROM public.persona_profiles WHERE slug = %(slug)s"
+"SELECT * FROM council.skills WHERE council_id = %(cid)s"
+
+# Wrong — bare table name (breaks if search_path changes)
+"SELECT * FROM persona_profiles WHERE slug = %(slug)s"
+"SELECT * FROM skills WHERE council_id = %(cid)s"
+```
+
+## Parameterized Queries
+
+```python
+# Correct — parameterized with %(name)s
+cur.execute(
+    """
+    SELECT id, slug, name
+    FROM public.persona_profiles
+    WHERE council_id = %(council_id)s AND is_roster_member = %(roster)s
+    """,
+    {"council_id": council_id, "roster": True}
+)
+
+# WRONG — f-string in SQL (SQL injection, syntax errors)
+cur.execute(f"SELECT * FROM public.persona_profiles WHERE slug = '{slug}'")
+
+# WRONG — % formatting (same problems)
+cur.execute("SELECT * FROM public.persona_profiles WHERE slug = '%s'" % slug)
+```
+
+## Write Operations with Commit
+
+```python
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO council.skills (id, name, slug, council_id, created_at)
+            VALUES (gen_random_uuid(), %(name)s, %(slug)s, %(council_id)s, NOW())
+            RETURNING id
+            """,
+            {"name": name, "slug": slug, "council_id": council_id}
+        )
+        row = cur.fetchone()
+        new_id = row['id']  # dict access
+    conn.commit()  # explicit commit inside context
+```
+
+## Pagination
+
+Use config-driven defaults, never hardcode limits:
+
+```python
+from council_mcp.config import get_council_config
+
+cfg = get_council_config()
+default_limit = cfg.get("council", {}).get("queries", {}).get("default_limit", 20)
+
+def list_agents(limit: int | None = None, offset: int = 0) -> list[dict]:
+    if limit is None:
+        limit = default_limit
+
+    with db.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT slug, name, title
+                FROM public.persona_profiles
+                WHERE is_roster_member = true
+                ORDER BY name
+                LIMIT %(limit)s OFFSET %(offset)s
+                """,
+                {"limit": limit, "offset": offset}
+            )
+            return cur.fetchall()  # list[dict]
+```
+
+## NULL Handling
+
+Use `COALESCE()` for nullable columns:
+
+```python
+cur.execute(
+    """
+    SELECT
+        slug,
+        COALESCE(title, name) AS display_name,
+        COALESCE(description, '') AS description
+    FROM public.persona_profiles
+    WHERE council_id = %(council_id)s
+    """,
+    {"council_id": council_id}
+)
+```
+
+## Anti-Patterns
+
+**Wrong** — `fetchall()` without LIMIT (unbounded query):
+```python
+cur.execute("SELECT * FROM public.persona_memories")  # Could return millions of rows
+rows = cur.fetchall()
+```
+
+**Right** — always paginate:
+```python
+cur.execute("SELECT * FROM public.persona_memories ORDER BY created_at DESC LIMIT %(limit)s", {"limit": 100})
+```
+
+**Wrong** — `dict(row)` when row is already a dict (psycopg3):
+```python
+row = cur.fetchone()
+data = dict(row)  # Redundant — row is already a RealDictRow
+```
+
+**Right** — access directly:
+```python
+row = cur.fetchone()
+data = row  # Already a dict-like object; or dict(row) if you need a plain dict for serialization
+```
+
+**Wrong** — unqualified table names:
+```python
+cur.execute("SELECT * FROM skills WHERE council_id = %(cid)s", {"cid": cid})
+```
+
+**Right** — always schema-qualified:
+```python
+cur.execute("SELECT * FROM council.skills WHERE council_id = %(cid)s", {"cid": cid})
+```
+
+**Wrong** — f-string SQL:
+```python
+cur.execute(f"SELECT * FROM public.persona_profiles WHERE slug = '{persona_id}'")
+```
+
+**Right** — parameterized:
+```python
+cur.execute("SELECT * FROM public.persona_profiles WHERE slug = %(slug)s", {"slug": persona_id})
+```
+
+## Transaction Scoping
+
+- Use a single `with db.connection()` block for operations that must be atomic
+- Call `conn.commit()` only after all writes succeed
+- Exceptions auto-rollback the transaction when the `with` block exits without commit
+
+```python
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute("INSERT INTO council.skills (...) VALUES (...)", {...})
+        cur.execute("INSERT INTO council.rule_bindings (...) VALUES (...)", {...})
+    conn.commit()  # Both inserts committed atomically
+```

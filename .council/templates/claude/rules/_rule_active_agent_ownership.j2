@@ -1,0 +1,15 @@
+---
+description: Active delegated work stays with the assigned agent until completion, blocker, or explicit user redirect
+priority: critical
+---
+# Active Agent Ownership
+
+Once a bounded task package is assigned to an agent, do not interrupt, redirect, reassign, or shut that agent down because progress feels slow.
+
+- A live task package stays with its current agent until the agent reports completion, the agent reports a concrete blocker, or the user explicitly changes direction.
+- Silence, long runtimes, and `running` or idle status are not permission to take the work back.
+- Delegated agents may legitimately work for 10 to 60+ minutes without a visible update. Treat that as normal execution time, not a stall.
+- Do not ping a live agent for status, ask it to hurry up, or otherwise steer it just because progress feels slow.
+- When an active delegated agent is still running, use `wait_agent` with a 10 minute timeout. If the wait expires with no completion, immediately issue another `wait_agent` with the same 10 minute timeout before sending any summary, checkpoint, or other assistant message. Keep using this rolling `wait_agent` loop until the agent completes or the operator explicitly redirects the work.
+- If you are worried a live agent may need intervention, ask the operator whether they want to inspect or redirect it. Do not make that call unilaterally.
+- If the coordinator needs momentum, do parallel non-overlapping work or wait. Do not interfere with the active agent.

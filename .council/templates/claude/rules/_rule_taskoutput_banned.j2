@@ -1,0 +1,11 @@
+---
+description: "Never use TaskOutput; read Scribe logs via read_recent/query_entries for agent progress"
+priority: critical
+---
+# TaskOutput Banned
+
+**NEVER use TaskOutput or read task output files.**
+
+For subagent progress, use Scribe logs: `read_recent(project="...")` or `query_entries(...)`.
+For team coordination, use TaskList/TaskGet to check task status.
+Scribe is always the audit trail; TaskList is only for real-time team task tracking.

@@ -1,0 +1,41 @@
+---
+description: "Every subagent gets project name + repo root; execution order; subagents do not commit"
+priority: critical
+---
+# Orchestration Law
+
+Every subagent and team teammate must receive explicit project context:
+
+- FIRST LINES of every delegated prompt must say:
+  - Use `mcp__scribe__*` tools DIRECTLY (`set_project`, `read_recent`, `append_entry`, `manage_docs`, etc.).
+  - NEVER use `mcp__council-v2__scribe_call` as a proxy when direct Scribe tools are loaded.
+- Project name
+- Repo root: `{{ repo_root }}`
+
+Required execution order for delegated work:
+
+1. Clock in (session + project context)
+2. Read required project docs for scope/acceptance
+3. Implement
+4. Verify against acceptance criteria
+5. Update project docs/checklists with evidence
+6. Clock out
+
+Hard constraints:
+
+- Subagents do not commit; orchestration layer owns commits.
+- Fresh execution windows only by default. Spawn bounded workers with isolated context, not a forked copy of the main Atlas thread.
+- `fork_context:true` is forbidden by default for roster agents and teammates. The normal pattern is: role card + bounded task package + project context, nothing more.
+- Full parent-thread inheritance is allowed only when the operator explicitly requests it or the task genuinely requires exact transcript continuity. If you use it, say why.
+- Use named roster agents with defined prompts. Never substitute a generic/default worker when the roster already defines the needed specialist.
+- Before routing implementation, classify whether the work is ordinary bug repair, behavior extension, frontend/user-facing implementation, design-contract drift, or architecture defect. Ordinary bug repair goes to Mantis by default; behavior extension goes to Forge; frontend implementation goes to Quill; design-contract work goes to Loom; architecture defects go back through Blueprint first.
+- If delegated task packages would touch the same files, they must not run concurrently. Split ownership or run them sequentially.
+- For T2+ frontend work, do not deploy Quill or frontend-affecting Forge until Loom has authored the required design contract, Blueprint references Loom specs by name, Witness Pre-Imp has passed, and Arbiter Intent has passed, unless the operator explicitly waived the full-plan pre-implementation review before implementation begins. T1 frontend work gets a Loom token-compliance consult before Quill. T0 frontend work routes to Quill only and follows existing tokens/patterns.
+- Loom and Quill follow the same `$work-protocol` and `$orchestration-law` as every other lane. They are specialist stages inside the standard Scribe/research/planning/review pipeline, not exceptions to it.
+- Mixed Forge/Quill work may run in parallel only with disjoint file ownership. If backend and frontend work overlap on a file, run sequentially in dependency order.
+- Never shut down an agent unless it reported completion or user explicitly directed shutdown.
+- Idle status is not completion.
+- The direct-Scribe warning belongs at the top of the prompt, not buried in the middle.
+
+For full prompt templates, shutdown policy details, and failure examples, use skill:
+`/orchestration-law`.

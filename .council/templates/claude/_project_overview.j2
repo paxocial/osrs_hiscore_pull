@@ -1,16 +1,13 @@
 {# Project overview - structure and recent activity (auto-generated) #}
 
-### Repository Layout
+### Key Directories
 
-**Repo Root**: `{{ repo_root }}`
-
-{% if key_directories %}
-| Path | Purpose |
-|------|---------|
+```
+council_mcp/
 {% for dir in key_directories %}
-| `{{ dir.path }}` | {{ dir.description }} |
+├── {{ dir.path.split('/')[-1] }}/{{ ' ' * (20 - dir.path.split('/')[-1]|length) }}# {{ dir.description }}
 {% endfor %}
-{% endif %}
+```
 
 {% if recent_projects %}
 ### Recent Scribe Activity
@@ -20,8 +17,10 @@
 {% for proj in recent_projects %}
 | `{{ proj.name }}` | {{ proj.last_modified }} | {{ proj.entry_count }} |
 {% endfor %}
+
+> *Auto-generated from `.scribe/docs/dev_plans/` - regenerate with `council update`*
 {% else %}
 ### Recent Scribe Activity
 
-*No Scribe projects found in `.scribe/docs/dev_plans/`.*
+*No Scribe projects found in `.scribe/docs/dev_plans/`*
 {% endif %}

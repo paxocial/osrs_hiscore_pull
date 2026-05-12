@@ -1,0 +1,7 @@
+## Ecosystem Runbook
+
+- Preview generation before writing: `council update --dry-run`, then `council update`.
+- Discover local and peer councils with `council list` and `council federation list`.
+- Share exported rules and skills with `council federation templates push` and consume them with `council federation templates pull`.
+- Use `council federation bug` when a problem belongs in another council workspace and should enter that council as a federated bug report.
+- When this council depends on peer-owned skills or rules, configure `council.skill_sources` so `council update` can auto-pull exported packages.

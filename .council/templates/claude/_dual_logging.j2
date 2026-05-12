@@ -2,14 +2,16 @@
 
 ### Session Start (MANDATORY)
 
-Before any work, activate your Scribe project context:
+Before any work, activate your Scribe project context once:
 ```python
-# 1. Set project (orchestrator provides name + root)
+# 1. Set project once (orchestrator provides name + root)
 set_project(agent="<you>", name="<project>", root="<repo_root>")
 
 # 2. Rehydrate — see what's happened so far
 read_recent(agent="<you>", limit=5)
 ```
+
+Do not repeat `set_project` before normal `append_entry` calls. Re-run it only when the project intentionally changes, or when an `append_entry`/Scribe response indicates sentinel/fallback/base-project mode or a project mismatch that needs correction.
 
 ### Council Logs (Milestones & Presence)
 
@@ -77,7 +79,7 @@ search(agent="<you>", pattern="class.*Handler", glob="**/*.py", output_mode="fil
 
 | Event | Council | Scribe |
 |-------|---------|--------|
-| Starting work | log_audit | set_project + read_recent + append_entry |
+| Starting work | log_audit | set_project once + read_recent + append_entry |
 | Reading a file | — | append_entry (prefer read_file over native Read) |
 | Found a bug | store_memory | append_entry + open_bug |
 | Made a decision | store_memory | append_entry |

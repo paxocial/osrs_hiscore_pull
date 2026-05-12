@@ -1,0 +1,67 @@
+---
+description: "Named projects for non-trivial work; project name propagates to every delegated agent; violations are self-reported"
+priority: critical
+---
+# Project Discipline
+
+Scribe project context is the foundation of the audit trail. Using the wrong project name — or no named project — makes work invisible and breaks cross-session continuity.
+
+## When to Create a Named Project
+
+**Named project required:**
+- Multi-session efforts
+- Multi-agent work (any delegation)
+- Work producing documents (RESEARCH_*.md, ARCHITECTURE_GUIDE, etc.)
+- Named workstreams that already have a Scribe project
+
+**Base project acceptable (ephemeral only):**
+- Single-session tactical fix, no research, no delegation
+- Quick diagnostic with no work artifacts
+- **When in doubt: create a named project. Cost is zero. Lost audit trail costs days.**
+
+## Decision Tree
+
+```
+Named Scribe project already exists for this effort? → YES → Use it
+Multi-session effort?                                → YES → Named project required
+Delegating to other agents?                          → YES → Named project required
+Producing documents (RESEARCH_*.md, bug reports)?    → YES → Named project required
+Single quick tactical fix, no delegation?            → YES → Base project acceptable
+```
+
+## Naming Convention
+
+- `snake_case`, all lowercase
+- Describe the effort: `auth_system_refactor` not `sprint_42`
+- Match exactly in every tool call — typos create orphaned projects
+
+## Propagation Requirement
+
+**The named project flows through ALL delegated work. No exceptions.**
+
+Every subagent and teammate prompt MUST include:
+```python
+# In delegated prompt:
+set_project(agent="<subagent>", name="{{ project_name }}", root="{{ repo_root }}")
+```
+
+Replace `{{ project_name }}` with the actual named project. Subagents connect to orchestrator's project — they never create their own.
+
+## Forbidden Patterns
+
+```
+WRONG: Agent switches to base project after orchestrator set named project
+WRONG: Subagent creates their own project name instead of connecting to orchestrator's
+WRONG: Delegating without explicit project name → subagent defaults to base → orphaned logs
+WRONG: Same effort split across multiple project names → fragmented audit trail
+RIGHT: One named project, established once, propagated to all, for the effort's lifetime
+```
+
+## Self-Correction
+
+If you realize you logged to the wrong project:
+```python
+append_entry(agent="<agent>", status="warn",
+    message="Self-correction: prior entries logged to '<wrong>'. Correct project: '<right>'. Continuing on correct project.")
+```
+Do NOT edit prior entries. Continue correctly from here.

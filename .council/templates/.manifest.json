@@ -1,30 +1,30 @@
 {
   "claude/_project_overview.j2": {
-    "sha256": "3504253d9787d1f16b4482a6e189b3ab4cb2e0e79a466c02279af23e78a15f12"
+    "sha256": "01b50f279c7931fa2b7097be11b2924ac1b697f3aa074d9022fa375d2c5fd072"
   },
   "claude/council_member.md.j2": {
-    "sha256": "d89cb3d243ce5059ab74fe9ff4279beb54beab722fcd673a14770c10f42e1524"
+    "sha256": "6a0de46df0ca3e2f11e60db0729ee203ecc31b662834521f20c8827959687646"
   },
   "claude/_session_protocol.j2": {
-    "sha256": "16fe9f70916b56cdf21a0d513c3ed2fa23f09cf4e896943800b9fc572fd05440"
+    "sha256": "fcf24bf673cdd2589fe497df28eadac464edbc9e51b54a6374d99c0fbbe16aea"
   },
   "claude/CLAUDE.md.j2": {
-    "sha256": "7672085d97982ba4c32dc7109ce73361a9ffdf0602f9bcb9151d2ce61b955ca3"
+    "sha256": "a0974083fde655dbe34dbce64c90576027621f944134ea0c14a0d52f28c4ebdf"
   },
   "claude/_agentkit_patterns.j2": {
     "sha256": "34208fc0c7108254996fec4c20fc9999a02b20060b4493498c26a9fea4b44a5c"
   },
   "claude/_scribe_protocol.j2": {
-    "sha256": "5dfe8b77d969550a0f9362caa55fd92c1926ff482dd8c9dc90804abdb49c5830"
+    "sha256": "25eca43d6dd78ab9815846ff51ac320348360a6a920f590f873074ebf48b017d"
   },
   "claude/_dual_logging.j2": {
-    "sha256": "50e8f9f429ac5dcda24769b7a6c86c9866d2fdee11740a0a23f6252eb4d6308b"
+    "sha256": "dc07462b5a390cbefe21f3bc9e3d1cc0bbcdf83f8b36a0957b8108c4ec8be28c"
   },
   "claude/_council_tools.j2": {
-    "sha256": "c9cfebe9d46ec67fedc81abdeb57d899094d6b0098888fbd3503736b723335ac"
+    "sha256": "4fb749382631c575be8c1d8ef2937e52fa09a5441de6099c4461a23c73661d8b"
   },
   "claude/agent_preview.md.j2": {
-    "sha256": "99da7c84c17f0db01763be5f736d247875f5861928b6f8cadfd505a154cedea0"
+    "sha256": "7e8bae29784b5911bcc61c73683ab6a06fbee2ea36fabb65c65ac9851d12f57f"
   },
   "claude/_persona_embodiment.j2": {
     "sha256": "fa8892445c0a8be6cbb2a6a195cdc780fa19f34221c79a6b123e1578e83612e4"
@@ -33,16 +33,16 @@
     "sha256": "1a0fb534f2a9fd66d0fccbb59adac30228d2833435b4a63b4092ada3469fa610"
   },
   "claude/rules/_rule_council_cli.j2": {
-    "sha256": "28fe0d11f3efade176f07813720356cf12b6b1a43e19273bfab9982aea16e634"
+    "sha256": "7432905eac8eb657c7bc3e1b508b41f23b0b1f6cb33a3a6fbfe13a11661080aa"
   },
   "claude/rules/_rule_process_lifecycle.j2": {
-    "sha256": "426ce170212ac2fa26ccc65a10bde6f52d96616fa9aea709a6b1f23d16820786"
+    "sha256": "8369708be671588201d9cf35dfa2466bedd0f52a8dde8d9f8bb5f8547edb4d92"
   },
   "claude/rules/_rule_multi_provider.j2": {
-    "sha256": "8ac7191f63be6422e47726dd9b86a8992994af29775a1f1a25b2023c39b6cf54"
+    "sha256": "7f5d8514e5f9cb24a7f4d5f2310ef919a8b3b1bbc4b1126058e01a6294e48fdb"
   },
   "claude/rules/_rule_custom_pages.j2": {
-    "sha256": "299317856a1ab8cedc8c7a17214a6d7d71490aac4b1714d05adff85b4c0596b5"
+    "sha256": "2b3650428fb71477fd7773216505ca6e06e110f5b3f70c7bc3c39309843943e4"
   },
   "claude/rules/_rule_atlas_discipline.j2": {
     "sha256": "5d34ff4c7bbc8013d22580ba1da68df78413c075e3d7e10241c1fe8e6b3e35a3"
@@ -51,7 +51,7 @@
     "sha256": "689b7210d37bcd006269ec6067386cf49579542d377300fc4085b21640d10de4"
   },
   "claude/rules/_rule_session.j2": {
-    "sha256": "1b481f47b59ff1f877b6557d694e80927b768b485f2781e17902d1c6c38adae7"
+    "sha256": "b43666b6564551e95988fcca5797b0d4e7c448c2240febf4f0dc8b12d62c532a"
   },
   "claude/rules/_rule_root_cause.j2": {
     "sha256": "52714d09814aa830b0d6564323d5959e28e9205f32801ee0c5975808163f3754"
@@ -60,30 +60,198 @@
     "sha256": "9c6f605f311edf412a3392d8761fbcc833558e63f61038fdf22f0f37aa2ca1ac"
   },
   "claude/rules/_rule_template_customization.j2": {
-    "sha256": "c7022892dd1c34a2fb769bc7917fe22537043908289970e325570581485d67ca"
+    "sha256": "d85bf1baaad0279930e85fb9ace54e45b8761d184968ceebb55803d2447b3db4"
   },
   "claude/rules/_rule_config_standards.j2": {
-    "sha256": "41441f56e34be557e759603e2de6f02cab080e0b3f46cbbfa7650a55cd30eb32"
+    "sha256": "03b914e271d1578ee73122da2faaad96fcd970c5b279e5d0d0c8eb4f59b0cd1a"
   },
   "claude/rules/_rule_agentkit.j2": {
     "sha256": "3a8521fc79452c45b63c31ce6410b70838408f181b398c3c0d6a7740c7bb964e"
   },
   "claude/rules/_rule_council_isolation.j2": {
-    "sha256": "9ac2a01dff185bbfe8a77434592ca2e986ebb6d62e57b199a4487a81e2791ddb"
+    "sha256": "6deb79c6d222d8d0b583b241e54b667b5428b1e24de8b0984f36df771d2637f1"
   },
   "claude/rules/_rule_web_api_auth.j2": {
-    "sha256": "8441f32d29230000a86eadce450981128b55f5d6b0198e071dbc2255a7cd0ff4"
+    "sha256": "2810c5f452f9364c6c4c9287169e809d2e1204b4fab8ba5dde14fafbb873bd52"
   },
   "claude/rules/_rule_log_observability.j2": {
-    "sha256": "02ed05e50843a305377a2b4084e0fb9e3fc3ade56e2ac481cfd0ba019f913e63"
+    "sha256": "68e9c389990ed677f006b8788c063ee1af18282c070755b7a40fddd36069d881"
   },
   "claude/rules/_rule_dual_logging.j2": {
-    "sha256": "456e69eab3ecba79de683d94700981e5f8687035f3c02c17eb27c47dc4db0328"
+    "sha256": "f70406ff2561dfa331b9c5c6f09a6512717cbd94d9ed70859338eba1b9f8a1ec"
   },
   "claude/rules/_rule_pipeline_gates.j2": {
-    "sha256": "929c0327be25f2a5ac5beb06695103c655f56444a4680f6386d29cf6f20c5176"
+    "sha256": "19c8bdd7dcd421b7db3e097ce86f81ff10b9976e456f14220800865ed23d147d"
   },
   "claude/rules/_rule_agentkit_schema.j2": {
-    "sha256": "9650b6b869ead235a0d4b9a56df52e7bb4b3e3cdbf42cbbd46098ce0c13d0d6d"
+    "sha256": "1a957b402960272b798e923e64b0ed7c550bc649b4709862420916e876cc43b8"
+  },
+  "claude/rules/_rule_coordinator_discipline.j2": {
+    "sha256": "2e299b095eccfd57f68dbfd34c3f1353f486a4608fdb96d0166ba8fee09f0bb6"
+  },
+  "claude/rules/_rule_migrations.j2": {
+    "sha256": "f84d4328551dc4c30c8313f39fed1ad8cb14a5b8313d38973d018dd22a5b27ec"
+  },
+  "claude/rules/_rule_team_orchestration.j2": {
+    "sha256": "6305d498ea9d64d0ad1ba4374980cb54b9a074f29467f85c01456f5afbf52f61"
+  },
+  "claude/rules/_rule_session_protocol.j2": {
+    "sha256": "aa7160cfcf2d9cb9e67dd2bb2f2b6989b3e71001ec0f08fdaa84d36b26c529c2"
+  },
+  "claude/rules/_rule_hetzner_deployment.j2": {
+    "sha256": "8de32a15f0d90145b9699f64f2fd9a2002372c5d7c0cf217ad0fcf98fe92354c"
+  },
+  "claude/rules/_rule_template_authoring.j2": {
+    "sha256": "15200e848788b2443578cede7c8846f0e9e519f3045014fb58dedb5bc3bfb7bb"
+  },
+  "claude/rules/_rule_taskoutput_banned.j2": {
+    "sha256": "411e38c8228cf1b695c91444142b58a13859abc7cce076d002c17f417e98b1bb"
+  },
+  "claude/rules/_rule_web_route_patterns.j2": {
+    "sha256": "0af021e1f0420130fc6334abeb75de0fb9bb6bfc5a9c602d3b14570578f688b0"
+  },
+  "claude/rules/_rule_error_handling.j2": {
+    "sha256": "9b253a9810ca503174f67b572a9f67de5aa1d6b4ef17e65aca4ed9174b8e2a65"
+  },
+  "claude/rules/_rule_logging_standards.j2": {
+    "sha256": "da36148d2d9cbf9cbff1da1651e0e6b83cf557506ebc991385f85e979ccc200e"
+  },
+  "claude/rules/_rule_testing_patterns.j2": {
+    "sha256": "f6504f30d2f1b5885fb73b1fcf68a06f1c7b22ca7c5594b6826f5fb64664bb6f"
+  },
+  "claude/_critical_rules.j2": {
+    "sha256": "88e92d56f96231e84d8259c6fe569d2a25bb851c66b980310028e3b9babf243d"
+  },
+  "claude/rules/_rule_sdk_session_patterns.j2": {
+    "sha256": "f3a6988122c10c5422fba80f6c8fc29a4e4bc2b0f246fd426fd1c44b1437f810"
+  },
+  "claude/rules/_rule_persona_embodiment.j2": {
+    "sha256": "cfce2a25e3436cb6b964a2eb36974ce45e2b285cd2d3f8c34dc3d469c963fddf"
+  },
+  "claude/rules/_rule_test_persona_policy.j2": {
+    "sha256": "ba9a4c5d7ef6c634424f35f8f1b0ad40eb9e6c3e88308586b5f037d2191a44eb"
+  },
+  "claude/rules/_rule_template_federation.j2": {
+    "sha256": "977d2faa930129019b5a214014e0bb8df2eee28e0bcd26c236274e70675cd742"
+  },
+  "claude/hooks/_architecture_map.j2": {
+    "sha256": "578a84c368d21adc6b0d9b2ec1a11e0dbfe2bcf64ae4938d6e438ecc432c7637"
+  },
+  "claude/_hook_partials_claude_extra.j2": {
+    "sha256": "8ab4c81a67c259f7d14a82d57199fd5419ecbf7dbabae69f7cf07da7efa1a7fb"
+  },
+  "claude/hooks/_agents_extra.j2": {
+    "sha256": "1760de340126bd56cb778be12454844dbbfc3aaf456c26f46fa346124e6fa2f7"
+  },
+  "claude/rules/_rule_typing_standards.j2": {
+    "sha256": "ac7a3c34cbf7da3c0dd755bbcde673d29bca05ed8debfcdefa5615fdd9f3dd10"
+  },
+  "claude/hooks/_ops_runbook.j2": {
+    "sha256": "2ee73cab57b31fbaf2f541e50736960cb213ff9ec40338a27a2e873fff731d4a"
+  },
+  "claude/hooks/_claude_extra.j2": {
+    "sha256": "ca67728251672c0a88c22cf00b76c8bb52dc1a2437e2346d21cecb46f32707c9"
+  },
+  "claude/rules/_rule_mcp_add_usage.j2": {
+    "sha256": "ca88c5e5ce61a509cafdfd958b00707069486eaecbf36e891e5116ba95b67e51"
+  },
+  "claude/rules/_rule_mcp_tool_calls.j2": {
+    "sha256": "ed61f69827cc5c23ab9901babc375f42c1cfc9dc235281affa368f6096a0da24"
+  },
+  "claude/rules/_rule_git_approval_gate.j2": {
+    "sha256": "d8af035130e14b0db61c8fac789973965f77b5de797cb43036007420e7e61122"
+  },
+  "claude/rules/_rule_db_query_patterns.j2": {
+    "sha256": "56ff6559373472d42c647ea76801a2cdad0564b1606c1d8ba6ccf8a9f93ca9ef"
+  },
+  "claude/rules/_rule_mcp_tool_dev.j2": {
+    "sha256": "2b29d265a25a51e33632946f909d30e24fc18d3ddf72c2c3c6f181206be2198a"
+  },
+  "claude/rules/_rule_agentkit_patterns.j2": {
+    "sha256": "18b0d7928b6e3907deb6592b5352b512afca7abfc7e4c989b3bc864c339cce48"
+  },
+  "claude/rules/_rule_orchestration_law.j2": {
+    "sha256": "45ae2fe73e3ce31977b1271ea8fca9931c238e8ab7c50554a9f1b6547d8237c0"
+  },
+  "claude/rules/_rule_manage_docs_create.j2": {
+    "sha256": "6dbb486a8c4bc573dd1f2775ae080db2db4c64a6496ccb86c84a3c6f34a18d30"
+  },
+  "claude/rules/_rule_fastapi_lifecycle.j2": {
+    "sha256": "6245c371370945c80c4860ab6a960b16d274d80efc474d5c6dcda04529695c25"
+  },
+  "claude/hooks/_coding_conventions.j2": {
+    "sha256": "c913fd8e13d5be2450cb3d53193694f9ed3fdd64a4cb7970abfbeefe35036e33"
+  },
+  "claude/hooks/_repo_context.j2": {
+    "sha256": "589b8928ae7db6a0cf867d3cbe07ce665dce69a9027734449a76c06cdece6d32"
+  },
+  "claude/_hook_partials_shared.j2": {
+    "sha256": "d3776f412725a69d22191a92061bda22f52aa728a83e21b4c82e33dd3eb96a7c"
+  },
+  "claude/_hook_partials_agents_extra.j2": {
+    "sha256": "d102263dc9c52c1773ec842b2fb44e9d7e68aa3b793b332b1467b951afdf744b"
+  },
+  "claude/rules/_rule_root_cause_only.j2": {
+    "sha256": "3ba3b84727c772be9d69963366bf355186b58696eb934ca9876efbe1e06f233d"
+  },
+  "claude/rules/_rule_codebase_ownership.j2": {
+    "sha256": "9b29fd8b1b1d19735a0c6888a6918d6f9be4979f4b1c100a02d7c4b14ee75ca7"
+  },
+  "claude/hooks/defaults/_claude_extra.j2": {
+    "sha256": "65196edce0b79e018746854e563b0300efa48d1b67a1e764df730787f454948f"
+  },
+  "claude/rules/_rule_fresh_agent_instances.j2": {
+    "sha256": "6f8b0429c743df60846fcfe5204cd3e11306b6c38dab045b00fe920a5d7b67f4"
+  },
+  "claude/hooks/defaults/_architecture_map.j2": {
+    "sha256": "7b0f1a2abef04f85878e9c5b1238fda53874890da2c28f416ba0249666b1184a"
+  },
+  "claude/_prompt_injections.j2": {
+    "sha256": "fe1023b9072ee13fa4c968288132625c7763570f31c814f6fc709bdb10aec619"
+  },
+  "claude/rules/_rule_iteration_recovery.j2": {
+    "sha256": "bb861367590087055ae815cfcffaa724ded749eac3709432c64db3ddef9aae56"
+  },
+  "claude/rules/_rule_plan_docs_before_code.j2": {
+    "sha256": "5b1869c222894992af2c6eafd8faeb08d04197dc47e8a0a079aecf10dc4364c4"
+  },
+  "claude/AGENTS.md.j2": {
+    "sha256": "89c6914b02653afca2661ede354622ee7798aa22d71403a548255a0bebba200c"
+  },
+  "claude/hooks/defaults/_agents_extra.j2": {
+    "sha256": "0e5a326d645acf21b295f234ee3e192ff72fa95a72fb5f5b0766a5fd4c46c556"
+  },
+  "claude/rules/_rule_project_discipline.j2": {
+    "sha256": "4fa7f454a9728af54fa8c4b2859d9d4eed2085ca65916f8cba7ad2e2f2dae5e9"
+  },
+  "claude/hooks/defaults/_repo_context.j2": {
+    "sha256": "4f4c081f2ca097000aeddc0df4a70cd87f8bc385d633eab973f526df8dbae249"
+  },
+  "claude/rules/_rule_active_agent_ownership.j2": {
+    "sha256": "c99a9db244f70f4a711eb23816ebb6710d1133e71639cf36e745b6a0fa4000aa"
+  },
+  "claude/hooks/defaults/_coding_conventions.j2": {
+    "sha256": "b3f8a79358df5f55748de596487e22f39ea7d1397eec6b69d0e8888a5becaafa"
+  },
+  "claude/rules/_rule_bracket_protocol.j2": {
+    "sha256": "03c252b1156526b8c1bca61472629ebb421fb3dacf2d5f5806d76cedb759c5e9"
+  },
+  "claude/hooks/defaults/_ops_runbook.j2": {
+    "sha256": "6bb3d074050c34f39bbd1cd1c64860d961c8b9f98d4d27d90e2ce515a4f871dc"
+  },
+  "claude/rules/_rule_bug_triage.j2": {
+    "sha256": "7eb084392f59834c4dbe2b0861e1cd1d357147e87f87fdced7dbc092728713bf"
+  },
+  "claude/rules/_rule_test_taxonomy.j2": {
+    "sha256": "09e0b4b55420e0dc5c9896de1b8874030838dc8b5f8674a0bffb45674806836a"
+  },
+  "claude/_knowledge_mcp_dataset_foundry_contract.j2": {
+    "sha256": "a47e32b59d157f63ecfdba73c9508d30588250086743bf8a14dc145be3a91e84"
+  },
+  "claude/rules/_rule_commit_hygiene.j2": {
+    "sha256": "7e438d5359b75cd3f098722373f1cdfc6de663fdb6342b6dffc5800a4e73fed3"
+  },
+  "claude/rules/_rule_codebase_organization.j2": {
+    "sha256": "a98f8f9ef64fcf2a6396644420a7f4425417f6994c8e09c76149d659b0ad13e6"
   }
 }

@@ -1,0 +1,101 @@
+---
+description: Use council mcp add to register MCP servers in Council-managed config
+priority: medium
+---
+# MCP Add Usage
+
+Use `council mcp add` to register MCP servers in Council-managed config.
+
+## Why This Rule Exists
+
+- `.mcp.json` is generated output, not source of truth.
+- If you hand-edit `.mcp.json`, your edits can be overwritten by export/update flows.
+- The authoritative workflow is:
+  1. Register/update server with `council mcp ...`
+  2. Generate client config with `council mcp export`
+
+## Required Pattern
+
+```bash
+# 1) Confirm what exists
+council mcp list
+
+# 2) Add a stdio MCP server
+council mcp add <slug> --transport stdio --scope project -- <command> [args...]
+
+# 3) Verify registration
+council mcp get <slug>
+council mcp list --scope project
+
+# 4) Generate .mcp.json for Claude/Codex clients
+council mcp export
+```
+
+## Common Examples
+
+### Local Python module server
+
+```bash
+council mcp add my-tools \
+  --transport stdio \
+  --scope project \
+  -d "My local tools" \
+  -- python -m my_tools.server
+```
+
+### Knowledge MCP from repo root
+
+```bash
+KNOWLEDGE_MCP_BIN="$(command -v knowledge-mcp)"
+
+council mcp add knowledge \
+  --transport stdio \
+  --scope project \
+  -d "Knowledge MCP shared RAG and indexing server" \
+  -- bash -lc "cd /path/to/knowledge_mcp && if [ -f .env ]; then set -a; source .env; set +a; fi; exec ${KNOWLEDGE_MCP_BIN}"
+```
+
+### Remote MCP (HTTP/SSE)
+
+```bash
+# HTTP
+council mcp add remote-api \
+  --transport http \
+  --url https://example.com/mcp \
+  --scope council
+
+# SSE
+council mcp add stream-api \
+  --transport sse \
+  --url https://example.com/mcp/stream \
+  --scope council
+```
+
+## Scope Guidance
+
+- `local`: only your local environment
+- `project`: shared for this project workspace (typical default)
+- `council`: shared across the council
+- `system`: reserved for built-ins (not user-created)
+
+## Validation Checklist
+
+After adding a server, run all checks:
+
+```bash
+council mcp get <slug>
+council mcp list --enabled
+council mcp export
+```
+
+Then confirm `.mcp.json` includes the new slug under `mcpServers`.
+
+## Failure Handling
+
+If `council mcp add` fails with a DB/table error (for example `relation council.mcp_servers does not exist`):
+
+1. Ensure commands are running against the intended Council DB environment.
+2. Load the correct environment for the target council before rerunning.
+3. Re-run `council mcp add`, then `council mcp export`.
+
+Do not bypass this by hand-editing `.mcp.json`.

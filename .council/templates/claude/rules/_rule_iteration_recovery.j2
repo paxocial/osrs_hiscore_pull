@@ -1,0 +1,17 @@
+---
+description: Treat blockers as disciplined recovery gates, not paralysis or permission to improvise
+priority: critical
+---
+# Iteration And Recovery
+
+`GOV-RECOVERY-001`: A `BLOCK` forbids unsafe gate advancement; it does not end the workstream.
+
+When blocked, continue only safe recovery work inside the active SPEC, Blueprint plan, source-authority rules, and review gates: clarify evidence, isolate failure, clean failed attempts, tighten the plan, or prepare the next valid review package.
+
+`GOV-RECOVERY-002`: Alternative attempts are allowed inside the approved boundary; architecture, public contracts, ownership boundaries, or system behavior must not be invented to satisfy a gate.
+
+If recovery requires an ad hoc plan change, changed acceptance criteria, broader scope, or new architecture, implementation pauses and the delta must return through Witness truth verification and Arbiter Intent review before Forge/Quill continues.
+
+`GOV-RECOVERY-003`: Failed or abandoned attempts must be removed before completion.
+
+Do not leave dead files, duplicate modules, temporary implementations, `*_v2`, `new_*`, or parallel systems behind. The final state must show one clean intentional path that matches the active plan and the system's actual needs.

@@ -1,0 +1,1241 @@
+/**
+ * OSRS Council Pages -- Shared Stylesheet
+ * =========================================
+ * All OSRS-specific CSS classes for the council custom pages.
+ * Replaces osrs-control.css.
+ *
+ * RULE: Every visual value uses var(--token-name). Zero hardcoded colors,
+ *       spacing, or fonts. Exceptions: icon dimensions (px).
+ */
+
+/* ============================================================================
+ * PAGE LAYOUT
+ * ========================================================================= */
+
+.osrs-page {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+ * RUNTIME CONTROLS (Dashboard top section)
+ * ========================================================================= */
+
+.osrs-runtime {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.osrs-runtime__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.osrs-runtime__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.osrs-runtime__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.osrs-runtime__status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.osrs-runtime__status-dot--running {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success-glow);
+}
+
+.osrs-runtime__status-dot--stopped {
+  background: var(--text-tertiary);
+}
+
+.osrs-runtime__status-dot--error {
+  background: var(--error);
+  box-shadow: 0 0 6px var(--error-glow);
+}
+
+.osrs-runtime__status-dot--starting {
+  background: var(--warning);
+  box-shadow: 0 0 6px var(--warning-glow);
+  animation: osrs-pulse 1.5s ease-in-out infinite;
+}
+
+.osrs-runtime__status-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.osrs-runtime__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.osrs-runtime__body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ============================================================================
+ * CARDS AND PANELS
+ * ========================================================================= */
+
+.osrs-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.osrs-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.osrs-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.osrs-card__header-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.osrs-card__body {
+  padding: var(--space-4);
+}
+
+.osrs-card__body--table {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.osrs-card__footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+/* ============================================================================
+ * STAT ROWS (key/value display)
+ * ========================================================================= */
+
+.osrs-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.osrs-stat-row:last-child {
+  border-bottom: none;
+}
+
+.osrs-stat-row__label {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-medium);
+}
+
+.osrs-stat-row__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+  word-break: break-word;
+}
+
+/* ============================================================================
+ * BADGES
+ * ========================================================================= */
+
+.osrs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: var(--leading-none);
+}
+
+.osrs-badge--online {
+  color: var(--success);
+  background: var(--success-glow);
+}
+
+.osrs-badge--offline {
+  color: var(--error);
+  background: var(--error-glow);
+}
+
+.osrs-badge--warning {
+  color: var(--warning);
+  background: var(--warning-glow);
+}
+
+.osrs-badge--info {
+  color: var(--cyan-400);
+  background: var(--cyan-glow);
+}
+
+.osrs-badge--mode {
+  color: var(--cyan-300);
+  background: var(--cyan-alpha-10);
+  border: 1px solid var(--cyan-alpha-20);
+}
+
+/* ============================================================================
+ * SKILL GRID
+ * ========================================================================= */
+
+.osrs-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+}
+
+.osrs-skill-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.osrs-skill-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+}
+
+.osrs-skill-card--99 {
+  border-color: var(--cyan-500);
+  box-shadow: var(--shadow-cyan-sm);
+}
+
+.osrs-skill-card--99:hover {
+  border-color: var(--cyan-400);
+}
+
+.osrs-skill-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+}
+
+.osrs-skill-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+  min-width: 0;
+  flex: 1;
+}
+
+.osrs-skill-card__name {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.osrs-skill-card__level {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.osrs-skill-card__xp {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.osrs-skill-card__rank {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+/* ============================================================================
+ * ACTIVITY LIST
+ * ========================================================================= */
+
+.osrs-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.osrs-activity-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.osrs-activity-row:hover {
+  background: var(--bg-hover);
+}
+
+.osrs-activity-row__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+}
+
+.osrs-activity-row__name {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.osrs-activity-row__score {
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+}
+
+.osrs-activity-row__rank {
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  min-width: 5ch;
+  text-align: right;
+}
+
+/* ============================================================================
+ * DELTA CHIPS
+ * ========================================================================= */
+
+.osrs-delta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-none);
+}
+
+.osrs-delta-chip--positive {
+  color: var(--success);
+  background: var(--success-glow);
+}
+
+.osrs-delta-chip--negative {
+  color: var(--error);
+  background: var(--error-glow);
+}
+
+.osrs-delta-chip--neutral {
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
+}
+
+/* ============================================================================
+ * COMPARE PAGE
+ * ========================================================================= */
+
+.osrs-compare-picker {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.osrs-compare-picker__vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--space-8);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--text-tertiary);
+}
+
+.osrs-compare-input {
+  position: relative;
+}
+
+.osrs-compare-input__field {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.osrs-compare-input__field:focus {
+  outline: none;
+  border-color: var(--cyan-500);
+  box-shadow: var(--focus-ring);
+}
+
+.osrs-compare-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  margin-top: var(--space-1);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-3);
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+
+.osrs-compare-suggestions--open {
+  display: block;
+}
+
+.osrs-compare-suggestions__item {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.osrs-compare-suggestions__item:hover,
+.osrs-compare-suggestions__item--active {
+  background: var(--bg-hover);
+}
+
+.osrs-compare-timeframe {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
+.osrs-compare-timeframe__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-medium);
+}
+
+.osrs-compare-timeframe__select {
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+}
+
+.osrs-compare-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.osrs-compare-player {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.osrs-compare-player--winner {
+  border-color: var(--cyan-500);
+  box-shadow: var(--shadow-cyan-sm);
+}
+
+.osrs-compare-player__name {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+}
+
+.osrs-compare-player__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.osrs-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.osrs-compare-table th,
+.osrs-compare-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  vertical-align: middle;
+}
+
+.osrs-compare-table th {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-surface);
+}
+
+.osrs-compare-table td {
+  color: var(--text-primary);
+}
+
+.osrs-compare-table__skill-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.osrs-compare-table__value--winner {
+  color: var(--cyan-400);
+  font-weight: var(--font-bold);
+}
+
+.osrs-compare-table__value--loser {
+  color: var(--text-tertiary);
+}
+
+.osrs-compare-table td.osrs-compare-table__player-a {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+.osrs-compare-table td.osrs-compare-table__player-b {
+  text-align: left;
+  font-family: var(--font-mono);
+}
+
+.osrs-compare-bar {
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.osrs-compare-bar__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--gradient-cyan);
+  transition: width var(--transition-base);
+}
+
+/* ============================================================================
+ * KPI CARDS (Dashboard)
+ * ========================================================================= */
+
+.osrs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.osrs-kpi {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.osrs-kpi__value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  line-height: var(--leading-tight);
+}
+
+.osrs-kpi__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-medium);
+}
+
+/* ============================================================================
+ * OFFLINE BANNER
+ * ========================================================================= */
+
+.osrs-offline-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--error-glow);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.osrs-offline-banner__icon {
+  flex-shrink: 0;
+  color: var(--error);
+}
+
+.osrs-offline-banner__text {
+  flex: 1;
+}
+
+.osrs-offline-banner__text strong {
+  color: var(--error);
+}
+
+/* ============================================================================
+ * SNAPSHOT FORM
+ * ========================================================================= */
+
+.osrs-snapshot-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.osrs-snapshot-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 160px;
+}
+
+.osrs-snapshot-form__field--grow {
+  flex: 1 1 200px;
+}
+
+.osrs-snapshot-form__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-medium);
+}
+
+.osrs-snapshot-form__input,
+.osrs-snapshot-form__select {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  min-height: 2.5rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.osrs-snapshot-form__input:focus,
+.osrs-snapshot-form__select:focus {
+  outline: none;
+  border-color: var(--cyan-500);
+  box-shadow: var(--focus-ring);
+}
+
+/* ============================================================================
+ * SEARCH / FILTER
+ * ========================================================================= */
+
+.osrs-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.osrs-search__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  padding-left: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.osrs-search__input:focus {
+  outline: none;
+  border-color: var(--cyan-500);
+  box-shadow: var(--focus-ring);
+}
+
+.osrs-search__icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+/* ============================================================================
+ * LOADING & EMPTY STATES
+ * ========================================================================= */
+
+.osrs-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.osrs-loading__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--cyan-500);
+  border-radius: var(--radius-full);
+  animation: osrs-spin 0.8s linear infinite;
+}
+
+.osrs-loading__text {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.osrs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  text-align: center;
+}
+
+.osrs-empty__icon {
+  width: 48px;
+  height: 48px;
+  color: var(--text-disabled);
+}
+
+.osrs-empty__message {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+.osrs-empty__submessage {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================================
+ * PROFILE (inline expansion)
+ * ========================================================================= */
+
+.osrs-profile {
+  padding: var(--space-4);
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.osrs-profile__section-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--space-2);
+}
+
+/* ============================================================================
+ * ACCOUNT TABLE ROWS
+ * ========================================================================= */
+
+.osrs-account-row {
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.osrs-account-row:hover {
+  background: var(--cyan-alpha-8);
+}
+
+.osrs-account-row--expanded {
+  background: var(--bg-hover);
+  border-left: 2px solid var(--cyan-500);
+}
+
+.osrs-account-row__name {
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.osrs-account-row__mode {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.osrs-account-row__meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.osrs-account-row__chevron {
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.osrs-account-row--expanded .osrs-account-row__chevron {
+  transform: rotate(180deg);
+}
+
+/* ============================================================================
+ * SNAPSHOT TABLE ROWS
+ * ========================================================================= */
+
+.osrs-snapshot-row {
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.osrs-snapshot-row:hover {
+  background: var(--cyan-alpha-8);
+}
+
+.osrs-snapshot-row--expanded {
+  background: var(--bg-hover);
+}
+
+.osrs-snapshot-detail {
+  padding: var(--space-4);
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.osrs-snapshot-detail__links {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.osrs-snapshot-detail__link {
+  font-size: var(--text-sm);
+  color: var(--cyan-400);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.osrs-snapshot-detail__link:hover {
+  color: var(--cyan-300);
+  text-decoration: underline;
+}
+
+/* ============================================================================
+ * RAW JSON CODEBOX
+ * ========================================================================= */
+
+.osrs-raw-section {
+  margin-top: var(--space-3);
+}
+
+.osrs-raw-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.osrs-raw-section__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.osrs-raw-codebox {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  background: rgba(255, 255, 255, 0.03);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+}
+
+/* Small ghost button for raw actions */
+.osrs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.osrs-btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.osrs-btn--ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+.osrs-btn--sm {
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+}
+
+.osrs-btn--success {
+  border-color: var(--green-400, #4ade80);
+  color: var(--green-400, #4ade80);
+}
+
+.osrs-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+ * ERROR BOX
+ * ========================================================================= */
+
+.osrs-error-box {
+  padding: var(--space-3) var(--space-4);
+  background: var(--error-glow);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.osrs-error-box[hidden] {
+  display: none;
+}
+
+/* ============================================================================
+ * UTILITY CLASSES
+ * ========================================================================= */
+
+.osrs-hidden {
+  display: none !important;
+}
+
+.osrs-toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: var(--z-toast, 1100);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-card-hover);
+  max-width: 360px;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.osrs-table-scroll {
+  overflow-x: auto;
+}
+
+.osrs-mono {
+  font-family: var(--font-mono);
+}
+
+.osrs-text-success {
+  color: var(--success);
+}
+
+.osrs-text-error {
+  color: var(--error);
+}
+
+.osrs-text-warning {
+  color: var(--warning);
+}
+
+.osrs-text-muted {
+  color: var(--text-tertiary);
+}
+
+.osrs-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.osrs-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* ============================================================================
+ * ANIMATIONS
+ * ========================================================================= */
+
+@keyframes osrs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes osrs-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes osrs-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.osrs-fade-in {
+  animation: osrs-fade-in var(--duration-base) var(--ease-out-expo);
+}
+
+/* ============================================================================
+ * RESPONSIVE -- 1120px breakpoint
+ * ========================================================================= */
+
+@media (max-width: 1120px) {
+  .osrs-skill-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .osrs-compare-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .osrs-compare-picker {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .osrs-compare-picker__vs {
+    padding-top: 0;
+    padding-bottom: var(--space-1);
+  }
+
+  .osrs-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .osrs-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+ * RESPONSIVE -- 700px breakpoint
+ * ========================================================================= */
+
+@media (max-width: 700px) {
+  .osrs-page {
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .osrs-runtime__header {
+    flex-wrap: wrap;
+    padding: var(--space-3);
+  }
+
+  .osrs-runtime__actions {
+    width: 100%;
+    padding: var(--space-3);
+  }
+
+  .osrs-runtime__status {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .osrs-card__header {
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .osrs-card__body {
+    padding: var(--space-3);
+  }
+
+  .osrs-skill-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: var(--space-1);
+  }
+
+  .osrs-skill-card {
+    padding: var(--space-1);
+  }
+
+  .osrs-snapshot-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .osrs-snapshot-form__field {
+    min-width: 0;
+  }
+
+  .osrs-compare-player__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .osrs-compare-table th,
+  .osrs-compare-table td {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+  }
+
+  .osrs-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .osrs-kpi__value {
+    font-size: var(--text-xl);
+  }
+
+  .osrs-offline-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  /* Touch targets */
+  .osrs-btn { min-height: 36px; }
+  .osrs-btn--sm { min-height: 36px; padding: var(--space-2) var(--space-3); }
+
+  /* Stat rows stack vertically */
+  .osrs-stat-row { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+  .osrs-stat-row__value { text-align: left; }
+
+  /* Toast full-width */
+  .osrs-toast { left: var(--space-3); right: var(--space-3); max-width: none; }
+}
+
+/* ============================================================================
+ * RESPONSIVE -- 480px breakpoint (small phones)
+ * ========================================================================= */
+
+@media (max-width: 480px) {
+  .osrs-page { padding: var(--space-2); gap: var(--space-2); }
+  .osrs-kpi-grid { grid-template-columns: 1fr; }
+  .osrs-skill-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+  .osrs-kpi__value { font-size: var(--text-lg); }
+  .osrs-btn { min-height: 44px; }
+  .osrs-btn--sm { min-height: 40px; }
+  .osrs-toast { left: var(--space-2); right: var(--space-2); }
+}

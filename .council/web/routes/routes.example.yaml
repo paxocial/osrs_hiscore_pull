@@ -1,0 +1,6 @@
+# Optional route loading manifest
+# If this file is absent, all *.py modules are auto-discovered.
+enabled: true
+routes:
+  # - module: my_service_runtime.py
+  #   prefix: ""

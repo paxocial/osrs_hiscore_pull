@@ -1,0 +1,45 @@
+---
+description: "Council MCP thin-wrapper patterns over AgentKit: sessions, memory, providers, and client usage"
+priority: medium
+---
+# AgentKit Integration
+
+Council MCP is a **thin wrapper** over AgentKit. Key patterns:
+
+## LLM Calls
+```python
+from agentkit.llm_factory import llm_factory
+
+client = llm_factory(provider='oss')  # or 'openai'
+response = client.respond(messages=[...])
+# response is LLMResponse(text='...', usage={...})
+```
+
+## Embeddings
+```python
+from agentkit.embeddings import embed_text
+
+embedding = embed_text("some text")  # Returns list[float], 384-dim
+```
+
+## Storage
+```python
+from agentkit.storage import models
+
+models.insert_persona_memory(...)
+models.query_persona_memories(...)
+```
+
+## Configuration
+All settings load from `.council/council.yaml` - never hardcode values:
+```python
+from council_mcp.config import get_llm_config
+
+config = get_llm_config()
+model = config.get("openai_model", "gpt-5-mini")
+```
+
+## Key Rules
+- Use `client.respond()` not `client.complete()` (AgentKit API)
+- Always check `.council/council.yaml` for config values
+- Storage uses pgvector for embeddings, with optional FAISS acceleration

@@ -1,0 +1,42 @@
+{# Critical Rules mapping -- add/remove/reorder by editing this list #}
+{# Each entry: n=rule number, slug=backing rule file, summary=one-line description #}
+{# For rules with no backing file, slug is empty and full_text provides inline content #}
+{% set _cr = [
+    {"n": 1, "slug": "taskoutput-banned", "summary": "TaskOutput is BANNED; TaskList is for team coordination only -- use Scribe logs for progress, TaskList for coordination"},
+    {"n": 2, "slug": "mcp-tool-calls", "summary": "MCP tools are tool calls -- call mcp__scribe__* directly, NEVER substitute with bash/echo/python"},
+    {"n": 3, "slug": "session-protocol", "summary": "Mandatory startup -- set_project then read_recent then work; pass project name + repo root to subagents"},
+    {"n": 4, "slug": "dual-logging", "summary": orchestrator_display_name ~ " logs too -- maintain audit trail via append_entry for every delegation and checkpoint"},
+    {"n": 5, "slug": "root-cause-only", "summary": "No replacement files -- edit existing files, no *_v2, enhanced_*, *_new"},
+    {"n": 6, "slug": "pipeline-gates", "summary": "Bounded task packages -- never send a single agent on large scope, break into bounded deliverables"},
+    {"n": 7, "slug": "orchestration-law", "summary": "Subagents don't commit -- orchestrator handles all git commits at defined gates"},
+    {"n": 8, "slug": "manage-docs-create", "summary": "create is not enough -- manage_docs(action=create) scaffolds an empty doc, ALWAYS follow with replace_section"},
+    {"n": 9, "slug": "error-handling", "summary": "All agents report bugs -- open_bug then manage_docs(create) then replace_section per section"},
+    {"n": 10, "slug": "coordinator-discipline", "summary": orchestrator_display_name ~ " does not own autonomous research or implementation -- research specialists research, Forge implements, " ~ orchestrator_display_name ~ " verifies changed files and outputs"},
+    {"n": 11, "slug": "migrations", "summary": "Schema migrations use AgentKit CLI -- agentkit-schema status then plan then apply"},
+    {"n": 12, "slug": "team-orchestration", "summary": "ALWAYS use Teams -- TeamCreate for ALL agent work, no background subagents"},
+    {"n": 13, "slug": "codebase-ownership", "summary": "You own EVERY error -- fix all failures before moving on; if the fix is larger, document it, track it, and resolve it immediately after the current task"},
+    {"n": 14, "slug": "codebase-organization", "summary": "Every codebase must preserve clear naming, module boundaries, reuse-first DRY/KISS architecture, and expansion structure -- no random file sprawl or duplicate systems"},
+    {"n": 15, "slug": "bracket-protocol", "summary": "Bracket protocol means SPEC-defined tournament-style research -- full bracket outlined before launch, max five concurrent researchers per wave, synthesis gates, clean indexed artifacts, and final closeout"},
+] %}
+{% set _core_slugs = _cr | map(attribute='slug') | list %}
+{% set _extra_critical = [] %}
+{% for rule in effective_rules_index | default([]) %}
+{% set _slug = rule.get('slug', '') %}
+{% set _priority = rule.get('priority') %}
+{% if _slug and _slug not in _core_slugs and (_priority == 'critical' or _priority == 100) %}
+{% set _ = _extra_critical.append(rule) %}
+{% endif %}
+{% endfor %}
+
+{% for rule in _cr | sort(attribute='n') %}
+{{ rule.n }}. **{{ rule.summary }}** -- See `{{ rule.slug }}` rule.
+{% endfor %}
+
+{% if _extra_critical %}
+
+### Project Critical Rules
+
+{% for rule in _extra_critical | sort(attribute='slug') %}
+{{ (_cr | length) + loop.index }}. **`{{ rule.get('slug', 'unknown-rule') }}`** -- Project-specific critical rule auto-discovered from `.claude/rules/`.
+{% endfor %}
+{% endif %}

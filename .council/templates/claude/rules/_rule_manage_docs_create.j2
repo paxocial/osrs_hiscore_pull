@@ -1,0 +1,127 @@
+---
+description: "manage_docs create only scaffolds; use frontmatter_update for narrative metadata; run quality_check before handoff"
+priority: critical
+---
+# Manage Docs & File Reading Protocol
+
+## manage_docs: Create Is Not Enough
+
+**`manage_docs(action="create")` scaffolds an EMPTY template. It is NOT a document.**
+
+```
+WRONG: manage_docs(action="create", ...) then treating the scaffold as the report → empty document
+WRONG: open_bug(...) + manage_docs(action="create", ...) + nothing more → empty scaffold ≠ bug report
+RIGHT: create → replace_section for each meaningful section → document now has content
+```
+
+### Required Pattern
+
+```python
+# 1. Scaffold — empty template
+manage_docs(agent="<agent>", action="create", doc_name="RESEARCH_X",
+    metadata={"doc_type": "research", "research_goal": "..."})
+
+# 2. Write content — this is where the document actually exists
+manage_docs(agent="<agent>", action="replace_section",
+    doc_name="RESEARCH_X", section="findings", content="Actual findings...")
+manage_docs(agent="<agent>", action="replace_section",
+    doc_name="RESEARCH_X", section="recommendations", content="...")
+```
+
+## manage_docs: Prefer `apply_patch` for Edits
+
+**`apply_patch` is the primary edit action.** It uses context matching so it handles document drift gracefully. `replace_range` uses bare line numbers which break when content shifts.
+
+```
+WRONG: replace_range with line numbers from a prior scan → lines shifted, wrong content replaced
+RIGHT: apply_patch with unified diff → context lines anchor the edit regardless of line drift
+```
+
+```python
+# Preferred: unified diff with context anchoring
+manage_docs(agent="<agent>", action="apply_patch", doc_name="architecture",
+    patch="--- before\n+++ after\n@@ -5,3 +5,4 @@\n existing line\n+new line\n context\n",
+    dry_run=True)  # ALWAYS dry_run first
+
+# Structured edit via apply_patch (section/block replacement)
+manage_docs(agent="<agent>", action="apply_patch", doc_name="architecture",
+    edit={"type": "replace_section", "section": "findings", "content": "Updated..."})
+```
+
+## manage_docs: Allowed Actions
+
+Use stable document actions. Discovery and quality actions are allowed when they support safe document edits and handoff proof.
+
+**WRITE / EDIT**: `create`, `replace_section`, `apply_patch`, `replace_range`, `replace_text`, `append`, `status_update`, `frontmatter_update`
+
+**DISCOVERY / QUALITY**: `list_sections`, `list_checklist_items`, `search`, `quality_check`
+
+**MAINTENANCE (use deliberately)**: `normalize_headers`, `generate_toc`, `validate_crosslinks`, `batch`
+
+## Frontmatter Intent and Quality Gates
+
+Narrative document frontmatter is not checklist progress.
+
+```python
+# Narrative-doc metadata/status belongs in frontmatter_update
+manage_docs(agent="<agent>", action="frontmatter_update", doc_name="architecture",
+    metadata={"frontmatter": {"status": "ready", "owners": ["blueprint"]}})
+
+# Checklist proof belongs in status_update
+manage_docs(agent="<agent>", action="status_update", doc_name="checklist",
+    section="task_1", metadata={"status": "done", "proof": "pytest ... passed"})
+```
+
+If `status_update` is used on a narrative doc, treat `DOC_STATUS_INTENT_MISMATCH` as a real error and use `frontmatter_update`.
+
+Before claiming a managed doc is ready, run:
+
+```python
+manage_docs(agent="<agent>", action="quality_check", doc_name="architecture", dry_run=True)
+```
+
+Treat `DOC_NOT_DONE_SCAFFOLD_QUALITY` and blocking `SCF_*` warnings as completion blockers. Scaffold residue, placeholder prose, empty findings, TODO-only ready sections, and frontmatter/body mismatches mean the artifact is not done.
+
+## Frontmatter and Line Numbers
+
+Every manage_docs response includes `document_info` showing the frontmatter layout:
+
+```json
+{"document_info": {"frontmatter_lines": 16, "body_lines": 45, "total_lines": 61, "body_starts_at_line": 17}}
+```
+
+**Why this matters:** Scribe documents have YAML frontmatter. Line numbers from `read_file` are file-relative (include frontmatter). The `replace_range` action via the MCP tool auto-adjusts file-relative numbers to body-relative. If you pass body-relative numbers directly, use `metadata={"line_reference": "body"}`.
+
+## read_file: Scan Before You Read
+
+**MANDATORY: Always scan first. Never read full content without scanning.**
+
+```
+WRONG: read_file(path="large_file.py", mode="full_stream") → wastes context without knowing what you need
+RIGHT: scan_only first → get structure + line numbers → line_range for targeted reads
+```
+
+```python
+# Step 1: Scan — get structure and line numbers, no content
+read_file(agent="<agent>", path="src/module.py", mode="scan_only", include_dependencies=True)
+# → Returns: class/function names, line numbers, imports
+
+# Step 2: Read only what you need
+read_file(agent="<agent>", path="src/module.py", mode="line_range", start_line=142, end_line=165)
+```
+
+| Mode | When | Cost |
+|------|------|------|
+| `scan_only` | Always first | Cheapest |
+| `line_range` | After scan, targeted | Low |
+| `search` | Find patterns in file | Low-Medium |
+| `full_stream` | Small files only | Expensive |
+
+## Section Naming
+
+Use the section ID from the doc scaffold, not arbitrary strings:
+
+```
+WRONG: replace_section(section="my analysis notes") → orphaned section
+RIGHT: replace_section(section="findings") → matches scaffold ID from <!-- ID: findings --> comment
+```

@@ -1,0 +1,36 @@
+---
+description: "Fix the broken system, never workaround it; no copies, no manual SQL, no hardcoding"
+priority: high
+---
+# Root Cause Fixes Only
+
+**NEVER suggest quick fixes that bypass existing infrastructure.**
+
+When encountering a bug or missing functionality:
+
+1. **INVESTIGATE** - Understand WHY the system exists and HOW it works
+2. **FIX ROOT CAUSE** - Modify the actual broken code/system
+3. **NEVER BYPASS** - No copying files, no manual workarounds, no hardcoding
+
+## Wrong (Workarounds)
+- "Let me copy this file to..." (bypasses loader/importer)
+- "Let me manually run this SQL" (bypasses migration system)
+- "Let me hardcode this value" (bypasses config system)
+- "Quick fix: just add this line" (doesn't understand why)
+- Suggesting both the fix AND a workaround as options
+
+## Right (Root Cause)
+- "The loader isn't finding files - let me investigate why"
+- "The migration system should handle this - let me fix it"
+- "The config system should provide this value - let me trace through"
+
+## The Question to Ask
+When stuck, ask yourself: **"What system is supposed to handle this, and why isn't it?"**
+
+Then fix THAT system.
+
+## Why This Matters
+- **Technical Debt**: Workarounds accumulate and break later
+- **Lost Knowledge**: Future devs don't know the "real" way
+- **Broken Infrastructure**: Systems exist for a reason - bypassing = rot
+- **Wasted Investment**: Infrastructure was built to be used

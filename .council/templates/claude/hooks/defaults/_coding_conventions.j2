@@ -1,0 +1,8 @@
+## Council Workflow
+
+- Prefer stored memory before fresh reasoning: use `ask_self(..., skip_llm=True, explore_mode=True)` for lookup, then escalate to LLM synthesis only when needed.
+- Every agent should store memories for findings, decisions, bugs, fixes, and handoff context so the council improves over time.
+- When you add or change rules, skills, or templates, validate with tests plus `council update --dry-run`.
+- Use the injected ecosystem skills below instead of duplicating workflow instructions into the core orchestrator template.
+
+{% include '_prompt_injections.j2' %}

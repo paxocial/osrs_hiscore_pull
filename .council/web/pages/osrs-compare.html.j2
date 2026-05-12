@@ -1,0 +1,161 @@
+---
+nav_label: Compare
+nav_order: 4
+nav_group: Snapshot Ops
+nav_group_order: 1
+nav_group_icon: monitor
+---
+{% extends "base.html" %}
+
+{% block title %}Player Comparison - OSRS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/council-static/css/osrs-pages.css">
+{% endblock %}
+
+{% block content %}
+<div class="osrs-page" id="osrs-compare-root">
+
+  {# ========== PAGE HEADER ========== #}
+  <div class="osrs-card">
+    <div class="osrs-card__header">
+      <h1 class="osrs-card__header-title">Player Comparison</h1>
+      <span class="osrs-text-muted" style="font-size: var(--text-sm);">Compare two players side-by-side</span>
+    </div>
+  </div>
+
+  {# ========== PLAYER PICKER ========== #}
+  <div class="osrs-card">
+    <div class="osrs-card__header">
+      <h2 class="osrs-card__header-title">Select Players</h2>
+      <div class="osrs-compare-timeframe">
+        <span class="osrs-compare-timeframe__label">Timeframe</span>
+        <select id="compare-timeframe" class="osrs-compare-timeframe__select">
+          <option value="7d" selected>7 Days</option>
+          <option value="30d">30 Days</option>
+          <option value="mtd">Month to Date</option>
+        </select>
+      </div>
+    </div>
+    <div class="osrs-card__body">
+      <div class="osrs-compare-picker">
+        {# Player A #}
+        <div class="osrs-compare-input" id="compare-player-a-wrapper">
+          <label class="osrs-compare-timeframe__label" for="compare-player-a">Player A</label>
+          <input
+            type="text"
+            id="compare-player-a"
+            class="osrs-compare-input__field"
+            placeholder="Search player name..."
+            autocomplete="off"
+          >
+          <div id="compare-suggestions-a" class="osrs-compare-suggestions"></div>
+        </div>
+
+        {# VS Divider #}
+        <div class="osrs-compare-picker__vs">VS</div>
+
+        {# Player B #}
+        <div class="osrs-compare-input" id="compare-player-b-wrapper">
+          <label class="osrs-compare-timeframe__label" for="compare-player-b">Player B</label>
+          <input
+            type="text"
+            id="compare-player-b"
+            class="osrs-compare-input__field"
+            placeholder="Search player name..."
+            autocomplete="off"
+          >
+          <div id="compare-suggestions-b" class="osrs-compare-suggestions"></div>
+        </div>
+      </div>
+
+      {# Compare Button #}
+      <div style="display: flex; justify-content: center; padding-top: var(--space-3);">
+        <button id="compare-run-btn" class="btn btn-primary" type="button">
+          Compare Players
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# ========== ERROR BOX ========== #}
+  <div id="compare-error" class="osrs-error-box osrs-hidden"></div>
+
+  {# ========== LOADING STATE ========== #}
+  <div id="compare-loading" class="osrs-loading osrs-hidden">
+    <div class="osrs-loading__spinner"></div>
+    <span class="osrs-loading__text">Comparing players...</span>
+  </div>
+
+  {# ========== EMPTY STATE ========== #}
+  <div id="compare-empty" class="osrs-empty">
+    <div class="osrs-empty__icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <p class="osrs-empty__message">Select two players to compare</p>
+    <p class="osrs-empty__submessage">Search for players above and click Compare to see a head-to-head breakdown</p>
+  </div>
+
+  {# ========== RESULTS SECTION (hidden until comparison run) ========== #}
+  <div id="compare-results" class="osrs-hidden">
+
+    {# Summary Cards #}
+    <div id="compare-summary" class="osrs-compare-summary"></div>
+
+    {# Skill Comparison Table #}
+    <div class="osrs-card" style="margin-top: var(--space-4);">
+      <div class="osrs-card__header">
+        <h2 class="osrs-card__header-title">Skill Comparison</h2>
+      </div>
+      <div class="osrs-card__body osrs-card__body--table">
+        <table id="compare-skills-table" class="osrs-compare-table">
+          <thead>
+            <tr>
+              <th style="text-align: right;" id="compare-th-player-a">Player A</th>
+              <th style="text-align: center;">Skill</th>
+              <th style="text-align: left;" id="compare-th-player-b">Player B</th>
+            </tr>
+          </thead>
+          <tbody id="compare-skills-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Activity Comparison #}
+    <div class="osrs-card" style="margin-top: var(--space-4);">
+      <div class="osrs-card__header">
+        <h2 class="osrs-card__header-title">Activities &amp; Bosses</h2>
+      </div>
+      <div class="osrs-card__body osrs-card__body--table">
+        <table id="compare-activities-table" class="osrs-compare-table">
+          <thead>
+            <tr>
+              <th style="text-align: center;">Activity</th>
+              <th style="text-align: right;" id="compare-act-th-a">Player A</th>
+              <th style="text-align: left;" id="compare-act-th-b">Player B</th>
+            </tr>
+          </thead>
+          <tbody id="compare-activities-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/council-static/js/osrs-common.js"></script>
+<script src="/council-static/js/osrs-compare.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.OsrsCompare) window.OsrsCompare.init();
+  });
+</script>
+{% endblock %}

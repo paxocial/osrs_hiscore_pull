@@ -1,0 +1,191 @@
+---
+description: Module-level loggers, correct log levels, never log secrets; structlog conventions
+priority: critical
+---
+{# Logging Standards - Logging conventions for Council MCP Python code #}
+# Logging Standards
+
+**Use module-level loggers, the shared observability stack, canonical event fields, and never log secrets.**
+
+## Non-Negotiable Invariants
+
+- Library and application modules use `logger = logging.getLogger(__name__)` at module scope.
+- App/runtime logging is initialized through `council_mcp.observability.configure.configure_logging()`, not `logging.basicConfig()`.
+- First-party structured events must preserve canonical fields when relevant: `level`, `event_type`, `service`, `route` or `tool_name`, `logger`, `summary`, and searchable identifiers such as `request_id` / `correlation_id`.
+- Observability events that are self-generated query traffic must preserve `signal_class` and `noise_kind` so `/logs`, `/errors`, and `council logs --json` can suppress noise consistently.
+- Runtime JSONL feeds belong under `.council/logs/`. Do not invent repo-root side channels for `tool_calls`, `downstream_routes`, or other structured event feeds.
+- Do not stringify structured events into `logger.info(json.dumps(event))` as the steady-state pattern when a native structured emit path exists.
+
+## Module-Level Logger
+
+Always declare the logger at module level using `__name__`:
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+```
+
+This is the only way logging should be initialized in library/application code. Do not call `logging.basicConfig()` in any module — that is only for scripts and test entrypoints.
+
+Use the shared observability initializer for real runtimes:
+
+```python
+from council_mcp.observability.configure import configure_logging
+
+configure_logging(service="web")
+```
+
+## Log Level Guidance
+
+| Level | When to Use | Examples |
+|-------|-------------|---------|
+| `DEBUG` | Detailed tracing, loop iterations, internal state | "Processing item 3/50", "Cache hit for key X" |
+| `INFO` | Normal operations, lifecycle events, service starts | "Session opened for atlas", "Council registered: my-council" |
+| `WARNING` | Degraded operation, non-critical failures, fallbacks | "TEI not available, falling back to CPU", "Stale session closed" |
+| `ERROR` | Operation failed, requires investigation | "Failed to persist session", "DB connection error" |
+
+```python
+# DEBUG: tracing internals
+logger.debug("Checking TEI cache: url=%s expires_in=%.1fs", url, expires - time.monotonic())
+
+# INFO: normal operations
+logger.info("Opened session %s for %s", session_id, persona_id)
+
+# WARNING: degraded but continuing
+logger.warning("Ray embedding failed, falling back to CPU: %s", e)
+
+# ERROR: with stack trace for unexpected failures
+logger.error("Failed to insert memory for %s: %s", persona_id, e, exc_info=True)
+```
+
+## Never Log Secrets
+
+Do NOT log:
+- Passwords, tokens, API keys, session tokens
+- Full SQL queries that contain parameter values
+- Private keys or credentials of any kind
+
+```python
+# Wrong — logs API key
+logger.info("Connecting with key: %s", api_key)
+
+# Right — log presence/prefix only
+logger.info("Connecting with key: %s...", api_key[:8] if api_key else "(none)")
+
+# Wrong — logs SQL with params embedded
+logger.debug("Executing: %s", f"SELECT * FROM x WHERE token='{token}'")
+
+# Right — log the query template only
+logger.debug("Executing agent lookup query for council_id=%s", council_id)
+```
+
+## Structured Context in Messages
+
+Include relevant identifiers in log messages so they're searchable:
+
+```python
+# Good — includes searchable context
+logger.info("Memory stored: persona=%s session=%s type=%s", persona_id, session_id, memory_type)
+logger.error("Route load failed: council=%s module=%s error=%s", council_name, module_path, e)
+
+# Bad — no context
+logger.info("Memory stored")
+logger.error("Failed: %s", e)
+```
+
+## Structured Event Contract
+
+If the code is producing machine-consumed observability data instead of a human-only breadcrumb, keep the event in the canonical contract rather than relying on UI heuristics to recover it later.
+
+```python
+# Good — canonical structured fields survive into /logs, /errors, and CLI JSON
+logger.info(
+    "HTTP request completed",
+    extra={
+        "event_type": "http.request.complete",
+        "service": "web",
+        "route": "/api/logs",
+        "method": "GET",
+        "status_code": 200,
+        "summary": "GET /api/logs -> 200 in 92 ms",
+        "correlation_id": corr_id,
+    },
+)
+```
+
+```python
+# Wrong — double-encodes the event and forces recovery logic downstream
+logger.info(json.dumps(event))
+```
+
+If a direct JSONL append path is required for a runtime feed, it must still write the canonical fields and land under `.council/logs/`.
+
+## Using exc_info
+
+For unexpected exceptions, always include `exc_info=True` to capture stack traces:
+
+```python
+try:
+    result = await risky_operation()
+except Exception as e:
+    logger.error("Operation failed for %s: %s", entity_id, e, exc_info=True)
+    # exc_info=True logs the full traceback — essential for debugging production
+```
+
+For expected/handled exceptions (like validation errors), `exc_info` is optional and often noisy:
+
+```python
+try:
+    value = int(user_input)
+except ValueError:
+    logger.warning("Invalid integer input: %r", user_input)  # No exc_info needed
+```
+
+## Anti-Patterns
+
+**Wrong** — `print()` instead of logger:
+```python
+print(f"Processing {persona_id}")  # Never in library code — not configurable
+```
+
+**Right** — logger:
+```python
+logger.info("Processing persona: %s", persona_id)
+```
+
+**Wrong** — `logging.basicConfig()` in library module:
+```python
+# In src/council_mcp/tools/memory.py
+logging.basicConfig(level=logging.DEBUG)  # NEVER — configures root logger globally
+```
+
+**Wrong** — structured event written to the wrong path:
+```python
+Path(workspace) / "tool_calls.jsonl"  # wrong contract for runtime feed discovery
+```
+
+**Right** — structured runtime feed under the canonical log directory:
+```python
+Path(workspace) / ".council" / "logs" / "tool_calls.jsonl"
+```
+
+**Wrong** — bare string formatting in lazy log calls:
+```python
+logger.debug("Processing: " + str(item))  # String built even if DEBUG is off
+```
+
+**Right** — use %-formatting (lazy evaluation):
+```python
+logger.debug("Processing: %s", item)  # String only built if DEBUG is enabled
+```
+
+**Wrong** — `logger = logging.getLogger("hardcoded.name")`:
+```python
+logger = logging.getLogger("council_mcp.tools.memory")  # Brittle if file moves
+```
+
+**Right** — always `__name__`:
+```python
+logger = logging.getLogger(__name__)  # Resolves correctly regardless of location
+```

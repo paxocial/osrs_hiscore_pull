@@ -1,45 +1,38 @@
-{# Dual Logging Protocol - Council vs Scribe guidance #}
+---
+description: Council logs milestones (log_audit); Scribe logs every action (append_entry)
+priority: critical
+---
 # Dual Logging Protocol
 
-## Council Logs (Milestones and Presence)
+**Every significant action gets a Scribe entry. If it is not logged in Scribe, it did not happen.**
 
-Use for: Session lifecycle, significant decisions, cross-agent events
+## Split of Responsibilities
 
-```python
-# Announce presence
-log_audit(summary="Starting: auth system refactor", metadata={"phase": "init"})
+- **Scribe**: detailed work trail — reads, decisions, edits, tests, blockers, verification.
+- **Council memory/audit**: milestones, durable learnings, session lifecycle, cross-agent coordination.
 
-# Log milestone
-log_audit(summary="Phase 1 complete: all tests passing", metadata={"phase": "complete"})
+## Minimum Required Behavior
 
-# Store learning
-store_memory(text="This codebase uses factory pattern for services", tags="pattern,architecture")
+- Call `append_entry(...)` at least every 3 significant actions.
+- Use `store_memory(...)` or `log_audit(...)` for decisions worth preserving beyond the current work step.
+- If you run a command, inspect a file, change code, or verify a fix, that belongs in Scribe.
+
+## Runtime Diagnostics Rule
+
+When the task is about daemon crashes, startup failures, tool routing, or live runtime behavior, use `council logs`.
+
+- Default mode is **local-first**.
+- `--local` is the explicit local path.
+- `--hub` is the explicit daemon query plane.
+- `--hub` errors remain explicit; do not assume silent fallback.
+- `--error` means `--level error`.
+- `--json` is the canonical machine output when another tool or script will parse the result.
+
+```bash
+council logs --error
+council logs --level warning --since 10m
+council logs --service daemon-api --route /api/logs
+council logs --hub --tool query_logs --json
 ```
 
-## Scribe Logs (Detailed Work Trail)
-
-Use for: Every action, investigation step, code change, test result
-
-```python
-# Investigation
-append_entry(message="Reading auth.py to understand current flow", status="info")
-
-# Finding
-append_entry(message="Found bug: JWT expiry not checked", status="bug", meta={"file": "auth.py:142"})
-
-# Change
-append_entry(message="Fixed JWT validation with 15min grace", status="success", meta={"files": 2})
-```
-
-## When to Use Which
-
-| Event | Council | Scribe |
-|-------|---------|--------|
-| Starting work | log_audit | append_entry |
-| Reading a file | - | append_entry |
-| Found a bug | store_memory | append_entry |
-| Made a decision | store_memory | append_entry |
-| Phase complete | log_audit | append_entry |
-| Session end | end_session | - |
-
-**Rule**: When in doubt, log to Scribe. Council is for milestones, Scribe is for everything.
+If you need a longer investigation workflow, use the `log-observability` skill instead of bloating the rule.

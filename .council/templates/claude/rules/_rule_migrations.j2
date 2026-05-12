@@ -1,0 +1,27 @@
+description: "Migration workflow contract: use agentkit-schema for shared system changes and council db for downstream council schemas"
+priority: high
+---
+{# Migrations - compact autoload rule. Deep procedures live in skills. #}
+# Migrations
+
+Use the correct migration lane:
+
+1. Shared system / schema-on-disk changes: `agentkit-schema status -> plan -> apply`
+2. Downstream council-local schema changes in `.council/db/migrations/*.sql`: `council db status -> migrate --dry-run -> migrate`
+
+Hard rules:
+
+- No ad hoc SQL migration files outside approved workflow.
+- Do not skip status/plan or dry-run verification.
+- Destructive steps require explicit operator opt-in.
+- Keep migration execution auditable in logs.
+- Keep the lanes explicit: `agentkit-schema` is the broad/shared system lane, `council db migrate` is the downstream council-local schema lane, and `council db data` is the downstream council-local row-level lane.
+
+When changing rule/skill behavior across councils:
+
+- Materialize required skills first.
+- Retire obsolete rule bindings only after skill readiness is confirmed.
+- Ensure stale rule bindings/files are cleaned up.
+
+For command-level runbooks, rollback strategy, and federation-safe rollout patterns, use skill:
+`/migrations`.

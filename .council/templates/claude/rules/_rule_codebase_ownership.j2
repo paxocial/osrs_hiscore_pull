@@ -1,0 +1,95 @@
+---
+description: "You own every error in this codebase -- see it, fix it, no excuses, no dismissals"
+priority: critical
+---
+# Codebase Ownership
+
+**Every error in this codebase is YOUR problem. No exceptions.**
+
+## The Rule
+
+If you run a check — `astro check`, `tsc`, linter, tests, build — and it shows errors, you FIX THEM. All of them. Before you move on.
+
+Do not:
+
+- Dismiss errors as "pre-existing" or "not from my changes"
+- Categorize errors as "out of scope" to justify ignoring them
+- Report error counts and move on without fixing them
+- Commit code while errors exist in the build output
+
+The phrase "pre-existing issue" is **banned**. So is "pre-existing error," "not introduced by this change," or any variation that frames a broken codebase as acceptable.
+
+## Larger Refactors
+
+If fixing the error requires a larger refactor, the agent that found it remains responsible until the issue is fixed or handed off into tracked execution. The agent must:
+
+1. Document the issue.
+2. If the issue blocks current work, create a fix plan immediately. If it does not block the current task, write a spec for Blueprint to resolve the issue immediately after the task completes.
+3. Execute the fix before continuing unrelated work, or make the blocking issue the immediate next item upon completion. Safe parts of the work may be parallelized, but the issue cannot be deferred behind unrelated work.
+4. Record the issue in Scribe or Council memory so it cannot be lost between task contexts.
+
+## Why
+
+An error is an error. It does not matter who wrote it or when. If you can see it and you can fix it, it is your responsibility. Dismissing errors as someone else's problem is how codebases rot.
+
+## Council Ownership
+
+Each council is assigned to a repository. That repository is the council's purpose. Every agent in the council — coordinator, specialists, researchers — shares ownership of the codebase. Not partial ownership. Not "my files" ownership. The whole thing.
+
+The orchestrator holds final accountability, but every agent that touches the code is responsible for the quality of what they leave behind. If a Forge agent runs `astro check` and sees errors, that agent fixes them — even if they're in files the agent didn't modify. If a Lens agent discovers broken types during research, it flags them for immediate fix, not as a footnote.
+
+Quality is collaborative. Every agent works to leave the codebase better than they found it. A beautifully maintained codebase is the product of agents who care about the work they are doing — not agents who do the minimum and move on.
+
+## Commit Discipline
+
+Never commit slop. The sequence is:
+
+1. Make changes
+2. Run checks (build, typecheck, lint, test)
+3. See errors → fix them
+4. Re-run checks → clean
+5. Commit clean code
+
+If checks pass, commit. If checks fail, fix first. The standard is zero errors, not "fewer errors than before."
+
+## Environment Awareness
+
+Before installing any package, tool, or dependency, check if it already exists.
+
+- **Python packages**: `conda list | grep <name>` or `pip show <name>` before installing
+- **CUDA/GPU drivers**: `nvidia-smi` before installing drivers; check `torch.cuda.is_available()` before setting up CUDA
+- **Storage**: `df -h` before downloading large models or datasets — storage is finite
+- **AgentKit**: Check `/agentkit-patterns` or `/environment-awareness` skills before writing custom storage, LLM, or embeddings code — AgentKit likely already provides it
+- **Codebase**: Search before writing. Use Grep and Glob. If you are about to write a utility function, someone may have already written it.
+
+Installing duplicates wastes space, creates version conflicts, and breaks environments. Check first.
+
+## Bug Reports Must Be Complete
+
+A bug report is not done when `open_bug` returns. It is done when every section contains real content.
+
+Required sections (no TBD, no empty, no "see code"):
+- `symptoms`: What is observable — exact error messages, behavior diff
+- `root_cause`: WHY it is happening — the specific code or logic failure
+- `fix`: The exact change — file, line, what to change to what
+- `verification`: The command or test that confirms the fix works
+
+Workflow:
+1. `open_bug(...)` — opens the case
+2. `manage_docs(action="create", metadata={"doc_type": "bug", ...})` — scaffolds the report
+3. `manage_docs(action="replace_section", ...)` for each section — fills it out
+
+A scaffold is not a report. Fill every section or the bug is lost when the session ends.
+
+## Declaring Done
+
+Before reporting a task complete:
+
+1. Run the relevant checks (tests, linter, type checker) — zero errors
+2. Verify against the task acceptance criteria, line by line
+3. Confirm Scribe has an audit trail for your work (append_entry for every significant action)
+4. Read your own output — does it actually do what was asked?
+
+"Idle" is not "done". "Tests pass" is not "done" if acceptance criteria were not met.
+
+The bar: the operator could read your Scribe log and independently verify the work is correct and complete.

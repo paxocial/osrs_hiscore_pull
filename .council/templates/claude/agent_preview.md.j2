@@ -27,7 +27,7 @@ You are **{{ agent.get('display_name', agent.name) | title }}**{% if agent.get('
 
 {% if agent.get('identity_prompt') -%}
 
-{{ agent.identity_prompt }}
+{{ agent.get('identity_prompt') }}
 {% endif %}
 
 {# ================================================================= #}
@@ -40,7 +40,7 @@ You are **{{ agent.get('display_name', agent.name) | title }}**{% if agent.get('
 
 ## Your Expertise
 
-{{ agent.expertise_prompt }}
+{{ agent.get('expertise_prompt') }}
 {% endif %}
 
 {# ================================================================= #}
@@ -53,7 +53,7 @@ You are **{{ agent.get('display_name', agent.name) | title }}**{% if agent.get('
 
 ## Behavioral Guidelines
 
-{{ agent.behavioral_guidelines }}
+{{ agent.get('behavioral_guidelines') }}
 {% endif %}
 
 {# ================================================================= #}
@@ -66,19 +66,21 @@ You are **{{ agent.get('display_name', agent.name) | title }}**{% if agent.get('
 
 ## Tool Usage
 
-{{ agent.tool_guidance }}
+{{ agent.get('tool_guidance') }}
 {% endif %}
 
 {# ================================================================= #}
 {# CUSTOM SECTIONS                                                    #}
 {# ================================================================= #}
 
-{% if agent.get('custom_sections') -%}
-{% for section in agent.custom_sections %}
+{% set custom_sections = agent.get('_custom_sections_list', []) %}
+{% if custom_sections -%}
+{% for section in custom_sections %}
 
 ---
 
-## {{ section.title }}
+{% if section.title %}## {{ section.title }}
+{% endif %}
 
 {{ section.content }}
 {% endfor %}
@@ -89,19 +91,27 @@ You are **{{ agent.get('display_name', agent.name) | title }}**{% if agent.get('
 {# ================================================================= #}
 
 {% set bundles = agent.get('protocol_bundles', {}) %}
+{% set bundle_defaults = agent.get('_bundle_defaults', {}) %}
+{% set template_options = agent.get('template_options', {}) %}
+{% set include_council_membership = template_options.get('include_council_membership', true) %}
+{% set include_council_protocol = template_options.get('include_council_protocol', true) %}
 {% set enabled_bundles = [] %}
-{% if bundles.get('council_tools', {}).get('enabled', true) %}{% set _ = enabled_bundles.append('Council MCP Tools') %}{% endif %}
-{% if bundles.get('scribe_protocol', {}).get('enabled', true) %}{% set _ = enabled_bundles.append('Scribe Protocol') %}{% endif %}
-{% if bundles.get('session_protocol', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('Session Protocol') %}{% endif %}
-{% if bundles.get('agentkit_patterns', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('AgentKit Patterns') %}{% endif %}
-{% if bundles.get('dual_logging', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('Dual Logging') %}{% endif %}
-{% if bundles.get('persona_embodiment', {}).get('enabled', false) %}{% set _ = enabled_bundles.append('Persona Embodiment') %}{% endif %}
+{% if bundles.get('council_tools', {}).get('enabled', bundle_defaults.get('council_tools', true)) %}{% set _ = enabled_bundles.append('Council MCP Tools') %}{% endif %}
+{% if bundles.get('scribe_protocol', {}).get('enabled', bundle_defaults.get('scribe_protocol', true)) %}{% set _ = enabled_bundles.append('Scribe Protocol') %}{% endif %}
+{% if bundles.get('session_protocol', {}).get('enabled', bundle_defaults.get('session_protocol', false)) %}{% set _ = enabled_bundles.append('Session Protocol') %}{% endif %}
+{% if bundles.get('agentkit_patterns', {}).get('enabled', bundle_defaults.get('agentkit_patterns', false)) %}{% set _ = enabled_bundles.append('AgentKit Patterns') %}{% endif %}
+{% if bundles.get('dual_logging', {}).get('enabled', bundle_defaults.get('dual_logging', false)) %}{% set _ = enabled_bundles.append('Dual Logging') %}{% endif %}
+{% if bundles.get('persona_embodiment', {}).get('enabled', bundle_defaults.get('persona_embodiment', false)) %}{% set _ = enabled_bundles.append('Persona Embodiment') %}{% endif %}
 
 ---
 
 > **Preview Note**: The final agent card will include:
+{% if include_council_membership %}
 > - Council Membership section
+{% endif %}
+{% if include_council_membership and include_council_protocol %}
 > - Council Protocol (session management, memory, collaboration)
+{% endif %}
 {% if enabled_bundles %}
 > - Enabled protocol bundles: {{ enabled_bundles | join(', ') }}
 {% else %}

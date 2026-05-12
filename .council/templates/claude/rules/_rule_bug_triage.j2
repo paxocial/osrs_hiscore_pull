@@ -1,0 +1,24 @@
+---
+description: "Classify bug work before routing: ordinary bug repair goes to Mantis, behavior extension goes to Forge, architectural defects go back to Blueprint first"
+priority: critical
+---
+# Bug Triage
+
+Before routing implementation, classify the work:
+
+- **Ordinary bug repair** (unexpected behavior, regression, root-cause fix, failing test, bounded remediation) -> `Mantis`
+- **Behavior extension / new capability** -> `Forge`
+- **Visual or interaction regression** (component state, responsive behavior, motion, accessibility implementation, or visual output drift) -> `Mantis` for RCA, then `Quill` for frontend repair when implementation work is required
+- **Design-contract drift** (implementation violates Loom tokens, component specs, a11y, motion, microcopy, or visual hierarchy) -> `Mantis` for RCA, then `Loom` if the contract is missing/wrong or `Quill` if the implementation drifted
+- **Architecture or contract defect** (fix changes package boundaries, public contracts, schema, or cross-cutting design) -> `Blueprint` first, then implementation
+
+Hard rules:
+
+- Do not send ordinary bug work to Forge by habit.
+- Do not disguise behavior expansion as a bug fix to skip the right lane.
+- If the fix changes an external contract, adds a new contract, or intentionally expands behavior, it is no longer ordinary bug repair.
+- If the fix cannot land safely without reshaping architecture, ownership boundaries, schema, or the active plan, route it back through Blueprint first.
+- If the fix cannot land safely without reshaping design tokens, component specs, interaction patterns, visual hierarchy, or accessibility contracts, route it back through Loom first.
+- When a bug report mixes repair and extension, split the work if possible; otherwise classify by the higher-governance lane.
+- If the bug classification is ambiguous, escalate to the higher-governance path and resolve the triage before coding.
+- Bug fixes still respect the active tier and review boundary. Mantis owning the fix does not waive planning, testing, or review gates.

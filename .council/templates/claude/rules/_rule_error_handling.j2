@@ -1,0 +1,60 @@
+---
+description: Boundary-only validation, typed HTTPException, no bare except, bug reporting workflow
+priority: critical
+---
+# Error Handling
+
+Boundary-only validation model:
+
+- Validate and sanitize at system boundaries.
+- Keep internal layers lean and trust validated contracts.
+
+Error contract by surface:
+
+- MCP tools return error dictionaries; do not raise raw exceptions to the model.
+- Web routes raise typed `HTTPException` with correct status codes.
+- Log at catch site with actionable context.
+
+Required bug workflow:
+
+```python
+# 1. Open case — pre-populate as much as possible at call time
+result = open_bug(agent="<agent>",
+    title="Short description",
+    symptoms="Observable behavior",
+    category="logic|runtime|config|data|integration|performance",
+    severity="critical|high|medium|low",
+    root_cause="Suspected or confirmed cause",         # pre-populates investigation
+    expected_behaviour="What should happen",           # NOTE: British spelling required
+    steps_to_reproduce=["Step 1", "Step 2"]            # pre-populates reproduction
+)
+case_id = result["case_id"]  # "BUG-YYYYMMDD-NNNN"
+
+# 2. Write the 3 REQUIRED sections (minimum — cannot be skipped)
+manage_docs(agent="<agent>", action="replace_section",
+    doc_name="<slug>", section="symptoms", content="Detailed symptoms with evidence...")
+manage_docs(agent="<agent>", action="replace_section",
+    doc_name="<slug>", section="root_cause", content="Root cause analysis...")
+manage_docs(agent="<agent>", action="replace_section",
+    doc_name="<slug>", section="fix", content="Fix approach and resolution plan...")
+
+# 3. Link fix when merged
+link_fix(agent="<agent>", case_id=case_id,
+    artifact_ref="src/file.py:42", landing_status="merged")
+```
+
+**Minimum required sections: symptoms + root_cause + fix. All three. Always.**
+
+**open_bug returns a completeness score — this is informational, not a gate. YOU enforce completeness.**
+
+A bug report is NOT complete until all three required sections are filled.
+`open_bug` + `manage_docs create` alone = empty scaffold = not a bug report.
+
+Forbidden:
+
+- Bare `except` blocks.
+- Silent exception swallowing.
+- Returning opaque or noisy internal failures without context.
+
+For full exception taxonomy, fallback/retry patterns, and code examples, use skills:
+`/error-handling` and `/mcp-tool-dev`.

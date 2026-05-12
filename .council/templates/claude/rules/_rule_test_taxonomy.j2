@@ -1,0 +1,17 @@
+---
+description: "Passing tests are not enough; tests must be truthful, well-categorized, and placed where future maintainers can find the behavior they protect"
+priority: critical
+---
+# Test Taxonomy
+
+Tests are part of the execution contract, not decorative coverage.
+
+Hard rules:
+
+- A passing test that does not prove the claimed behavior does not satisfy a gate.
+- Tests must be categorized and named by the behavior they protect.
+- Tests that hit real infrastructure must be marked and scoped accordingly.
+- Regression fixes require regression tests.
+- Misplaced, mislabeled, or fake tests may justify a BLOCK even when the suite is green.
+
+Use skill `/test-taxonomy` for the reusable framework: categories, naming, markers, placement, and incremental alignment rules.

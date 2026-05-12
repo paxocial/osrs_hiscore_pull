@@ -1,0 +1,57 @@
+---
+description: "Respect the SPEC-before-Blueprint boundary and update planning documents before resuming implementation after course correction"
+priority: critical
+---
+# Plan Docs Before Code
+
+**For named Scribe projects: before Blueprint runs, the only coordinator-authored planning artifact is the managed `SPEC` doc. `ARCHITECTURE_GUIDE`, `PHASE_PLAN`, and `CHECKLIST` stay off-limits to the coordinator until Blueprint owns planning.**
+
+**After Blueprint runs: when direction, scope, or requirements deviate from the documented plan, no further code proceeds until the team either (a) corrects course back to the current plan or (b) updates the plan.**
+
+The managed `SPEC` is the pre-research problem-definition contract. It captures the problem, goals, non-goals, constraints, and open questions. It is NOT an architecture doc, phase plan, or task-package substitute. The planning documents (`ARCHITECTURE_GUIDE`, `PHASE_PLAN`, `CHECKLIST`) are the post-research execution contract. Planning content is Blueprint-owned. Verification proof after implementation is coordinator-owned.
+
+Minimum `SPEC` quality before formal research starts:
+
+1. Problem statement is concrete, not vibes or solution language
+2. Goals and non-goals are both present
+3. Constraints/assumptions are explicit
+4. Open questions are phrased as research questions assigned specialists can actually answer
+5. If bracket protocol is selected, the full tournament-style bracket is outlined before any researchers launch
+6. The `SPEC` does not sneak in architecture, task packages, or implementation sequencing
+
+## The Rule
+
+Before Blueprint:
+
+1. The coordinator and the operator define the work in a managed `SPEC`
+2. The coordinator may do bounded orientation to shape that `SPEC`, but may not author `ARCHITECTURE_GUIDE`, `PHASE_PLAN`, or `CHECKLIST`
+3. Lens starts only after the `SPEC` exists
+
+When a course correction happens mid-stream after Blueprint:
+
+1. STOP any pending Forge deployments
+2. Decide explicitly: correct execution back to the current plan, or route Blueprint to update planning docs first
+3. The coordinator verifies package outputs and updates checklist proof via `manage_docs(action="status_update")`
+4. THEN resume implementation from the updated plan and verified checklist state
+
+Small implementation corrections may continue only if they remain inside the documented plan boundary. If direction or scope deviates, update the plan first.
+
+## Who This Applies To
+
+- **Coordinator / Orchestrator**: Must define/maintain the managed `SPEC` before research, verify outputs, maintain checklist proof, and request Blueprint planning updates when broader plan changes are needed
+- **Blueprint**: Must update `ARCHITECTURE_GUIDE` / `PHASE_PLAN` / `CHECKLIST` when scope changes
+- **Forge**: Must re-read plan docs if told the plan has changed mid-task
+
+## Anti-Patterns
+
+```text
+WRONG: The operator and coordinator never write a managed `SPEC`, but Lens starts anyway
+WRONG: The coordinator packs architecture decisions, package sequencing, or file ownership into `SPEC` and pretends Blueprint already happened
+WRONG: The `SPEC` is so vague that Lens cannot tell what it is supposed to investigate
+WRONG: The coordinator writes `ARCHITECTURE_GUIDE` / `PHASE_PLAN` / `CHECKLIST` before Blueprint runs
+WRONG: Operator corrects the broader plan -> the orchestrator skips Blueprint and keeps deploying Forge
+WRONG: Blueprint verbally acknowledges change but doesn't update `ARCHITECTURE_GUIDE`
+WRONG: the orchestrator rewrites architecture/phasing content after every package-level correction
+WRONG: Execution drifts from documented plan in a named Scribe project and coding continues anyway
+RIGHT: Coordinator/operator define `SPEC` -> assigned specialists research -> Blueprint updates planning docs -> the orchestrator verifies package outputs and checklist proof -> THEN resume implementation
+```

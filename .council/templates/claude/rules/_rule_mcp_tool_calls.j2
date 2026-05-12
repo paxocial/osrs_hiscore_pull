@@ -1,0 +1,9 @@
+---
+description: Call mcp__scribe__* and mcp__council-v2__* as tool calls; never substitute with bash
+priority: critical
+---
+# MCP Tool Calls
+
+**Call `mcp__scribe__*` and `mcp__council-v2__*` directly as tool calls. NEVER substitute with bash/echo/python.**
+
+MCP tools are the primary API surface. They must be invoked via the tool interface, not simulated via shell commands, echo, or scripting.

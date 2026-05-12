@@ -1,75 +1,163 @@
-{# Pipeline Gates - Mandatory stage prerequisites and gate enforcement #}
+---
+description: "Research then Blueprint/Loom then reviewed Forge/Quill; Witness and Arbiter bracket implementation, while Crucible is only used between implementation checkpoints"
+priority: critical
+---
 # Pipeline Gates
 
-**Every pipeline stage has prerequisites. No stage may be skipped without explicit user approval.**
+Default delivery path is:
 
-## Stage Prerequisites
+`Research -> Blueprint (+ Loom for frontend) -> Witness (Pre-Imp) -> Arbiter (Intent) -> Forge / Quill`
 
-### Stage 1: Research (Lens)
-- **Prerequisite**: Scribe project set, `read_recent` done
-- **Produces**: `RESEARCH_*.md` via `manage_docs`
-- **Gate**: Research doc exists with findings. Lens reports confidence.
-- **Skip condition**: User explicitly says "skip research" OR task is a known-scope bug fix
+Default review cadence for non-trivial multi-package work is:
 
-### Stage 2: Architecture (Blueprint)
-- **Prerequisite**: Stage 1 complete — research doc exists
-- **Produces**: `ARCHITECTURE_GUIDE`, `PHASE_PLAN`, `CHECKLIST`, task packages
-- **Gate**: Architecture docs exist with concrete task packages for Forge
-- **Skip condition**: User explicitly says "skip architecture" OR task is small enough for single bounded fix
+- for Tier 2+, one pre-implementation review bundle over the full task-package set by default unless the operator explicitly waives it: `Witness -> Arbiter`
+- default between-wave behavioral validation gate during implementation: `Forge/Quill -> Crucible -> Forge/Quill`
+- one post-implementation review bundle by default over the completed Scribe project: `Witness -> Arbiter`
 
-### Stage 3: Pre-Implementation Review (Arbiter)
-- **Prerequisite**: Stage 2 complete — architecture docs exist
-- **Produces**: Feasibility assessment, pass/fail
-- **Gate**: Arbiter passes with >=93% confidence
-- **Skip condition**: User explicitly says "skip review" OR task is trivial fix
+Once implementation starts, the orchestrator should drive the Scribe project to completion by default using `Forge/Quill -> Crucible` as the default execution loop. Do not re-enter Witness -> Arbiter during implementation or add per-package review loops by habit. If ambiguity, elevated risk, schema/concurrency sensitivity, design-contract uncertainty, or contract uncertainty warrants an additional checkpoint, the orchestrator may elevate one, but must make the elevation explicit to the operator and log the rationale in Scribe before or at routing time.
 
-### Stage 4: Implementation (Forge)
-- **Prerequisite**: AT MINIMUM one of:
-  - Stage 2 complete (task packages from Blueprint) — preferred
-  - Stage 1 complete (research from Lens) + explicit user approval to skip architecture
-  - User provides explicit, detailed implementation instructions (no research needed)
-- **Produces**: Working code + tests
-- **Gate**: Code compiles, tests pass
-- **NEVER**: Send Forge with vague instructions and no prior research
+Tier 1 local-safe work skips formal `Witness -> Arbiter` review by default. The orchestrator still verifies the change and logs intent, decisions, and proof when Scribe is active.
 
-### Stage 5: Post-Implementation Review (Arbiter)
-- **Prerequisite**: Stage 4 complete — Forge reports success
-- **Produces**: Quality grade, ship/no-ship decision
-- **Gate**: >=93% to ship
-- **Skip condition**: User explicitly says "skip review"
+Tier 1 is not a vibes-based shortcut. If classification is ambiguous, if the work changes tests to justify behavior, if it alters shared/imported modules, or if it smells like more than one local-safe edit, promote it to Tier 2 and use the heavier path.
 
-## Shortcut Paths (Pre-Approved)
+Mandatory gate policy:
 
-Not every task needs all 5 stages. These shortcuts are approved:
+1. For Tier 2+ named Scribe projects, no formal research begins until the orchestrator and the operator have created a managed `SPEC` doc capturing the problem statement, goals, constraints, non-goals, and research questions.
+2. Before that `SPEC` exists, the orchestrator may do bounded orientation work only: quick local digging, narrow explore helpers, and question-shaping to define the work. That does not count as formal specialist research or Blueprint planning.
+3. If bracket protocol is selected, the `SPEC` must outline the entire tournament-style bracket before any researchers launch: tiers, waves, tracks or matchups, specialist lanes, specialist-fit rationale, research questions, dependencies, owned artifacts, synthesis gates, research index/folder expectations, external evidence links, and closeout criteria. Lens can be the main research engine outside bracket protocol, but inside bracket protocol Lens is a scoping/inventory/search lane whose claims must be checked during synthesis and cannot substitute for specialist-owned domain artifacts.
+4. Before Blueprint runs, the orchestrator may create or update the managed `SPEC` doc only. `ARCHITECTURE_GUIDE`, `PHASE_PLAN`, and `CHECKLIST` are Blueprint-owned and must not be coordinator-authored prematurely.
+5. The `SPEC` is problem-definition only. It is not a shadow architecture doc, phase plan, task package, or file-ownership list. A bracket outline is allowed inside the `SPEC` because it defines research structure, not implementation architecture.
+6. A usable `SPEC` must contain a concrete problem statement, goals, non-goals, constraints/assumptions, and research questions assigned specialists can answer. If those are missing or mushy, formal research should not start yet.
+6. For non-trivial named Scribe projects, no code is written until formal research is complete and Blueprint has written real `ARCHITECTURE_GUIDE`, `PHASE_PLAN`, and `CHECKLIST` content with Scribe audit trail.
+7. For frontend/user-facing Tier 2+ work, no implementation is written until Loom has authored the design contract: `DESIGN_SYSTEM`, relevant `COMPONENT_SPECS`, `INTERACTION_PATTERNS`, `A11Y_REQUIREMENTS`, `VISUAL_HIERARCHY`, and `BESPOKE_DECISIONS` when exceptions exist. Loom output feeds the normal pre-implementation review; it does not replace Witness Pre-Imp or Arbiter Intent.
+8. Blueprint task packages should default to one coherent behavior/outcome with one clear verification story. A vertical slice may cross layers; it may not silently bundle multiple unrelated behaviors. If a package reads like multiple independent proof stories, split it before Forge/Quill.
+9. Before routing implementation, classify the work lane: ordinary bug repair routes to Mantis, behavior extension/new capability routes to Forge, frontend/user-facing implementation routes to Quill, and architecture/cross-cutting defects route back through Blueprint first.
+9. If the “bug fix” changes external contracts, adds new behavior, or requires plan reshaping, it is not ordinary bug repair anymore; escalate the lane instead of forcing it through Mantis by label.
+10. For named Scribe projects after coding begins, if direction or scope deviates from the documented plan, no further code is written until execution is corrected back to plan or Blueprint updates the plan.
+11. Do not send implementation work to Forge or Quill without either:
+- Blueprint task packages, or
+- explicit user-provided implementation spec.
+12. For Tier 2+ implementation, do not send work to Forge, Quill, or frontend-affecting Forge until Witness Pre-Imp and Arbiter Intent have passed, unless the operator explicitly waived the full-plan pre-implementation review before implementation begins.
+13. For frontend implementation, the implementation spec must include Loom design-contract references or Quill must block.
+14. Research alone is not architecture.
+15. Pre-implementation review uses one `Witness -> Arbiter` pass on the plan/package set. Post-implementation review uses one `Witness -> Arbiter` pass on the completed implementation boundary. Arbiter does not review until the corresponding Witness pass exists.
+16. `Crucible` and `Witness` have different jobs: Crucible judges whether tests and behavioral validation are meaningful; Witness judges whether the claimed boundary, artifacts, commands, and implementation truth actually exist. In frontend mode, Witness also verifies design contract existence and token/state/a11y/motion evidence mechanically.
+17. For multi-package work, the default downstream review boundary is the completed Scribe project, not each individual task package, unless the operator explicitly chooses another review checkpoint.
+18. Once Forge, Quill, or Mantis starts on a named multi-wave plan, the orchestrator should route packages through to full plan completion by default; do not treat each completed package as a new full review boundary.
+19. If the work later needs major reshaping, new phases, or a materially different execution contract, open a new named Scribe project and run a new Research -> Blueprint cycle instead of overwriting the old plan in place.
+20. For Tier 2+, the full `Witness -> Arbiter` review bundle is MANDATORY at the required review boundary. Tier 1 local-safe work may use coordinator verification plus explicit logged proof instead, unless the operator requests a formal review.
+21. Any other stage skip must be explicit and logged with reason.
+22. Blueprint owns planning-doc content (`ARCHITECTURE_GUIDE`, `PHASE_PLAN`, task-package framing, checklist planning structure). Loom owns design-doc content for frontend surfaces. The orchestrator owns the pre-research `SPEC` doc plus post-package verification and checklist proof updates, and does not own implementation.
+23. During named Scribe workstreams, the orchestrator must append entries for milestones, decisions, plan changes, review outcomes, agent completions/blocks, and package handoffs. Before spawning the next delegated agent, summarize the prior agent's outcome in Scribe so `read_recent` exposes current context.
 
-| Task Type | Path | Justification |
-|-----------|------|---------------|
-| Known bug, clear fix | Mantis → Forge → tests | Root cause already identified |
-| Quick research only | Lens only | No implementation needed |
-| User gives exact spec | Forge → Arbiter | User substitutes for research/architecture |
-| Trivial one-line fix | Forge only | Obvious change, bounded scope |
+Research completion definition:
 
-## Mandatory Logging
+**"Research is complete" means assigned research specialists have produced real `RESEARCH_*.md` documents or approved specialist reports in the active Scribe project via `manage_docs`, those artifacts were launched from an existing managed `SPEC`, and any active bracket protocol has completed its synthesis/index/closeout requirements.** Research in the wrong Scribe project, repo root, noncanonical dev-plan path, wrong filename prefix, stale index, or orphaned location is BLOCKED until moved with Scribe `rehome_doc` / `manage_docs(action="rehome_doc")` and re-verified. This is a hard gate — the following do NOT satisfy the research requirement:
 
-Every stage skip MUST be logged:
+- The coordinator's own pre-planning exploration (Explore agents, plan-mode research, reading files)
+- Mental models or summaries in the coordinator's context
+- A managed `SPEC` without formal research artifacts
+- Research that exists only in the conversation but was never written to Scribe docs
+- Generic codebase scans without structured findings
+- `manage_docs(create)` scaffolds, placeholder sections, TODO-only notes, stale body status, duplicate scaffold headings, noncanonical paths, or unindexed bracket research folders
+- Managed research docs moved by shell `mv`, `cp`, ad hoc file writes, or git-only rename instead of Scribe rehome tooling
 
-```python
-append_entry(
-    agent="atlas",
-    message="Skipping Stage 2 (Architecture) — user provided explicit implementation spec",
-    status="info",
-    meta={"pipeline": "skip", "stage": 2, "reason": "user-directed"}
-)
-```
+The coordinator's preliminary research informs WHAT to ask specialists to investigate and helps write the managed `SPEC`. It is never a substitute for formal research. Blueprint reads the `SPEC` plus `RESEARCH_*.md` documents and approved specialist reports — if those artifacts don't exist in the Scribe project, Blueprint has nothing to design from.
 
-## Anti-Patterns (VIOLATIONS)
+Allowed shortcut paths:
+- Trivial one-line fix -> Forge directly.
+- Small operator-directed Tier 0/Tier 1 local work -> direct local path allowed without a full named Scribe workflow unless the operator asks for it.
+- Named project but genuinely trivial work -> shortcut allowed only when the reason is logged explicitly.
+- User provides complete spec -> Forge directly.
+- Research-only request -> Lens only.
 
-- Sending Forge "to figure it out" without research or spec
-- Skipping all stages because "it seemed simple"
-- Using "use judgment" as blanket permission to skip
-- Deploying multiple Forge agents for interconnected changes without architecture
-- Skipping Arbiter review before shipping significant changes
+## Risk Tier Classification
 
-## The Rule
+The orchestrator MUST classify every task into a risk tier BEFORE routing. Classification is deterministic — apply the rules mechanically, do not interpret.
 
-**When in doubt, run the full pipeline. It exists to prevent mistakes.**
+| Tier | Criteria | Pipeline |
+|------|----------|----------|
+| **0 — Trivial** | No code logic changes, no imports modified. Docs, comments, formatting, log strings only. | Forge → DONE |
+| **1 — Local Safe** | Single file, no public interface change, no dependency changes. | Direct local implementation or one bounded Forge package → orchestrator verification + logged proof → DONE |
+| **2 — Behavioral** | Modifies logic OR adds behavior OR touches tests OR changes internal interfaces. | Blueprint (+ Loom for frontend) → full-plan `Witness (Pre-Imp) -> Arbiter (Intent)` by default unless operator-waived → Forge/Quill (project completion by default, with Crucible only between implementation checkpoints when needed) → full-plan `Witness (Post-Imp) -> Arbiter (Quality)` on completed project boundary → DONE |
+| **3 — High Risk** | Multiple files OR modifies API/schema OR affects shared modules OR architectural change. | Blueprint (+ Loom for frontend) → full-plan `Witness (Pre-Imp) -> Arbiter (Intent)` by default unless operator-waived → Forge/Quill (project completion by default, with Crucible only between implementation checkpoints when needed) → full-plan `Witness (Post-Imp) -> Arbiter (Quality)` on completed project boundary → Operator Notification |
+
+### Deterministic Classification Rules
+
+Apply in order — first match wins:
+1. Only docs, comments, formatting, log strings → **Tier 0**
+2. Single file AND no public interface change AND no dependency change → **Tier 1**
+3. Multiple files OR modifies API/schema OR affects shared/imported modules → **Tier 3**
+4. Everything else (logic change, new behavior, test changes) → **Tier 2**
+
+Tier 1 anti-abuse:
+- If you need to explain why something is “still basically Tier 1,” it probably is not.
+- If the test change is carrying behavioral risk or proving a real logic change, treat it as Tier 2.
+- If the file is single-file only in a technical sense but the behavior blast radius is wider, treat it as Tier 2.
+- If the change looks like root-cause bug repair, shared-contract repair, or “just a quick follow-up” to a larger change, stop treating Tier 1 as the default.
+
+### Arbiter Dual-Mode
+
+Arbiter operates in two distinct modes depending on pipeline position:
+
+**Intent Mode (Pre-Forge, Post-Witness Pre-Imp, Tier 2+):**
+- SPEC-vs-plan alignment and feasibility review
+- Is each package actually one coherent behavior with one clear verification story?
+- Does this plan match the user's request?
+- Is scope expanded beyond what was asked?
+- Are the files reasonable for the goal?
+- Is anything suspiciously over-engineered?
+- Does the approach contradict known patterns?
+- Frontend only: Does Loom's design tier match scope, and do design specs cover every user-facing surface?
+- Output: PASS or FAIL only. No style commentary, no suggestions.
+
+**Quality Mode (Post-Witness Post-Imp, Tier 2+):**
+- Standard adversarial review: evidence, scope, maintainability, patterns
+- Requires Witness PASS + Crucible PASS as prerequisites
+- Frontend only: reviews design-system adherence, component state completion, a11y/motion/reduced-motion evidence, responsive behavior, and microcopy fidelity as blocking quality concerns
+- Output: PASS or FAIL with blocking findings
+
+### Gate Dependencies
+
+- If Tier 2+ pre-implementation review is active: Witness Pre-Imp FAIL -> do NOT run Arbiter Intent, Forge, or Quill (fix plan first)
+- If Tier 2+ pre-implementation review is active: Arbiter Intent FAIL -> do NOT deploy Forge or Quill (fix plan first)
+- Crucible is only valid between Forge/Quill checkpoints/packages, never as a pre-implementation or default final review gate
+- Witness Post-Imp FAIL → do NOT run Arbiter Quality (fix implementation truth first)
+- For Tier 2+: Blueprint MUST emit APPROACH_SUMMARY or the orchestrator blocks
+- For frontend Tier 2+: Loom MUST emit a complete design contract or the orchestrator blocks
+- Tier 1 uses orchestrator verification and logged proof, not formal `Witness -> Arbiter`, unless the operator explicitly asks for that bundle
+- Multi-package work does not automatically trigger package-by-package Witness/Arbiter loops; default to one post-implementation review bundle at project completion unless the operator explicitly directs an additional checkpoint or the orchestrator makes an explicit, Scribe-logged escalation
+
+### Tier 3 Operator Notification
+
+Tier 3 work completes autonomously but the operator is notified at completion with a summary of: what was built, risk classification reason, all gate results, and any findings. This is non-blocking — work is not paused waiting for approval.
+
+Blueprint package boundaries are LAW:
+
+- If Blueprint defines P6-B and P6-C as separate packages, those are separate agents. Period.
+- The orchestrator does not have authority to merge, collapse, or "combine" Blueprint-defined packages.
+- Blueprint set those boundaries for a reason — scope, complexity, file ownership, verification surface.
+- Merging packages is a pipeline-gates violation, same as skipping research or architecture.
+- If the operator or review finds a package is too large, the repair is to split the plan before Forge. Use as many Forges as needed in careful sequence; never send one Forge a whole phase, cross-domain blob, or continent-sized package.
+- Dependent packages remain blocked until the previous package has package-specific Crucible PASS, even when coordinator verification passed.
+
+Violation examples:
+- Lens -> Forge for non-trivial work with no Blueprint handoff.
+- Delegating vague "figure it out" implementation tasks.
+- Skipping planning without user direction or clear trivial scope.
+- Coordinator treats own Explore/plan-mode research as satisfying the Lens gate.
+- Coordinator turns SPEC into a shadow architecture doc before Blueprint runs.
+- Coordinator starts Lens from a vague `SPEC` that lacks usable research questions.
+- Deploying Blueprint before RESEARCH_*.md documents exist in the Scribe project.
+- Sending an ordinary bug fix to Forge by habit instead of routing Mantis.
+- Calling a multi-behavior bundle a “vertical slice” to smuggle extra scope through one package.
+- Sending frontend implementation to Forge by habit when Quill owns the lane.
+- Letting Quill implement a user-facing surface with no Loom design contract.
+- Treating Loom or Quill as a shortcut around `$work-protocol`, `$orchestration-law`, Scribe, or the Tier 2+ pre-implementation `Witness -> Arbiter` gate.
+- Merging Blueprint-defined packages into fewer agents to "save time."
+- Re-entering Witness -> Arbiter during implementation without making the escalation explicit to the operator and to Scribe.
+- Sending code to Arbiter without Witness PASS evidence first.
+- Skipping Arbiter review for logic-touching code changes without explicit logged reason.
+
+For full gate checklists, team-stage mapping, and examples, use skill:
+`/pipeline-gates`.

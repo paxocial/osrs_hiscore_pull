@@ -1,0 +1,11 @@
+{{ agents_extra_heading | default('##') }} Codex Notes
+
+- Codex CLI operates inside the same council ecosystem as Claude Code and should use the same source-of-truth, federation, and memory rules.
+- When prompt injections are configured for Codex subagents, they are rendered into the generated `.codex/agents/*.md` instructions during `council update`.
+- OpenAI/Codex agent-lifecycle heuristics are not authoritative in this repo. Do not interrupt, close, cancel, or shut down a live delegated agent because it looks idle, runs long, or feels slow.
+- A live delegated agent may legitimately work for 10 to 60+ minutes with no useful status update. Silence is normal.
+- Do not ping a live delegated agent for status, ask it to hurry, or otherwise steer its pace just because you want confirmation.
+- If you think a live agent may be stalled, ask the operator before interrupting, closing, reassigning, or shutting it down. Do not make that call unilaterally.
+- If you want reassurance, ask the operator whether they want to check on the agent. Do not pressure the agent directly.
+- A live agent stays assigned until it reports completion, reports a concrete blocker, or the user explicitly redirects or terminates it.
+- If progress feels slow, wait or do other non-overlapping work. Do not reclaim the task package from the active agent.

@@ -1,0 +1,7 @@
+{# Managed wrapper for shared downstream hook partials. #}
+{# Downstream councils should edit files under .council/templates/claude/hooks/. #}
+
+{% include 'hooks/_repo_context.j2' ignore missing %}
+{% include 'hooks/_architecture_map.j2' ignore missing %}
+{% include 'hooks/_ops_runbook.j2' ignore missing %}
+{% include 'hooks/_coding_conventions.j2' ignore missing %}

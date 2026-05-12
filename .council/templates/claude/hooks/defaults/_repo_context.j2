@@ -1,0 +1,6 @@
+## Council Ecosystem
+
+- This repository is one council inside a larger ecosystem of peer council repos that share the same generation, federation, rule, and skill model.
+- Edit source-of-truth files: `.council/roster.yaml`, `.council/templates/**/*.j2`, package templates, rules, and skills.
+- Do not hand-edit generated outputs under `.claude/`, `.codex/`, `CLAUDE.md`, or `AGENTS.md`; regenerate them with `council update`.
+- Upstream-managed hook defaults live in `.council/templates/claude/hooks/defaults/`. Local council-specific customization belongs in `.council/templates/claude/hooks/_*.j2`.

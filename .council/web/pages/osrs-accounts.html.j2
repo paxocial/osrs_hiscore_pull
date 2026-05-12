@@ -1,0 +1,175 @@
+---
+nav_label: Accounts
+nav_order: 2
+nav_group: Snapshot Ops
+nav_group_order: 1
+nav_group_icon: monitor
+---
+{% extends "base.html" %}
+
+{% block title %}Accounts - OSRS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/council-static/css/osrs-pages.css">
+{% endblock %}
+
+{% block content %}
+<div class="osrs-page" id="osrs-accounts-root">
+
+  <!-- ================================================================
+       PAGE HEADER
+       ================================================================ -->
+  <div class="osrs-card">
+    <div class="osrs-card__header">
+      <h1 class="osrs-card__header-title">Accounts</h1>
+      <button id="openCreateModalBtn" class="btn btn-primary btn-sm" type="button">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="margin-right:4px;vertical-align:middle;">
+          <path d="M10 4v12m-6-6h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Add Account
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       OFFLINE BANNER (inserted dynamically by JS)
+       ================================================================ -->
+
+  <!-- ================================================================
+       LOADING STATE
+       ================================================================ -->
+  <div id="accountsLoading" class="osrs-loading">
+    <div class="osrs-loading__spinner"></div>
+    <span class="osrs-loading__text">Loading accounts...</span>
+  </div>
+
+  <!-- ================================================================
+       ERROR STATE
+       ================================================================ -->
+  <div id="accountsError" class="osrs-error-box osrs-hidden" role="alert"></div>
+
+  <!-- ================================================================
+       EMPTY STATE
+       ================================================================ -->
+  <div id="accountsEmpty" class="osrs-empty osrs-hidden">
+    <svg class="osrs-empty__icon" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="12" width="32" height="28" rx="3" stroke="currentColor" stroke-width="2"/>
+      <path d="M16 8h16M24 20v12m-6-6h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <p class="osrs-empty__message">No accounts found</p>
+    <p class="osrs-empty__submessage">Create one to get started tracking hiscores.</p>
+    <button class="btn btn-primary btn-sm" type="button"
+            onclick="document.getElementById('createAccountModal').classList.remove('osrs-hidden');">
+      Add Account
+    </button>
+  </div>
+
+  <!-- ================================================================
+       ACCOUNT TABLE
+       ================================================================ -->
+  <div id="accountsTableWrap" class="osrs-card osrs-hidden">
+    <div class="osrs-card__body osrs-card__body--table">
+    <table class="c-table c-table--striped" style="width:100%;">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Game Mode</th>
+          <th>Status</th>
+          <th>Snapshots</th>
+          <th>Last Fetched</th>
+          <th style="width:80px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="accountsTableBody">
+        <!-- Rows injected by JS -->
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       CREATE ACCOUNT MODAL
+       ================================================================ -->
+  <div id="createAccountModal" class="osrs-hidden"
+       style="position:fixed;inset:0;z-index:var(--z-modal,1000);display:flex;align-items:center;justify-content:center;">
+    <!-- Backdrop -->
+    <div id="createModalBackdrop"
+         style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+    <!-- Dialog -->
+    <div class="osrs-card" style="position:relative;width:100%;max-width:440px;margin:var(--space-4);">
+      <div class="osrs-card__header">
+        <h2 class="osrs-card__header-title">Add Account</h2>
+        <button id="closeCreateModalBtn" class="btn btn-ghost btn-sm" type="button" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+            <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="osrs-card__body">
+        <div class="osrs-snapshot-form" style="flex-direction:column;">
+          <div class="osrs-snapshot-form__field" style="width:100%;">
+            <label class="osrs-snapshot-form__label" for="createAccountName">Player Name</label>
+            <input id="createAccountName" class="osrs-snapshot-form__input"
+                   type="text" placeholder="e.g. Zezima" maxlength="50" autocomplete="off">
+          </div>
+          <div class="osrs-snapshot-form__field" style="width:100%;">
+            <label class="osrs-snapshot-form__label" for="createAccountMode">Game Mode</label>
+            <select id="createAccountMode" class="osrs-snapshot-form__select">
+              <option value="main">Main</option>
+              <option value="ironman">Ironman</option>
+              <option value="hardcore_ironman">Hardcore Ironman</option>
+              <option value="ultimate_ironman">Ultimate Ironman</option>
+            </select>
+          </div>
+        </div>
+        <div id="createAccountError" class="osrs-error-box osrs-hidden" style="margin-top:var(--space-3);"></div>
+      </div>
+      <div class="osrs-card__footer" style="display:flex;justify-content:flex-end;gap:var(--space-2);">
+        <button id="cancelCreateBtn" class="btn btn-secondary btn-sm" type="button">Cancel</button>
+        <button id="submitCreateBtn" class="btn btn-primary btn-sm" type="button">Create Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       DELETE CONFIRMATION MODAL
+       ================================================================ -->
+  <div id="deleteAccountModal" class="osrs-hidden"
+       style="position:fixed;inset:0;z-index:var(--z-modal,1000);display:flex;align-items:center;justify-content:center;">
+    <!-- Backdrop -->
+    <div id="deleteModalBackdrop"
+         style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+    <!-- Dialog -->
+    <div class="osrs-card" style="position:relative;width:100%;max-width:400px;margin:var(--space-4);border-color:var(--error);">
+      <div class="osrs-card__header" style="background:var(--error-glow);">
+        <h2 class="osrs-card__header-title" style="color:var(--error);">Delete Account</h2>
+      </div>
+      <div class="osrs-card__body">
+        <p style="font-size:var(--text-sm);color:var(--text-secondary);margin:0 0 var(--space-2);">
+          Are you sure you want to delete
+          <strong id="deleteAccountName" style="color:var(--text-primary);"></strong>?
+        </p>
+        <p style="font-size:var(--text-xs);color:var(--text-tertiary);margin:0;">
+          This action cannot be undone. All associated snapshots will be retained.
+        </p>
+      </div>
+      <div class="osrs-card__footer" style="display:flex;justify-content:flex-end;gap:var(--space-2);">
+        <button id="cancelDeleteBtn" class="btn btn-secondary btn-sm" type="button">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger btn-sm" type="button">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       TOAST NOTIFICATION CONTAINER
+       ================================================================ -->
+  <div id="accountsToast" class="osrs-toast osrs-hidden"></div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/council-static/js/osrs-common.js"></script>
+<script src="/council-static/js/osrs-accounts.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { if (window.OsrsAccounts) OsrsAccounts.init(); });</script>
+{% endblock %}

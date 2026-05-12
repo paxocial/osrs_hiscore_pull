@@ -1,0 +1,20 @@
+---
+description: Commit in bounded logical units, keep commit ownership with the orchestrator, and ask before pushing
+priority: medium
+visibility: exported
+---
+# Commit Hygiene
+
+Keep Git history honest and bounded.
+
+Hard constraints:
+
+- Commit regularly at bounded checkpoints. Do not wait until the end of a long workstream to commit everything at once.
+- Each commit should represent one logical intent. Do not mix unrelated fixes, features, refactors, docs, or generated churn unless they are inseparable.
+- Subagents and teammates do not make final commits. The orchestrator reads the diff, stages intentionally, and creates the commit.
+- Never push without explicit user approval in the current thread.
+- Never combine commit and push into one blind step.
+- If the working tree contains unrelated backlog, split it into separate logical commits or stop and ask how ownership should be partitioned.
+
+For the backlog-sweep workflow, commit grouping heuristics, and message patterns, use skill:
+`/commit-hygiene`

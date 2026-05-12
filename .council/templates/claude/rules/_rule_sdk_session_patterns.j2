@@ -1,0 +1,205 @@
+---
+description: "SDK sessions in worker subprocess pools; SessionManager lifecycle and worker pool management"
+priority: medium
+---
+# SDK Session Patterns
+
+**SDK sessions run in worker subprocess pools. Use SessionManager for all session operations.**
+
+## Architecture Overview
+
+```
+SessionManager (orchestrator)
+├── WorkerPool         → spawns/manages worker subprocesses per session
+├── StreamBridge       → relays stream events to WebSocket clients
+├── CostTracker        → tracks token usage and enforces budgets
+├── ApprovalRouter     → manages tool approval policy (auto-approve, pending, deny)
+└── ProviderRegistry   → maps provider slugs to SDKProvider implementations
+```
+
+## Provider Registry
+
+Providers register at import time. The registry routes sessions to the right SDK:
+
+```python
+from council_mcp.sdk.provider_registry import ProviderRegistry
+from council_mcp.sdk.provider import SDKProvider
+
+class ClaudeSDKProvider(SDKProvider):
+    slug = "claude"
+
+    async def run(self, config: SessionConfig) -> AsyncIterator[StreamEvent]:
+        # ... SDK integration ...
+
+# Self-registration at module level
+ProviderRegistry.instance().register("claude", ClaudeSDKProvider)
+```
+
+Get the active provider from config:
+
+```python
+from council_mcp.config import get_council_config
+
+cfg = get_council_config()
+default_provider = cfg.get("council", {}).get("sdk", {}).get("default_provider", "claude")
+provider_class = ProviderRegistry.instance().get(default_provider)
+```
+
+## Session Lifecycle
+
+### Creating a Session
+
+```python
+from council_mcp.sdk.types import SessionConfig
+from council_mcp.sdk.session_manager import SessionManager
+
+config = SessionConfig(
+    persona_id="{{ coordinator_name }}",
+    provider="claude",
+    model="claude-sonnet-4-6",
+    system_prompt="You are {{ coordinator_display_name }}...",
+    permission_mode="default",  # default | bypassPermissions | plan | acceptEdits
+)
+
+session_record = await session_manager.create_session(config=config)
+session_id = session_record.session_id
+```
+
+### Streaming Events
+
+Sessions produce a stream of typed events:
+
+```python
+from council_mcp.sdk.types import (
+    TextDelta, ThinkingDelta, ToolUseStart, ToolUseResult,
+    CostUpdate, ApprovalRequired, SessionStatusEvent, ErrorEvent
+)
+
+async for event in session_manager.stream(session_id):
+    if isinstance(event, TextDelta):
+        print(event.text, end="", flush=True)
+    elif isinstance(event, ApprovalRequired):
+        # Tool needs human approval — send to UI
+        await handle_approval_request(event)
+    elif isinstance(event, CostUpdate):
+        # Track spend
+        logger.info("Cost so far: $%.4f", event.total_usd)
+    elif isinstance(event, SessionStatusEvent):
+        if event.status == "completed":
+            break
+    elif isinstance(event, ErrorEvent):
+        logger.error("Session error: %s", event.message)
+        break
+```
+
+### Ending a Session
+
+```python
+await session_manager.end_session(session_id=session_id)
+```
+
+## Worker Pool
+
+`WorkerPool` spawns one worker subprocess per session. Workers communicate over Unix Domain Sockets (UDS):
+
+```python
+from council_mcp.sdk.worker_pool import WorkerPool
+
+pool = WorkerPool(process_manager=pm)
+# pool.spawn() is called internally by SessionManager when a session starts
+```
+
+Workers are tracked as `ProcessType.sdk_session` in the ProcessManager SQLite registry. The `_SHUTDOWN_ORDER` in `process_manager.py` stops SDK sessions first during graceful shutdown.
+
+## Approval Routing
+
+Three-tier policy evaluation (checked in order):
+1. **Permission mode** (session-level): `bypassPermissions` auto-approves all tools; `plan` blocks all edits; `acceptEdits` auto-approves file writes
+2. **Allowlist/denylist** (session config): specify which tools to auto-approve or deny
+3. **Human approval**: everything else goes to the UI for human decision
+
+```python
+from council_mcp.sdk.types import PermissionMode
+
+config = SessionConfig(
+    permission_mode=PermissionMode.ACCEPT_EDITS,  # Auto-approve file edits
+    tool_allowlist=["Read", "Glob", "Grep"],       # Always approve these
+    tool_denylist=["Bash"],                         # Always deny these
+)
+```
+
+## Cost Tracking
+
+`CostTracker` records usage per session and enforces budget limits:
+
+```python
+from council_mcp.sdk.cost_tracker import CostTracker, BudgetDecision
+
+tracker = CostTracker()
+
+# Check budget before starting a turn
+decision: BudgetDecision = await tracker.enforce_budget(session_id)
+if decision.action == "kill":
+    raise RuntimeError(f"Budget exceeded: {decision.message}")
+elif decision.action == "warn":
+    logger.warning("Budget warning: %s remaining=$%.2f", decision.message, decision.remaining_usd)
+```
+
+Budget config in `council.yaml`:
+
+```yaml
+council:
+  sdk:
+    session_budget_usd: 1.0        # Per-session spending cap
+    daily_budget_usd: 20.0         # Daily spending cap
+    budget_warning_threshold: 0.8   # Warn at 80% of budget
+```
+
+## SDK Config Keys
+
+```python
+cfg = get_council_config()
+sdk_cfg = cfg.get("council", {}).get("sdk", {})
+
+default_provider = sdk_cfg.get("default_provider", "claude")
+default_model = sdk_cfg.get("default_model", "claude-sonnet-4-6")
+session_budget = sdk_cfg.get("session_budget_usd", 1.0)
+stream_timeout = sdk_cfg.get("stream_timeout_seconds", 300)
+```
+
+## WorkerPool Shutdown (process-lifecycle integration)
+
+SDK workers are cleaned up during graceful shutdown:
+
+```python
+# In web lifespan shutdown
+await session_manager.shutdown()   # End active sessions, signal workers
+await worker_pool.shutdown()       # Wait for workers to exit, cleanup UDS sockets
+await sdk_pm.shutdown()            # Stop ProcessManager health loop
+```
+
+The `ProcessManager._SHUTDOWN_ORDER` lists `sdk_session` first — they're stopped before plugins, web UI, and MCP servers.
+
+## Anti-Patterns
+
+**Wrong** — spawning workers directly (bypassing WorkerPool):
+```python
+# Never spawn SDK worker processes directly
+proc = subprocess.Popen(["python", "-m", "council_mcp.sdk.worker", ...])
+```
+
+**Right** — always via WorkerPool/SessionManager:
+```python
+session_record = await session_manager.create_session(config=config)
+```
+
+**Wrong** — accessing `_RUNTIME_CONTEXT` for SDK state in web:
+```python
+from council_mcp.server import _RUNTIME_CONTEXT
+mgr = _RUNTIME_CONTEXT.get("sdk_session_manager")  # Always None in web process
+```
+
+**Right** — use `app.state` which is initialized in web lifespan:
+```python
+mgr = request.app.state.sdk_session_manager  # Set in web lifespan startup
+```

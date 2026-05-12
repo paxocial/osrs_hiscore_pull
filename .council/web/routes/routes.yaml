@@ -1,0 +1,4 @@
+enabled: true
+routes:
+  - module: osrs_runtime.py
+  - module: osrs_proxy.py

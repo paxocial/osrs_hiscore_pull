@@ -1,0 +1,17 @@
+{% set knowledge_contract_mode = knowledge_contract_mode | default("agent") %}
+{% set knowledge_contract_heading = knowledge_contract_heading | default("##") %}
+{% if knowledge_contract_mode == "operator" %}
+{{ knowledge_contract_heading }} Knowledge MCP + Dataset Foundry
+
+- **Dataset Foundry publishes; Knowledge MCP retrieves.** Use Dataset Foundry to normalize, version, promote, and monitor datasets. Use Knowledge MCP to index, scope, search, and answer over the published corpus.
+- **Keep the operator flow narrow and observable.** Start with the smallest useful scope (`datasets`, `projects`, `doc_types`, `source_types`), then widen only if evidence is thin.
+- **Probe current source when runtime state is suspect.** Use the Knowledge MCP probe CLI for fresh-process validation before blaming the daemon or claiming a regression is fixed.
+- **For Scribe-backed work:** update the docs, run or promote the dataset in Dataset Foundry, poll/list/cancel there, then verify search and answers in Knowledge MCP.
+{% else %}
+{{ knowledge_contract_heading }} Knowledge MCP + Dataset Foundry Workflow
+
+- **Dataset Foundry prepares datasets; Knowledge MCP answers from them.** Normalize or publish structured corpora in Dataset Foundry, then use Knowledge MCP for scoped retrieval and cited answers.
+- **Filter before you widen.** Prefer `datasets`, `projects`, `doc_types`, and `source_types` to keep evidence coherent and prevent cross-project bleed.
+- **Treat retrieval as authoritative context, not freeform inspiration.** Base claims on returned evidence, surface uncertainty explicitly, and suggest follow-up research or refresh work when coverage is thin.
+- **Use the probe path when freshness matters.** If daemon state may be stale, validate current-source behavior with the Knowledge MCP probe CLI before escalating a bug.
+{% endif %}

@@ -1,0 +1,116 @@
+---
+description: "Bracket protocol means a SPEC-defined tournament-style investigation with bounded specialist research waves, synthesis gates, clean indexed artifacts, and no unbounded fan-out"
+priority: critical
+visibility: exported
+---
+# Bracket Protocol
+
+When the operator says `bracket protocol`, treat it as a SPEC-defined tournament-style investigation, not a synonym for one massive research fan-out and not a Lens-only workflow.
+
+For the full procedure, use `/bracket-protocol`. This critical rule is the boot contract; the companion skill is the deep-dive operating manual.
+
+The core invariant: bracket protocol changes research routing. Outside bracket protocol, Lens can be the main engine for ordinary high-volume codebase/docs exploration. Inside bracket protocol, the bracket is specialist-led. Lens can participate as a bounded scoping, inventory, codebase/docs, dependency, or cross-project search lane, but Lens is not the primary research engine for bracketed work. A bracket that defaults every research track to Lens, or routes specialist domains through Lens because it is convenient, is invalid.
+
+## Routing And Intensity Semantics
+
+- `DIRECT`: deterministic local work with low blast radius and clear source authority. This is not a bracket tier; it is the standard non-bracket path.
+- `TACTICAL_BRACKET`: bounded uncertainty where two to three specialist perspectives and one synthesis checkpoint are enough.
+- `STANDARD_BRACKET`: multi-domain ambiguity or risk that needs bounded specialist research tracks, owned artifacts, and at least one synthesis gate.
+- `GRAND_BRACKET`: reserved for downstream template changes, runtime enforcement claims, launch/release-critical governance or security boundaries, cross-repo migration risk, or other high-blast-radius uncertainty. GRAND still uses bounded waves; it is never permission for unbounded concurrency.
+
+Basic work does not always need bracket protocol. Use the standard protocol for ordinary work when the blast radius is low and source authority is clear. Use bracket protocol for larger, ambiguous, multi-domain, governance-sensitive, security-sensitive, downstream-visible, or otherwise high-blast-radius work.
+
+Once bracket protocol is selected, it has three intensities: `TACTICAL_BRACKET`, `STANDARD_BRACKET`, and `GRAND_BRACKET`. At every synthesis checkpoint, re-evaluate the intensity. If the risk collapses, de-escalate immediately, including back to the standard non-bracket path when evidence shows the bracket is no longer warranted.
+
+## SPEC Bracket Outline
+
+No bracket research agents launch until the managed `SPEC` outlines the entire bracket.
+
+That bracket outline must include:
+
+- selected bracket tier and why it applies
+- full wave structure from opening round through closeout
+- tracks or matchups for each wave, with dependencies between waves
+- assigned specialist lane for each track
+- specialist-fit rationale for each lane, including why Lens is sufficient for any Lens-owned track
+- bounded research questions for every track
+- explicit scope and forbidden overlap for every track
+- owned artifact path or folder for every track
+- synthesis checkpoints between waves
+- index/folder organization expected under the Scribe research area
+- approved external docs expected as evidence, such as bug reports or security reports
+- closeout criteria for deciding research is complete or must be re-bracketed
+
+Synthesis can refine the bracket, collapse later waves, or recommend new tracks, but it cannot silently change the tournament. Any material bracket change must update the `SPEC` or an explicitly linked bracket plan before the next wave launches.
+
+## Concurrency And Wave Bounds
+
+- Never launch more than five concurrent research agents in a bracket wave.
+- If the research surface needs more than five tracks, split it into sequential waves.
+- Each wave must build on the prior synthesis and the predeclared bracket outline, not restart from the original question blindly.
+- No dependent next wave, Blueprint planning, Loom design contract, Forge/Quill implementation, or final review may proceed from a wave until the current wave has been synthesized.
+- Each researcher gets one bounded question set, an explicit scope, explicit forbidden overlap, and one owned artifact. No shared live-edit research docs during parallel waves.
+- Post-package brackets follow the same rule: one global Witness/Arbiter pass is not a substitute for bounded specialist review lanes plus synthesis when the completed package corpus spans multiple domains.
+
+## Specialist Mix
+
+Bracket research uses the right specialist for the research question. This is mandatory, not advisory.
+
+Lens is useful inside brackets, but only for its actual domain: scoping research lanes, codebase inventory, documentation mapping, dependency tracing, high-volume source search, and cross-project search. Lens work in a bracket must be checked during synthesis before other lanes or downstream gates rely on it. Lens must not be used as the default owner for security, RCA, design-contract, architecture-option, testing, truth-verification, or quality-review research. If a bracket wave is all Lens, the orchestrator must treat the wave as reconnaissance only, not as valid bracket closeout. If the work is simple enough for Lens to be the main engine, it should not be represented as active bracket protocol.
+
+- Lens for codebase, documentation, dependency, and cross-project investigation.
+- Mantis for bug lifecycle, RCA, reproduction, visual/interaction regressions, and failure-mode research.
+- Sentinel for security, threat modeling, trust boundaries, secrets, auth, and exposure risk.
+- Loom for design-system, UI, accessibility, motion, microcopy, and visual-contract research.
+- Blueprint for architecture option analysis only after research questions are concrete enough to avoid shadow planning.
+- Crucible for test strategy, coverage adequacy, behavioral proof, and validation-surface research.
+- Witness for truth-boundary, import/signature, artifact-existence, scope, and claimed-verification research.
+- Arbiter for adversarial quality, standards, overreach, and plan-vs-request review research.
+- Other specialists may research inside their domain when the orchestrator gives them a bounded research artifact contract.
+
+A specialist producing a research artifact is still in research mode. They must not implement code, reshape architecture, or edit shared planning documents unless separately routed through the correct implementation or planning gate.
+
+Invalid bracket patterns:
+
+- one Lens agent doing all bracket research
+- many Lens agents covering specialist domains
+- Lens owning security, RCA, architecture-option, design-contract, validation, truth, or quality-review tracks
+- specialist consultation buried inside a Lens artifact instead of an owned specialist artifact
+- synthesis that treats Lens reconnaissance as a substitute for specialist-owned findings
+- downstream routing that relies on unchecked Lens claims
+
+## Research Artifact Contract
+
+Every bracket research artifact must be real content, not Scribe scaffolding:
+
+- `manage_docs(action="create")` is only a scaffold. It is not approved to remain as the final artifact.
+- Placeholder sections, empty headings, TODO-only notes, template instructions, or unfilled generated boilerplate must be removed before the artifact is accepted.
+- Research artifacts belong under the active Scribe workstream's research area, organized into topic folders when the bracket has multiple waves or domains.
+- Research artifacts must be in the active Scribe project. Wrong-project, repo-root, stale, noncanonical, orphaned, or unindexed research docs BLOCK downstream synthesis/planning until moved with Scribe `rehome_doc` / `manage_docs(action="rehome_doc")` and re-verified.
+- Do not move managed Scribe docs with shell `mv`, `cp`, ad hoc file writes, or git-only renames.
+- Each research folder must have an index that names the wave, artifact owner, research question, status, and relationship to synthesis.
+- Root research indexes must point to folder indexes, synthesis docs, accepted external docs, and any approved bug/security reports used as evidence.
+- Bug reports, security reports, SPEC docs, ADRs, or other approved documents should be linked or referenced as external evidence; do not duplicate them into research docs unless synthesis requires a short summary.
+
+## Synthesis And Closeout
+
+After every wave, the orchestrator must create or update a synthesis artifact that records:
+
+- research artifacts reviewed
+- facts established
+- conflicts or unresolved questions
+- scope changes or tier changes
+- next-wave questions, or Blueprint readiness
+- links to relevant external approved docs such as bug reports and security reports
+
+At the end of bracket research, the orchestrator must run a research closeout review before claiming research complete:
+
+- all expected research artifacts exist and are owned
+- no scaffold or placeholder content remains
+- folder organization and indexes are current
+- links or references to external approved docs are present where needed
+- synthesis covers every completed wave
+- remaining unknowns are explicit and either routed to another wave or accepted as planning risk
+- post-package review brackets, when used, have bounded specialist lanes, synthesis, and final review rather than one overloaded reviewer
+
+Only after that closeout can bracket research be considered complete.

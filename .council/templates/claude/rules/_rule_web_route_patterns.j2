@@ -1,0 +1,245 @@
+---
+description: APIRouter, council isolation, Pydantic models, and proper auth dependency for all routes
+priority: high
+---
+# Web Route Patterns
+
+**All web routes must use APIRouter, council isolation, Pydantic models, and proper auth dependency.**
+
+## Standard Route Module Structure
+
+```python
+"""Brief description of this route module."""
+
+from __future__ import annotations
+
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from agentkit.storage.models import db
+from council_mcp.web.dependencies import get_current_user
+from council_mcp.web.shared import _get_active_council_id
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(
+    tags=["my-feature"],
+    dependencies=[Depends(get_current_user)],  # Auth on all routes by default
+)
+```
+
+## Request/Response Models
+
+Use Pydantic `BaseModel` for request bodies. Use `JSONResponse` for responses:
+
+```python
+class CreateSkillRequest(BaseModel):
+    """Request body for creating a new skill."""
+    name: str
+    slug: str
+    content: str
+    domains: list[str] | None = None
+
+
+class UpdateSkillRequest(BaseModel):
+    """Request body for updating a skill."""
+    name: str | None = None
+    content: str | None = None
+
+
+@router.post("/api/skills")
+async def create_skill(
+    body: CreateSkillRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> JSONResponse:
+    council_id = _get_active_council_id(request)
+    # ... implementation ...
+    return JSONResponse(content={"status": "created", "slug": body.slug}, status_code=201)
+```
+
+## Council Isolation (MANDATORY)
+
+Every endpoint that touches council-scoped data MUST call `_get_active_council_id`:
+
+```python
+@router.get("/api/skills")
+async def list_skills(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> JSONResponse:
+    council_id = _get_active_council_id(request)  # MANDATORY for scoped data
+
+    with db.connection() as conn:
+        with conn.cursor() as cur:
+            query = "SELECT slug, name FROM council.skills WHERE is_enabled = true"
+            params: dict = {}
+            if council_id:
+                query += " AND council_id = %(council_id)s"
+                params["council_id"] = council_id
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+    return JSONResponse(content={"skills": [dict(r) for r in rows], "count": len(rows)})
+```
+
+## Error Handling
+
+Use `HTTPException` for web route errors:
+
+```python
+@router.get("/api/agents/{slug}")
+async def get_agent(slug: str, request: Request) -> JSONResponse:
+    council_id = _get_active_council_id(request)
+
+    with db.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT slug, name, title, description
+                FROM public.persona_profiles
+                WHERE slug = %(slug)s AND council_id = %(cid)s
+                """,
+                {"slug": slug, "cid": council_id}
+            )
+            row = cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Agent '{slug}' not found")
+
+    return JSONResponse(content=dict(row))
+```
+
+## Route File Naming
+
+- Place route modules in `src/council_mcp/web/routes/<feature>.py`
+- Register in `src/council_mcp/web/routes/__init__.py` via `register_all_routers()`
+- Use kebab-case for URL segments: `/api/agent-tasks`, `/api/rule-bindings`
+
+## Frontend Council Switch Handler
+
+All pages with dynamic data MUST listen for council switches:
+
+```javascript
+// In your page's JS file
+window.addEventListener('councilSwitched', async (event) => {
+    console.log('Council switched to:', event.detail.councilId);
+    // Clear current data
+    clearCurrentState();
+    // Reload from API (which reads X-Council-Id header)
+    await loadData();
+});
+```
+
+The `API.getAuthHeaders()` helper automatically includes the `X-Council-Id` header from sessionStorage.
+
+## Downstream Custom Routes
+
+Downstream repos can add API routes via `.council/web/routes/*.py`. Two patterns:
+
+### Pattern 1: APIRouter Export
+
+```python
+# .council/web/routes/my_runtime.py
+from fastapi import APIRouter
+
+ROUTE_PREFIX = "/api/my-service"  # Optional prefix override
+
+router = APIRouter()
+
+@router.get("/status")
+async def get_status():
+    return {"status": "running"}
+```
+
+### Pattern 2: Register Function
+
+```python
+# .council/web/routes/my_runtime.py
+from fastapi import FastAPI
+
+def register(app: FastAPI, council_name: str | None = None, repo_path: str | None = None) -> None:
+    """Advanced registration with full app access."""
+    @app.get("/api/my-service/status")
+    async def get_status():
+        return {"status": "running", "council": council_name}
+```
+
+**Route discovery** auto-loads all `*.py` files from `.council/web/routes/` (excluding `_*.py`). Control load order with `routes.yaml`:
+
+```yaml
+# .council/web/routes/routes.yaml
+enabled: true
+routes:
+  - module: my_runtime.py
+    prefix: ""
+  - module: other_service.py
+    prefix: "/api/other"
+```
+
+## ProcessManager Runtime Pattern for Downstream Routes
+
+Use shared helpers from `council_mcp.web.runtime_services` for service lifecycle:
+
+```python
+from council_mcp.web.runtime_services import (
+    get_active_repo,
+    get_process_manager,
+    build_plugin_process_config,
+    collect_plugin_runtime_state,
+)
+from council_mcp.process_manager import ProcessType
+
+@router.post("/api/my-service/start")
+async def start_service(request: Request) -> JSONResponse:
+    repo_path = get_active_repo(request)
+    pm = get_process_manager(request)
+
+    config = build_plugin_process_config(
+        service="my-service",
+        command=["python", "-m", "my_service.server"],
+        repo=repo_path,
+        port=8080,
+    )
+    entry = await pm.spawn(ProcessType.PLUGIN, config)
+    return JSONResponse(content={"status": "started", "pid": entry.pid})
+```
+
+Always set `metadata.service` (stable tag) and `metadata.repo_path` (council binding) when spawning plugin processes.
+
+## Anti-Patterns
+
+**Wrong** — missing auth dependency:
+```python
+router = APIRouter(tags=["agents"])  # No auth — all routes public!
+```
+
+**Right** — auth on all routes:
+```python
+router = APIRouter(tags=["agents"], dependencies=[Depends(get_current_user)])
+```
+
+**Wrong** — hardcoding council_id:
+```python
+council_id = list_councils_sync()[0]["id"]  # Breaks multi-council
+```
+
+**Right** — cookie-based via helper:
+```python
+council_id = _get_active_council_id(request)
+```
+
+**Wrong** — returning raw exception:
+```python
+except Exception as e:
+    return JSONResponse(content={"error": str(e)}, status_code=500)  # Leaks internals
+```
+
+**Right** — HTTPException with user-safe message:
+```python
+except Exception as e:
+    logger.error("Failed to list skills: %s", e, exc_info=True)
+    raise HTTPException(status_code=500, detail="Failed to retrieve skills")
+```

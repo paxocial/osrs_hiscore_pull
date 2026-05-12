@@ -1,0 +1,194 @@
+version: 1
+hooks:
+  - id: session.start
+    description: Session bootstrap context injection and tracking.
+    providers:
+      claude:
+        enabled: true
+        materialize: true
+        event_name: SessionStart
+        runtime_script: session_start.py
+      codex:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: SessionStart
+        matcher: startup|resume
+        runtime_script: session_start.py
+        status_message: Loading session context
+        limitation: Provider-specific runtime wrapper not materialized in this slice.
+
+  - id: tool.pre
+    description: Pre-tool governance before execution.
+    providers:
+      claude:
+        enabled: true
+        materialize: true
+        event_name: PreToolUse
+        matcher: .*
+        runtime_script: pre_tool.py
+      codex:
+        enabled: true
+        materialize: false
+        support: partial
+        event_name: PreToolUse
+        matcher: Bash
+        runtime_script: pre_tool.py
+        status_message: Checking Bash command
+        limitation: Current official Codex runtime exposes PreToolUse only for Bash.
+
+  - id: tool.post
+    description: Post-tool logging and review after execution.
+    providers:
+      claude:
+        enabled: true
+        materialize: true
+        event_name: PostToolUse
+        matcher: .*
+        runtime_script: post_tool.py
+      codex:
+        enabled: true
+        materialize: false
+        support: partial
+        event_name: PostToolUse
+        matcher: Bash
+        runtime_script: post_tool.py
+        status_message: Reviewing Bash output
+        limitation: Current official Codex runtime exposes PostToolUse only for Bash.
+
+  - id: prompt.submit
+    description: Prompt-level validation or enrichment before model processing.
+    providers:
+      claude:
+        enabled: true
+        materialize: true
+        support: full
+        event_name: UserPromptSubmit
+        runtime_script: user_prompt_submit.py
+      codex:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: UserPromptSubmit
+        limitation: No Council runtime script exists yet.
+
+  - id: context.pre_compact
+    description: Persist compact handoff context before Claude compacts the transcript.
+    providers:
+      claude:
+        enabled: true
+        materialize: true
+        support: full
+        event_name: PreCompact
+        runtime_script: pre_compact.py
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No equivalent current Codex hook event is documented.
+
+  - id: session.stop
+    description: Session stop review and cleanup.
+    providers:
+      claude:
+        enabled: true
+        materialize: true
+        event_name: Stop
+        runtime_script: stop.py
+      codex:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: Stop
+        runtime_script: stop.py
+        limitation: Provider-specific runtime wrapper not materialized in this slice.
+
+  - id: tool.permission_request
+    description: Permission dialog interception.
+    providers:
+      claude:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: PermissionRequest
+        limitation: No Council runtime script exists yet.
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No equivalent current Codex hook event is documented.
+
+  - id: tool.post_failure
+    description: Tool failure review after an unsuccessful call.
+    providers:
+      claude:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: PostToolUseFailure
+        limitation: No Council runtime script exists yet.
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No separate current Codex failure hook is documented.
+
+  - id: notification
+    description: Notification lifecycle integration.
+    providers:
+      claude:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: Notification
+        limitation: No Council runtime script exists yet.
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No equivalent current Codex hook event is documented.
+
+  - id: subagent.start
+    description: Subagent lifecycle start.
+    providers:
+      claude:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: SubagentStart
+        limitation: No Council runtime script exists yet.
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No equivalent current Codex hook event is documented.
+
+  - id: subagent.stop
+    description: Subagent lifecycle stop.
+    providers:
+      claude:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: SubagentStop
+        limitation: No Council runtime script exists yet.
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No equivalent current Codex hook event is documented.
+
+  - id: worktree.create
+    description: Worktree creation lifecycle.
+    providers:
+      claude:
+        enabled: true
+        materialize: false
+        support: full
+        event_name: WorktreeCreate
+        limitation: No Council runtime script exists yet.
+      codex:
+        enabled: false
+        materialize: false
+        support: unsupported
+        limitation: No equivalent current Codex hook event is documented.

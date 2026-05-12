@@ -1,0 +1,49 @@
+---
+description: Each bounded task package gets a fresh agent instance — never reuse agents across packages
+priority: critical
+---
+# Fresh Agent Instances
+
+Every bounded task package MUST be assigned to a freshly spawned agent. Never reuse an agent across multiple task packages.
+
+**Why:** Agent context windows accumulate prior work, causing:
+- Lost task specifications (agent forgets what was assigned)
+- Confusion between completed and current work
+- Degraded output quality from context noise
+- Repeated need to resend instructions
+
+## The Rule
+
+- One Forge per task package. `forge-p7-bridge` and `forge-p7-hooks` are separate agents.
+- Fresh means fresh. Spawn new workers as isolated execution windows; do not fork the coordinator/session transcript into them by default.
+- `fork_context:true` is not a normal freshness mechanism. It clones upstream context and can collapse specialist identity back into Atlas/coordinator drift.
+- **Maximum 5-6 files per agent.** Measure complexity before delegation: count files, functions to modify, and integration points. If it exceeds 6 files, split into multiple agents.
+- Shut down the previous agent before or after spawning the next (unless file ownership is disjoint and they can run parallel).
+- Name agents descriptively: `forge-p6-validator`, `lens-agentkit-audit`, `mantis-git-bug`.
+- This applies to ALL agent types: Forge, Lens, Blueprint, Mantis, Sentinel, Arbiter.
+- The only exception is when an agent explicitly reports "ready for next task" AND the next task is in the same bounded scope (e.g., sequential sub-packages within the same phase where the agent's context is still relevant).
+- Full thread inheritance is allowed only when the operator explicitly requests it or when exact transcript continuity is itself part of the task. If used, the orchestrator must justify it explicitly.
+
+## Complexity Cap
+
+Before delegating, the orchestrator MUST measure:
+- **File count**: hard cap at 5-6 files per agent
+- **Function count**: more than 10-15 functions to modify = split
+- **Integration points**: if the change requires coordinating across multiple subsystems, split by subsystem
+
+If Blueprint defines N packages, the orchestrator deploys N agents. No merging. No "it's the same pattern so one agent can handle it." The pattern may be the same but the scope is not.
+
+## Anti-Patterns
+
+```
+WRONG: Reusing forge-phase6 across 9 task packages (Phases 6-10)
+WRONG: Sending a new task to an agent that completed unrelated prior work
+WRONG: Keeping an agent alive "in case we need it later" after its package is done
+WRONG: Spawning forge with fork_context:true so it inherits Atlas thread history
+WRONG: Combining separate Blueprint packages into one agent because "same pattern"
+WRONG: A task package that touches 18 files — that's 3-4 packages, not one
+WRONG: Giving one agent "all remaining files" as a single task
+RIGHT: Fresh forge-p7-bridge for package 7.1, fresh forge-p7-hooks for package 7.2
+RIGHT: Shut down completed agent, spawn new one with clean context
+RIGHT: If Blueprint produces a package over 6 files, push back and split it before executing
+```

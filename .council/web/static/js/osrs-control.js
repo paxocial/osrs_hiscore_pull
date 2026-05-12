@@ -1,876 +1,571 @@
-(function () {
-  "use strict";
-
-  const STORAGE_BACKEND_URL = "osrs-control.backend-url";
-  const STORAGE_EMBED_PATH = "osrs-control.embed-path";
-  const DEFAULT_BACKEND_URL = "http://127.0.0.1:8001";
-  const DEFAULT_EMBED_PATH = "/";
-  const DEFAULT_RUNTIME_PORT = 8001;
-  const SNAPSHOT_MODES = [
-    "auto",
-    "main",
-    "ironman",
-    "hardcore",
-    "ultimate",
-    "deadman",
-    "tournament",
-    "seasonal",
-  ];
-  const ACCOUNT_MODES = SNAPSHOT_MODES.filter((mode) => mode !== "auto");
-
-  const state = {
-    view: "dashboard",
-    baseUrl: DEFAULT_BACKEND_URL,
-    embedPath: DEFAULT_EMBED_PATH,
-    lastHealth: null,
-    accounts: [],
-    snapshots: [],
-    runtime: null,
-  };
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  function text(el, value) {
-    if (!el) {
-      return;
-    }
-    el.textContent = value == null ? "" : String(value);
-  }
-
-  function escapeHtml(input) {
-    return String(input ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
-  function normalizeBaseUrl(value) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return DEFAULT_BACKEND_URL;
-    }
-    return raw.replace(/\/+$/, "");
-  }
-
-  function normalizeEmbedPath(value) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return DEFAULT_EMBED_PATH;
-    }
-    return raw.startsWith("/") ? raw : `/${raw}`;
-  }
-
-  function fullEmbedUrl() {
-    return `${state.baseUrl}${state.embedPath}`;
-  }
-
-  function apiUrl(path) {
-    return `${state.baseUrl}/api${path}`;
-  }
-
-  function parseRuntimePort() {
-    try {
-      const parsed = new URL(state.baseUrl);
-      if (parsed.port) {
-        return Number(parsed.port);
-      }
-      return parsed.protocol === "https:" ? 443 : 80;
-    } catch (_error) {
-      return DEFAULT_RUNTIME_PORT;
-    }
-  }
-
-  function formatTime(isoValue) {
-    if (!isoValue) {
-      return "-";
-    }
-    const ts = new Date(isoValue);
-    if (Number.isNaN(ts.getTime())) {
-      return String(isoValue);
-    }
-    return ts.toLocaleString();
-  }
-
-  function statusTone(dotId, kind) {
-    const dot = byId(dotId);
-    if (!dot) {
-      return;
-    }
-    dot.classList.remove("osrs-dot--healthy", "osrs-dot--warning", "osrs-dot--error");
-    if (kind === "healthy") {
-      dot.classList.add("osrs-dot--healthy");
-    } else if (kind === "warning") {
-      dot.classList.add("osrs-dot--warning");
-    } else if (kind === "error") {
-      dot.classList.add("osrs-dot--error");
-    }
-  }
-
-  function setBackendStatus(label, detail, toneKind) {
-    text(byId("backendStatusLabel"), label);
-    text(byId("backendStatusDetail"), detail);
-    statusTone("backendStatusDot", toneKind);
-  }
-
-  function setRuntimeStatus(label, detail, toneKind) {
-    text(byId("runtimeStatusLabel"), label);
-    text(byId("runtimeStatusDetail"), detail);
-    statusTone("runtimeStatusDot", toneKind);
-  }
-
-  function setLastRefreshLabel() {
-    const now = new Date();
-    text(byId("lastHealthCheckedAt"), `Last checked: ${now.toLocaleTimeString()}`);
-  }
-
-  function getCouncilAuthHeaders() {
-    if (window.API && typeof window.API.getAuthHeaders === "function") {
-      return window.API.getAuthHeaders();
-    }
-
-    const headers = {};
-    const token = window.localStorage.getItem("session_token");
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    const councilId =
-      window.sessionStorage.getItem("activeCouncilId") ||
-      window.localStorage.getItem("selectedCouncil");
-    if (councilId) {
-      headers["X-Council-Id"] = councilId;
-    }
-    return headers;
-  }
-
-  async function parseResponse(response) {
-    const raw = await response.text();
-    let parsed = null;
-    if (raw) {
-      try {
-        parsed = JSON.parse(raw);
-      } catch (_err) {
-        parsed = null;
-      }
-    }
-    if (!response.ok) {
-      let message = `HTTP ${response.status}`;
-      if (parsed && typeof parsed === "object" && parsed.detail) {
-        message = `${message}: ${parsed.detail}`;
-      } else if (raw) {
-        message = `${message}: ${raw.slice(0, 220)}`;
-      }
-      throw new Error(message);
-    }
-    return parsed;
-  }
-
-  async function getJson(url, options = {}) {
-    const req = {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      ...options,
-    };
-    const response = await fetch(url, req);
-    return parseResponse(response);
-  }
-
-  async function getCouncilJson(endpoint, options = {}) {
-    const { headers: inputHeaders = {}, ...rest } = options;
-    const req = {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-        ...getCouncilAuthHeaders(),
-        ...inputHeaders,
-      },
-      ...rest,
-    };
-    const response = await fetch(endpoint, req);
-    return parseResponse(response);
-  }
-
-  function applyViewFilters() {
-    const scoped = document.querySelectorAll("[data-show-on]");
-    scoped.forEach((el) => {
-      const allow = String(el.getAttribute("data-show-on") || "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-      const visible = allow.length === 0 || allow.includes("all") || allow.includes(state.view);
-      el.classList.toggle("osrs-hidden", !visible);
-    });
-  }
-
-  function setInputValues() {
-    const baseInput = byId("backendBaseUrlInput");
-    if (baseInput) {
-      baseInput.value = state.baseUrl;
-    }
-    const embedInput = byId("embedPathInput");
-    if (embedInput) {
-      embedInput.value = state.embedPath;
-    }
-  }
-
-  function syncEmbeddedFrame() {
-    const frame = byId("embeddedBackendFrame");
-    if (!frame) {
-      return;
-    }
-    frame.src = fullEmbedUrl();
-  }
-
-  function renderRuntimeState(runtime) {
-    const info = runtime && typeof runtime === "object" ? runtime : {};
-    const running = Boolean(info.running);
-    const conflict = Boolean(info.single_instance_conflict);
-    const managed = Boolean(info.managed);
-    const port = info.port ?? parseRuntimePort();
-    const managedPid = info.managed_pid ?? "-";
-    const canStart = Boolean(info.can_start);
-
-    text(byId("runtimePortValue"), String(port));
-    text(byId("runtimePidValue"), String(managedPid));
-    text(byId("runtimeManagedValue"), managed ? "yes" : "no");
-    text(byId("runtimeConflictValue"), conflict ? "yes" : "no");
-
-    if (conflict) {
-      setRuntimeStatus(
-        "Conflict",
-        "Another matching process is online. Resolve conflict before starting a new instance.",
-        "error"
-      );
-    } else if (running) {
-      setRuntimeStatus(
-        "Running",
-        managed
-          ? "Council is tracking a managed OSRS backend process."
-          : "Backend is online but not currently marked as managed.",
-        "healthy"
-      );
-    } else {
-      setRuntimeStatus(
-        "Stopped",
-        "No OSRS backend runtime detected for this council.",
-        "warning"
-      );
-    }
-
-    const startBtn = byId("startRuntimeBtn");
-    if (startBtn) {
-      startBtn.disabled = running || conflict || !canStart;
-    }
-    const stopBtn = byId("stopRuntimeBtn");
-    if (stopBtn) {
-      stopBtn.disabled = !running;
-    }
-  }
-
-  async function checkBackendHealth() {
-    setBackendStatus("Checking...", `GET ${apiUrl("/health")}`, "warning");
-    try {
-      const health = await getJson(apiUrl("/health"));
-      state.lastHealth = health || {};
-
-      const stats = (state.lastHealth && state.lastHealth.stats) || {};
-      text(byId("kvHealthStatus"), state.lastHealth.status || "unknown");
-      text(byId("kvAccountCount"), stats.accounts ?? "-");
-      text(byId("kvSnapshotCount"), stats.snapshots ?? "-");
-      text(byId("kvSchemaVersion"), stats.schema_version ?? "-");
-
-      if (state.lastHealth.status === "healthy") {
-        setBackendStatus("Healthy", "Backend reachable and DB connected.", "healthy");
-      } else {
-        setBackendStatus(
-          state.lastHealth.status || "Unhealthy",
-          state.lastHealth.error || "Backend responded with a non-healthy status.",
-          "warning"
-        );
-      }
-    } catch (error) {
-      setBackendStatus(
-        "Unavailable",
-        `${error.message}. If this is CORS, restart backend with Council origin allowed.`,
-        "error"
-      );
-      text(byId("kvHealthStatus"), "unreachable");
-      text(byId("kvAccountCount"), "-");
-      text(byId("kvSnapshotCount"), "-");
-      text(byId("kvSchemaVersion"), "-");
-    } finally {
-      setLastRefreshLabel();
-    }
-  }
-
-  async function loadRuntimeStatus() {
-    const runtimePort = parseRuntimePort();
-    setRuntimeStatus("Checking...", "Loading Council runtime state...", "warning");
-    try {
-      const runtime = await getCouncilJson(`/api/osrs/runtime/status?port=${encodeURIComponent(runtimePort)}`);
-      state.runtime = runtime || {};
-      renderRuntimeState(state.runtime);
-      text(byId("runtimeActionStatus"), "Runtime status refreshed.");
-    } catch (error) {
-      state.runtime = null;
-      setRuntimeStatus("Unavailable", `Failed to load runtime status: ${error.message}`, "error");
-      text(byId("runtimePortValue"), String(runtimePort));
-      text(byId("runtimePidValue"), "-");
-      text(byId("runtimeManagedValue"), "-");
-      text(byId("runtimeConflictValue"), "-");
-      text(byId("runtimeActionStatus"), `Runtime status failed: ${error.message}`);
-      const startBtn = byId("startRuntimeBtn");
-      if (startBtn) {
-        startBtn.disabled = false;
-      }
-      const stopBtn = byId("stopRuntimeBtn");
-      if (stopBtn) {
-        stopBtn.disabled = true;
-      }
-    }
-  }
-
-  async function startRuntime() {
-    const runtimePort = parseRuntimePort();
-    const statusBox = byId("runtimeActionStatus");
-    text(statusBox, `Starting OSRS backend on port ${runtimePort}...`);
-
-    try {
-      const payload = {
-        port: runtimePort,
-        wait_seconds: 30.0,
-      };
-
-      const runtime = await getCouncilJson("/api/osrs/runtime/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      state.runtime = runtime || {};
-      renderRuntimeState(state.runtime);
-      text(statusBox, runtime?.message || "Backend start request accepted.");
-
-      await Promise.all([loadCouncilProcesses(), checkBackendHealth()]);
-    } catch (error) {
-      text(statusBox, `Start failed: ${error.message}`);
-    } finally {
-      await loadRuntimeStatus();
-    }
-  }
-
-  async function stopRuntime() {
-    const runtimePort = parseRuntimePort();
-    const statusBox = byId("runtimeActionStatus");
-    text(statusBox, "Stopping OSRS backend...");
-
-    try {
-      const runtime = await getCouncilJson(`/api/osrs/runtime/stop?port=${encodeURIComponent(runtimePort)}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          confirm: true,
-          grace_seconds: 4.0,
-          force_kill: true,
-        }),
-      });
-
-      state.runtime = runtime || {};
-      renderRuntimeState(state.runtime);
-      text(statusBox, runtime?.message || "Backend stop request completed.");
-
-      await Promise.all([loadCouncilProcesses(), checkBackendHealth()]);
-    } catch (error) {
-      text(statusBox, `Stop failed: ${error.message}`);
-    } finally {
-      await loadRuntimeStatus();
-    }
-  }
-
-  async function loadAccounts() {
-    const tableBody = byId("accountsTableBody");
-    if (!tableBody) {
-      return;
-    }
-
-    tableBody.innerHTML = "<tr><td colspan='6'>Loading accounts...</td></tr>";
-    try {
-      const payload = await getJson(apiUrl("/accounts/?page=1&page_size=200&active_only=true"));
-      const accounts = Array.isArray(payload?.accounts) ? payload.accounts : [];
-      state.accounts = accounts;
-
-      if (!accounts.length) {
-        tableBody.innerHTML = "<tr><td colspan='6'>No accounts found.</td></tr>";
-        return;
-      }
-
-      tableBody.innerHTML = accounts
-        .map((account) => {
-          const name = escapeHtml(account.name || "-");
-          const display = escapeHtml(account.display_name || "-");
-          const mode = escapeHtml(account.default_mode || "-");
-          const snapshots = account.total_snapshots ?? "-";
-          const latest = formatTime(account.latest_snapshot);
-          const deleteKey = encodeURIComponent(account.name || "");
-
-          return `
-            <tr>
-              <td><code>${name}</code></td>
-              <td>${display}</td>
-              <td>${mode}</td>
-              <td>${snapshots}</td>
-              <td>${escapeHtml(latest)}</td>
-              <td>
-                <span class="osrs-actions">
-                  <button class="osrs-btn osrs-btn--danger osrs-btn--small" data-delete-account="${deleteKey}">Delete</button>
-                </span>
-              </td>
-            </tr>
-          `;
-        })
-        .join("");
-    } catch (error) {
-      tableBody.innerHTML = `<tr><td colspan='6'>Failed to load accounts: ${escapeHtml(error.message)}</td></tr>`;
-    }
-  }
-
-  async function createAccount(event) {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    const name = String(form.elements.account_name?.value || "").trim();
-    const displayName = String(form.elements.display_name?.value || "").trim();
-    const mode = String(form.elements.account_mode?.value || "main").trim().toLowerCase();
-    const statusBox = byId("accountActionStatus");
-
-    if (!name) {
-      text(statusBox, "Account name is required.");
-      return;
-    }
-
-    const payload = {
-      name,
-      display_name: displayName || null,
-      default_mode: mode || "main",
-      active: true,
-      metadata: {},
-    };
-
-    try {
-      await getJson(apiUrl("/accounts/"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      text(statusBox, `Created account ${name}.`);
-      form.reset();
-      if (form.elements.account_mode) {
-        form.elements.account_mode.value = "main";
-      }
-      await loadAccounts();
-      await checkBackendHealth();
-    } catch (error) {
-      text(statusBox, `Create failed: ${error.message}`);
-    }
-  }
-
-  async function deleteAccount(accountName) {
-    if (!accountName) {
-      return;
-    }
-    const confirmed = window.confirm(`Delete account "${accountName}" and all associated snapshot records?`);
-    if (!confirmed) {
-      return;
-    }
-
-    const statusBox = byId("accountActionStatus");
-    text(statusBox, `Deleting ${accountName}...`);
-    try {
-      await getJson(apiUrl(`/accounts/${encodeURIComponent(accountName)}`), {
-        method: "DELETE",
-      });
-      text(statusBox, `Deleted ${accountName}.`);
-      await loadAccounts();
-      await loadLatestSnapshots();
-      await checkBackendHealth();
-    } catch (error) {
-      text(statusBox, `Delete failed: ${error.message}`);
-    }
-  }
-
-  function renderRunResults(results) {
-    const container = byId("snapshotRunResults");
-    if (!container) {
-      return;
-    }
-    if (!Array.isArray(results) || !results.length) {
-      container.innerHTML = "<div class='osrs-inline-note'>No result payload returned.</div>";
-      return;
-    }
-
-    container.innerHTML = results
-      .map((result) => {
-        const ok = Boolean(result?.success);
-        const tone = ok ? "osrs-tag--ok" : "osrs-tag--error";
-        const label = ok ? "success" : "failed";
-        const player = escapeHtml(result?.player || "-");
-        const mode = escapeHtml(result?.resolved_mode || "-");
-        const message = escapeHtml(result?.message || "");
-        const delta = escapeHtml(result?.delta_summary || "");
-        const path = escapeHtml(result?.snapshot_path || "");
-
-        return `
-          <div class="osrs-result-row">
-            <div class="osrs-row">
-              <span class="osrs-tag ${tone}">${label}</span>
-              <span class="osrs-tag">${player}</span>
-              <span class="osrs-tag">${mode}</span>
-            </div>
-            <div>${message}</div>
-            ${delta ? `<div class="osrs-muted">${delta}</div>` : ""}
-            ${path ? `<code>${path}</code>` : ""}
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  async function runSnapshot(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const player = String(form.elements.snapshot_player?.value || "").trim();
-    const mode = String(form.elements.snapshot_mode?.value || "auto").trim().toLowerCase();
-    const statusBox = byId("snapshotRunStatus");
-
-    if (!player) {
-      text(statusBox, "Player name is required.");
-      return;
-    }
-
-    text(statusBox, `Running snapshot for ${player}...`);
-    renderRunResults([]);
-
-    try {
-      const payload = { player, mode };
-      const result = await getJson(apiUrl("/snapshots/run"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      text(statusBox, `Snapshot run completed for ${player}.`);
-      renderRunResults(result?.results || []);
-      await loadLatestSnapshots();
-      await checkBackendHealth();
-    } catch (error) {
-      text(statusBox, `Snapshot run failed: ${error.message}`);
-    }
-  }
-
-  async function loadLatestSnapshots() {
-    const body = byId("latestSnapshotsTableBody");
-    if (!body) {
-      return;
-    }
-
-    body.innerHTML = "<tr><td colspan='7'>Loading snapshots...</td></tr>";
-    try {
-      const rows = await getJson(apiUrl("/snapshots/latest?limit=25"));
-      const snapshots = Array.isArray(rows) ? rows : [];
-      state.snapshots = snapshots;
-
-      if (!snapshots.length) {
-        body.innerHTML = "<tr><td colspan='7'>No snapshots available.</td></tr>";
-        return;
-      }
-
-      body.innerHTML = snapshots
-        .map((row) => {
-          const snapshotId = row.snapshot_id || "-";
-          const account = row.account_name || row.player || "-";
-          const mode = row.resolved_mode || "-";
-          const fetchedAt = formatTime(row.fetched_at);
-          const totalLevel = row.total_level ?? "-";
-          const totalXp = row.total_xp ?? "-";
-          const rawLink = `${apiUrl(`/snapshots/${encodeURIComponent(snapshotId)}/raw`)}`;
-          const reportLink = `${apiUrl(`/snapshots/${encodeURIComponent(snapshotId)}/report`)}`;
-
-          return `
-            <tr>
-              <td><code>${escapeHtml(snapshotId)}</code></td>
-              <td>${escapeHtml(account)}</td>
-              <td>${escapeHtml(mode)}</td>
-              <td>${escapeHtml(String(totalLevel))}</td>
-              <td>${escapeHtml(String(totalXp))}</td>
-              <td>${escapeHtml(fetchedAt)}</td>
-              <td>
-                <span class="osrs-actions">
-                  <a class="osrs-btn osrs-btn--ghost osrs-btn--small" href="${rawLink}" target="_blank" rel="noopener">Raw</a>
-                  <a class="osrs-btn osrs-btn--ghost osrs-btn--small" href="${reportLink}" target="_blank" rel="noopener">Report</a>
-                </span>
-              </td>
-            </tr>
-          `;
-        })
-        .join("");
-    } catch (error) {
-      body.innerHTML = `<tr><td colspan='7'>Failed to load snapshots: ${escapeHtml(error.message)}</td></tr>`;
-    }
-  }
-
-  async function loadCouncilProcesses() {
-    const body = byId("processTableBody");
-    if (!body) {
-      return;
-    }
-
-    body.innerHTML = "<tr><td colspan='6'>Loading process list...</td></tr>";
-    try {
-      const payload = await getCouncilJson("/api/processes");
-      const list = Array.isArray(payload?.processes) ? payload.processes : [];
-
-      if (!list.length) {
-        body.innerHTML = "<tr><td colspan='6'>No managed processes reported by Council.</td></tr>";
-        return;
-      }
-
-      body.innerHTML = list
-        .map((processRow) => {
-          const pid = processRow.pid ?? "-";
-          const type = processRow.process_type ?? "-";
-          const status = processRow.status ?? "-";
-          const started = formatTime(processRow.started_at);
-          const heartbeat = formatTime(processRow.last_heartbeat);
-          const restarts = processRow.restart_count ?? 0;
-          return `
-            <tr>
-              <td>${escapeHtml(String(pid))}</td>
-              <td>${escapeHtml(String(type))}</td>
-              <td>${escapeHtml(String(status))}</td>
-              <td>${escapeHtml(started)}</td>
-              <td>${escapeHtml(heartbeat)}</td>
-              <td>${escapeHtml(String(restarts))}</td>
-            </tr>
-          `;
-        })
-        .join("");
-    } catch (error) {
-      body.innerHTML = `<tr><td colspan='6'>Failed to load Council processes: ${escapeHtml(error.message)}</td></tr>`;
-    }
-  }
-
-  async function copyText(content, doneLabelEl) {
-    try {
-      await navigator.clipboard.writeText(content);
-      if (doneLabelEl) {
-        doneLabelEl.textContent = "Copied.";
-      }
-    } catch (_error) {
-      if (doneLabelEl) {
-        doneLabelEl.textContent = "Clipboard blocked.";
-      }
-    } finally {
-      if (doneLabelEl) {
-        window.setTimeout(() => {
-          doneLabelEl.textContent = "";
-        }, 1800);
-      }
-    }
-  }
-
-  function populateModeSelect(selectId, options, defaultValue) {
-    const select = byId(selectId);
-    if (!select) {
-      return;
-    }
-    select.innerHTML = options.map((mode) => `<option value="${mode}">${mode}</option>`).join("");
-    select.value = defaultValue;
-  }
-
-  function buildCommandHints() {
-    const startCommand = `CORS_ALLOWED_ORIGINS="http://localhost:8000,${window.location.origin}" OSRS_BACKEND_PORT=8001 ./scripts/start_osrs_backend.sh`;
-    const corsCommand = `export CORS_ALLOWED_ORIGINS="http://localhost:8000,${window.location.origin}"`;
-
-    text(byId("startCommandText"), startCommand);
-    text(byId("corsCommandText"), corsCommand);
-
-    const copyStart = byId("copyStartCmdBtn");
-    if (copyStart) {
-      copyStart.addEventListener("click", async () => {
-        await copyText(startCommand, byId("copyStartCmdState"));
-      });
-    }
-
-    const copyCors = byId("copyCorsCmdBtn");
-    if (copyCors) {
-      copyCors.addEventListener("click", async () => {
-        await copyText(corsCommand, byId("copyCorsCmdState"));
-      });
-    }
-  }
-
-  function bindEvents() {
-    const saveBackendBtn = byId("saveBackendBtn");
-    if (saveBackendBtn) {
-      saveBackendBtn.addEventListener("click", () => {
-        const baseInput = byId("backendBaseUrlInput");
-        state.baseUrl = normalizeBaseUrl(baseInput ? baseInput.value : state.baseUrl);
-        window.localStorage.setItem(STORAGE_BACKEND_URL, state.baseUrl);
-        setInputValues();
-        syncEmbeddedFrame();
-        checkBackendHealth();
-        loadAccounts();
-        loadLatestSnapshots();
+/**
+ * OSRS Control Center -- Dashboard Controller
+ * =============================================
+ * Named IIFE module for the Control Center (osrs-dashboard) page.
+ * Manages runtime controls, health stats, quick snapshots, and recent snapshots.
+ *
+ * Pattern: Named IIFE exported as window.OsrsControl
+ * Dependencies: OsrsCommon (osrs-common.js), API (Council app.js)
+ */
+
+const OsrsControl = (() => {
+    'use strict';
+
+    // =========================================================================
+    // CONFIGURATION
+    // =========================================================================
+
+    let _pollTimer = null;
+    let _refreshTimer = null;
+    const POLL_INTERVAL = 5000;     // 5s for runtime status
+    const REFRESH_INTERVAL = 30000; // 30s for health + snapshots
+    const RECENT_LIMIT = 10;
+    const _dom = {};
+
+    // =========================================================================
+    // LIFECYCLE
+    // =========================================================================
+
+    function init() {
+        _cacheDom();
+        if (!_dom.root) return;
+        _bindEvents();
         loadRuntimeStatus();
-      });
+        loadHealth();
+        loadRecentSnapshots();
+        _startPolling();
+        OsrsCommon.listenCouncilSwitch(() => { destroy(); init(); });
     }
 
-    const checkBackendBtn = byId("checkBackendBtn");
-    if (checkBackendBtn) {
-      checkBackendBtn.addEventListener("click", async () => {
-        await checkBackendHealth();
-      });
+    function destroy() {
+        if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+        if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
     }
 
-    const openBackendBtn = byId("openBackendBtn");
-    if (openBackendBtn) {
-      openBackendBtn.addEventListener("click", () => {
-        window.open(fullEmbedUrl(), "_blank", "noopener");
-      });
+    function refresh() {
+        loadRuntimeStatus();
+        loadHealth();
+        loadRecentSnapshots();
     }
 
-    const loadEmbedBtn = byId("loadEmbedBtn");
-    if (loadEmbedBtn) {
-      loadEmbedBtn.addEventListener("click", () => {
-        const embedInput = byId("embedPathInput");
-        state.embedPath = normalizeEmbedPath(embedInput ? embedInput.value : state.embedPath);
-        window.localStorage.setItem(STORAGE_EMBED_PATH, state.embedPath);
-        setInputValues();
-        syncEmbeddedFrame();
-      });
+    // =========================================================================
+    // DOM CACHING
+    // =========================================================================
+
+    function _cacheDom() {
+        _dom.root = document.getElementById('osrs-control-root');
+        // Runtime controls
+        _dom.statusBadge = document.getElementById('runtime-status-badge');
+        _dom.status = document.getElementById('runtime-status');
+        _dom.pid = document.getElementById('runtime-pid');
+        _dom.port = document.getElementById('runtime-port');
+        _dom.uptime = document.getElementById('runtime-uptime');
+        _dom.btnStart = document.getElementById('btn-start');
+        _dom.btnStop = document.getElementById('btn-stop');
+        _dom.btnRefresh = document.getElementById('btn-refresh');
+        // Health KPIs
+        _dom.healthBadge = document.getElementById('health-status-badge');
+        _dom.kpiAccounts = document.getElementById('kpi-accounts');
+        _dom.kpiSnapshots = document.getElementById('kpi-snapshots');
+        _dom.kpiSchema = document.getElementById('kpi-schema');
+        _dom.kpiLastCheck = document.getElementById('kpi-last-check');
+        // Snapshot form
+        _dom.snapshotForm = document.getElementById('quick-snapshot-form');
+        _dom.snapshotPlayer = document.getElementById('snapshot-player');
+        _dom.snapshotMode = document.getElementById('snapshot-mode');
+        _dom.snapshotStatus = document.getElementById('snapshot-run-status');
+        _dom.snapshotResults = document.getElementById('snapshot-run-results');
+        // Recent snapshots table
+        _dom.snapshotsLoading = document.getElementById('recent-snapshots-loading');
+        _dom.snapshotsEmpty = document.getElementById('recent-snapshots-empty');
+        _dom.snapshotsTable = document.getElementById('recent-snapshots-table');
+        _dom.snapshotsBody = document.getElementById('recent-snapshots-body');
+        _dom.btnRefreshSnapshots = document.getElementById('btn-refresh-snapshots');
+        // Offline banner
+        _dom.offlineBanner = document.getElementById('offline-banner');
+        // Toast
+        _dom.toast = document.getElementById('osrs-toast');
     }
 
-    const refreshAccountsBtn = byId("refreshAccountsBtn");
-    if (refreshAccountsBtn) {
-      refreshAccountsBtn.addEventListener("click", async () => {
-        await loadAccounts();
-      });
-    }
+    // =========================================================================
+    // EVENT BINDING
+    // =========================================================================
 
-    const refreshSnapshotsBtn = byId("refreshSnapshotsBtn");
-    if (refreshSnapshotsBtn) {
-      refreshSnapshotsBtn.addEventListener("click", async () => {
-        await loadLatestSnapshots();
-      });
-    }
-
-    const refreshProcessesBtn = byId("refreshProcessesBtn");
-    if (refreshProcessesBtn) {
-      refreshProcessesBtn.addEventListener("click", async () => {
-        await loadCouncilProcesses();
-      });
-    }
-
-    const runtimeRefreshBtn = byId("runtimeRefreshBtn");
-    if (runtimeRefreshBtn) {
-      runtimeRefreshBtn.addEventListener("click", async () => {
-        await loadRuntimeStatus();
-      });
-    }
-
-    const startRuntimeBtn = byId("startRuntimeBtn");
-    if (startRuntimeBtn) {
-      startRuntimeBtn.addEventListener("click", async () => {
-        await startRuntime();
-      });
-    }
-
-    const stopRuntimeBtn = byId("stopRuntimeBtn");
-    if (stopRuntimeBtn) {
-      stopRuntimeBtn.addEventListener("click", async () => {
-        await stopRuntime();
-      });
-    }
-
-    const accountForm = byId("accountCreateForm");
-    if (accountForm) {
-      accountForm.addEventListener("submit", createAccount);
-    }
-
-    const snapshotForm = byId("snapshotRunForm");
-    if (snapshotForm) {
-      snapshotForm.addEventListener("submit", runSnapshot);
-    }
-
-    const accountsBody = byId("accountsTableBody");
-    if (accountsBody) {
-      accountsBody.addEventListener("click", async (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-          return;
+    function _bindEvents() {
+        if (_dom.btnStart) {
+            _dom.btnStart.addEventListener('click', () => startBackend());
         }
-        const button = target.closest("button[data-delete-account]");
-        if (!button) {
-          return;
+        if (_dom.btnStop) {
+            _dom.btnStop.addEventListener('click', () => stopBackend());
         }
-        const encoded = button.getAttribute("data-delete-account");
-        const accountName = decodeURIComponent(encoded || "");
-        await deleteAccount(accountName);
-      });
-    }
-  }
-
-  async function boot() {
-    const root = document.querySelector("[data-osrs-control-root]");
-    if (!(root instanceof HTMLElement)) {
-      return;
+        if (_dom.btnRefresh) {
+            _dom.btnRefresh.addEventListener('click', () => refresh());
+        }
+        if (_dom.btnRefreshSnapshots) {
+            _dom.btnRefreshSnapshots.addEventListener('click', () => loadRecentSnapshots());
+        }
+        if (_dom.snapshotForm) {
+            _dom.snapshotForm.addEventListener('submit', (e) => runSnapshot(e));
+        }
     }
 
-    state.view = String(root.dataset.view || "dashboard").trim().toLowerCase();
-    state.baseUrl = normalizeBaseUrl(
-      window.localStorage.getItem(STORAGE_BACKEND_URL) ||
-        root.dataset.defaultBackendUrl ||
-        DEFAULT_BACKEND_URL
-    );
-    state.embedPath = normalizeEmbedPath(
-      window.localStorage.getItem(STORAGE_EMBED_PATH) || DEFAULT_EMBED_PATH
-    );
+    // =========================================================================
+    // POLLING
+    // =========================================================================
 
-    populateModeSelect("snapshotModeSelect", SNAPSHOT_MODES, "auto");
-    populateModeSelect("accountModeSelect", ACCOUNT_MODES, "main");
+    function _startPolling() {
+        _pollTimer = setInterval(loadRuntimeStatus, POLL_INTERVAL);
+        _refreshTimer = setInterval(() => {
+            loadHealth();
+            loadRecentSnapshots();
+        }, REFRESH_INTERVAL);
+    }
 
-    applyViewFilters();
-    setInputValues();
-    buildCommandHints();
-    bindEvents();
-    syncEmbeddedFrame();
+    // =========================================================================
+    // RUNTIME STATUS
+    // Calls osrs_runtime.py directly (Council route, NOT proxy)
+    // =========================================================================
 
-    await checkBackendHealth();
-    await Promise.all([
-      loadAccounts(),
-      loadLatestSnapshots(),
-      loadCouncilProcesses(),
-      loadRuntimeStatus(),
-    ]);
-  }
+    async function loadRuntimeStatus() {
+        try {
+            const headers = _getAuthHeaders();
+            const resp = await fetch('/api/osrs/runtime/status', { headers });
+            if (!resp.ok) {
+                const errBody = await resp.json().catch(() => ({}));
+                throw { status: resp.status, message: errBody.detail || `HTTP ${resp.status}` };
+            }
+            const data = await resp.json();
+            _renderRuntimeStatus(data);
+        } catch (err) {
+            _renderRuntimeStatus({ status: 'error', _error: err.message || String(err) });
+        }
+    }
 
-  window.addEventListener("DOMContentLoaded", () => {
-    boot();
-  });
+    function _renderRuntimeStatus(data) {
+        const running = Boolean(data.running);
+        const conflict = Boolean(data.single_instance_conflict);
+        const pid = data.managed_pid;
+        const port = data.port || 8001;
+        const canStart = Boolean(data.can_start);
+
+        // Status text
+        if (conflict) {
+            _setText(_dom.status, 'Conflict');
+        } else if (running) {
+            _setText(_dom.status, 'Running');
+        } else {
+            _setText(_dom.status, 'Stopped');
+        }
+
+        // PID / Port
+        _setText(_dom.pid, pid != null ? String(pid) : '--');
+        _setText(_dom.port, String(port));
+
+        // Uptime: compute from uptime_seconds if available, otherwise from started_at
+        if (data.uptime_seconds != null && data.uptime_seconds > 0) {
+            _setText(_dom.uptime, _formatUptime(data.uptime_seconds));
+        } else if (running && data.started_at) {
+            const started = new Date(data.started_at);
+            const now = new Date();
+            const diffSec = Math.max(0, Math.floor((now - started) / 1000));
+            _setText(_dom.uptime, _formatUptime(diffSec));
+        } else {
+            _setText(_dom.uptime, '--');
+        }
+
+        // Badge
+        if (_dom.statusBadge) {
+            _dom.statusBadge.className = 'osrs-badge';
+            if (conflict) {
+                _dom.statusBadge.textContent = 'Conflict';
+                _dom.statusBadge.classList.add('osrs-badge--warning');
+            } else if (running) {
+                _dom.statusBadge.textContent = 'Online';
+                _dom.statusBadge.classList.add('osrs-badge--online');
+            } else if (data._error) {
+                _dom.statusBadge.textContent = 'Error';
+                _dom.statusBadge.classList.add('osrs-badge--offline');
+            } else {
+                _dom.statusBadge.textContent = 'Offline';
+                _dom.statusBadge.classList.add('osrs-badge--offline');
+            }
+        }
+
+        // Button states
+        if (_dom.btnStart) {
+            _dom.btnStart.disabled = running || conflict || !canStart;
+        }
+        if (_dom.btnStop) {
+            _dom.btnStop.disabled = !running;
+        }
+    }
+
+    // =========================================================================
+    // HEALTH
+    // Calls through OsrsCommon proxy (/api/osrs/health)
+    // =========================================================================
+
+    async function loadHealth() {
+        try {
+            const data = await OsrsCommon.fetchJson('/health');
+            _renderHealth(data);
+            OsrsCommon.hideOfflineBanner(_dom.offlineBanner);
+        } catch (err) {
+            if (err.status === 503 || err.status === 502) {
+                OsrsCommon.showOfflineBanner(_dom.offlineBanner);
+            }
+            _renderHealth(null);
+        }
+    }
+
+    function _renderHealth(data) {
+        if (!data) {
+            _setText(_dom.kpiAccounts, '--');
+            _setText(_dom.kpiSnapshots, '--');
+            _setText(_dom.kpiSchema, '--');
+            _setText(_dom.kpiLastCheck, '--');
+            _setBadge(_dom.healthBadge, 'Offline', 'osrs-badge--offline');
+            return;
+        }
+
+        const stats = data.stats || {};
+        _setText(_dom.kpiAccounts, _formatNum(stats.accounts));
+        _setText(_dom.kpiSnapshots, _formatNum(stats.snapshots));
+        _setText(_dom.kpiSchema, stats.schema_version != null ? String(stats.schema_version) : '--');
+        _setText(_dom.kpiLastCheck, _now());
+
+        if (data.status === 'healthy') {
+            _setBadge(_dom.healthBadge, 'Healthy', 'osrs-badge--online');
+        } else {
+            _setBadge(_dom.healthBadge, data.status || 'Unknown', 'osrs-badge--warning');
+        }
+    }
+
+    // =========================================================================
+    // RECENT SNAPSHOTS
+    // Calls through OsrsCommon proxy (/api/osrs/snapshots/latest)
+    // =========================================================================
+
+    async function loadRecentSnapshots() {
+        _showEl(_dom.snapshotsLoading);
+        _hideEl(_dom.snapshotsEmpty);
+        _hideEl(_dom.snapshotsTable);
+
+        try {
+            const data = await OsrsCommon.fetchJson('/snapshots/latest?limit=' + RECENT_LIMIT);
+            const snapshots = Array.isArray(data) ? data : (data && Array.isArray(data.snapshots) ? data.snapshots : []);
+
+            _hideEl(_dom.snapshotsLoading);
+
+            if (snapshots.length === 0) {
+                _showEl(_dom.snapshotsEmpty);
+                _hideEl(_dom.snapshotsTable);
+                return;
+            }
+
+            _hideEl(_dom.snapshotsEmpty);
+            _showEl(_dom.snapshotsTable);
+            _renderSnapshotsTable(snapshots);
+        } catch (err) {
+            _hideEl(_dom.snapshotsLoading);
+            // If backend is offline, show empty state rather than error
+            if (err.status === 503 || err.status === 502) {
+                _showEl(_dom.snapshotsEmpty);
+                if (_dom.snapshotsEmpty) {
+                    const msg = _dom.snapshotsEmpty.querySelector('.osrs-empty__message');
+                    if (msg) msg.textContent = 'Backend offline';
+                    const sub = _dom.snapshotsEmpty.querySelector('.osrs-empty__submessage');
+                    if (sub) sub.textContent = 'Start the backend to view snapshots';
+                }
+            } else {
+                _showEl(_dom.snapshotsEmpty);
+                if (_dom.snapshotsEmpty) {
+                    const msg = _dom.snapshotsEmpty.querySelector('.osrs-empty__message');
+                    if (msg) msg.textContent = 'Failed to load snapshots';
+                    const sub = _dom.snapshotsEmpty.querySelector('.osrs-empty__submessage');
+                    if (sub) sub.textContent = err.message || String(err);
+                }
+            }
+        }
+    }
+
+    function _renderSnapshotsTable(snapshots) {
+        if (!_dom.snapshotsBody) return;
+
+        _dom.snapshotsBody.innerHTML = snapshots.map(row => {
+            const player = OsrsCommon.escapeHtml(row.account_name || row.player || '--');
+            const mode = OsrsCommon.escapeHtml(row.resolved_mode || row.mode || '--');
+            const totalLevel = row.total_level != null ? OsrsCommon.formatLevel(row.total_level) : '--';
+            const totalXp = row.total_xp != null ? OsrsCommon.formatXp(row.total_xp) : '--';
+            const fetched = row.fetched_at ? OsrsCommon.formatTimeAgo(row.fetched_at) : '--';
+
+            return '<tr>' +
+                '<td>' + player + '</td>' +
+                '<td><span class="osrs-badge osrs-badge--mode">' + mode + '</span></td>' +
+                '<td class="osrs-mono">' + totalLevel + '</td>' +
+                '<td class="osrs-mono">' + totalXp + '</td>' +
+                '<td>' + fetched + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    // =========================================================================
+    // START / STOP BACKEND
+    // Calls osrs_runtime.py directly (Council route, NOT proxy)
+    // =========================================================================
+
+    async function startBackend() {
+        if (_dom.btnStart) _dom.btnStart.disabled = true;
+        _showToast('Starting backend...', 'info');
+
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                ..._getAuthHeaders()
+            };
+            const resp = await fetch('/api/osrs/runtime/start', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ port: 8001, wait_seconds: 25 })
+            });
+
+            const data = await resp.json().catch(() => ({}));
+
+            if (!resp.ok) {
+                throw { status: resp.status, message: data.detail || `HTTP ${resp.status}` };
+            }
+
+            if (data.already_running) {
+                _showToast('Backend is already running', 'info');
+            } else if (data.started) {
+                _showToast('Backend started successfully', 'success');
+            } else {
+                _showToast(data.message || 'Start request accepted', 'info');
+            }
+
+            // Refresh all status
+            await loadRuntimeStatus();
+            await loadHealth();
+            await loadRecentSnapshots();
+        } catch (err) {
+            _showToast('Start failed: ' + (err.message || String(err)), 'error');
+            if (_dom.btnStart) _dom.btnStart.disabled = false;
+            await loadRuntimeStatus();
+        }
+    }
+
+    async function stopBackend() {
+        if (_dom.btnStop) _dom.btnStop.disabled = true;
+        _showToast('Stopping backend...', 'info');
+
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                ..._getAuthHeaders()
+            };
+            const resp = await fetch('/api/osrs/runtime/stop', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ confirm: true, grace_seconds: 4.0, force_kill: true })
+            });
+
+            const data = await resp.json().catch(() => ({}));
+
+            if (!resp.ok) {
+                throw { status: resp.status, message: data.detail || `HTTP ${resp.status}` };
+            }
+
+            if (data.stopped) {
+                _showToast('Backend stopped', 'success');
+            } else {
+                _showToast(data.message || 'Stop request completed', 'info');
+            }
+
+            await loadRuntimeStatus();
+            await loadHealth();
+        } catch (err) {
+            _showToast('Stop failed: ' + (err.message || String(err)), 'error');
+            if (_dom.btnStop) _dom.btnStop.disabled = false;
+            await loadRuntimeStatus();
+        }
+    }
+
+    // =========================================================================
+    // RUN SNAPSHOT
+    // Calls through OsrsCommon proxy (/api/osrs/snapshots/run)
+    // =========================================================================
+
+    async function runSnapshot(event) {
+        event.preventDefault();
+
+        const player = (_dom.snapshotPlayer ? _dom.snapshotPlayer.value : '').trim();
+        const mode = _dom.snapshotMode ? _dom.snapshotMode.value : 'auto';
+
+        if (!player) {
+            _setText(_dom.snapshotStatus, 'Player name is required.');
+            return;
+        }
+
+        _setText(_dom.snapshotStatus, 'Running snapshot for ' + OsrsCommon.escapeHtml(player) + '...');
+        if (_dom.snapshotResults) _dom.snapshotResults.innerHTML = '';
+
+        try {
+            const data = await OsrsCommon.postJson('/snapshots/run', { player, mode });
+            _setText(_dom.snapshotStatus, 'Snapshot completed for ' + OsrsCommon.escapeHtml(player));
+            _renderSnapshotResults(data);
+            _showToast('Snapshot completed for ' + player, 'success');
+            await loadRecentSnapshots();
+            await loadHealth();
+        } catch (err) {
+            const msg = err.message || String(err);
+            _setText(_dom.snapshotStatus, 'Snapshot failed: ' + OsrsCommon.escapeHtml(msg));
+            _showToast('Snapshot failed: ' + msg, 'error');
+        }
+    }
+
+    function _renderSnapshotResults(data) {
+        if (!_dom.snapshotResults) return;
+
+        const results = data && Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : []);
+
+        if (results.length === 0) {
+            _dom.snapshotResults.innerHTML = '';
+            return;
+        }
+
+        _dom.snapshotResults.innerHTML = results.map(r => {
+            const ok = Boolean(r.success);
+            const badgeClass = ok ? 'osrs-badge--online' : 'osrs-badge--offline';
+            const label = ok ? 'Success' : 'Failed';
+            const playerName = OsrsCommon.escapeHtml(r.player || '--');
+            const resolvedMode = OsrsCommon.escapeHtml(r.resolved_mode || '--');
+            const message = OsrsCommon.escapeHtml(r.message || '');
+            const delta = r.delta_summary ? OsrsCommon.escapeHtml(r.delta_summary) : '';
+
+            return '<div style="margin-top: var(--space-2); padding: var(--space-2); background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">' +
+                '<div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">' +
+                    '<span class="osrs-badge ' + badgeClass + '">' + label + '</span>' +
+                    '<strong>' + playerName + '</strong>' +
+                    '<span class="osrs-badge osrs-badge--mode">' + resolvedMode + '</span>' +
+                '</div>' +
+                (message ? '<div class="osrs-text-muted" style="font-size: var(--text-sm); margin-top: var(--space-1);">' + message + '</div>' : '') +
+                (delta ? '<div style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">' + delta + '</div>' : '') +
+            '</div>';
+        }).join('');
+    }
+
+    // =========================================================================
+    // TOAST NOTIFICATIONS
+    // =========================================================================
+
+    let _toastTimer = null;
+
+    function _showToast(message, type) {
+        if (!_dom.toast) return;
+
+        if (_toastTimer) {
+            clearTimeout(_toastTimer);
+            _toastTimer = null;
+        }
+
+        // Style based on type
+        let bg, color, border;
+        switch (type) {
+            case 'success':
+                bg = 'var(--success-glow)';
+                color = 'var(--success)';
+                border = 'var(--success)';
+                break;
+            case 'error':
+                bg = 'var(--error-glow)';
+                color = 'var(--error)';
+                border = 'var(--error)';
+                break;
+            default: // info
+                bg = 'var(--cyan-glow)';
+                color = 'var(--cyan-400)';
+                border = 'var(--cyan-500)';
+                break;
+        }
+
+        _dom.toast.style.background = bg;
+        _dom.toast.style.color = color;
+        _dom.toast.style.border = '1px solid ' + border;
+        _dom.toast.textContent = message;
+        _dom.toast.classList.remove('osrs-hidden');
+
+        _toastTimer = setTimeout(() => {
+            _dom.toast.classList.add('osrs-hidden');
+            _toastTimer = null;
+        }, 4000);
+    }
+
+    // =========================================================================
+    // UTILITY HELPERS
+    // =========================================================================
+
+    function _getAuthHeaders() {
+        if (typeof API !== 'undefined' && typeof API.getAuthHeaders === 'function') {
+            return API.getAuthHeaders();
+        }
+        return {};
+    }
+
+    function _setText(el, value) {
+        if (el) el.textContent = value != null ? String(value) : '';
+    }
+
+    function _showEl(el) {
+        if (el) el.classList.remove('osrs-hidden');
+    }
+
+    function _hideEl(el) {
+        if (el) el.classList.add('osrs-hidden');
+    }
+
+    function _setBadge(el, text, className) {
+        if (!el) return;
+        el.className = 'osrs-badge';
+        el.textContent = text;
+        if (className) el.classList.add(className);
+    }
+
+    function _formatUptime(totalSeconds) {
+        if (totalSeconds == null || totalSeconds <= 0) return '--';
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const secs = Math.floor(totalSeconds % 60);
+
+        if (days > 0) return days + 'd ' + hours + 'h ' + minutes + 'm';
+        if (hours > 0) return hours + 'h ' + minutes + 'm';
+        if (minutes > 0) return minutes + 'm ' + secs + 's';
+        return secs + 's';
+    }
+
+    function _formatNum(val) {
+        if (val == null) return '--';
+        const num = Number(val);
+        if (Number.isNaN(num)) return String(val);
+        return num.toLocaleString();
+    }
+
+    function _now() {
+        return new Date().toLocaleTimeString();
+    }
+
+    // =========================================================================
+    // PUBLIC API
+    // =========================================================================
+
+    return {
+        init,
+        destroy,
+        refresh,
+        startBackend,
+        stopBackend,
+        runSnapshot
+    };
 })();
+
+window.OsrsControl = OsrsControl;

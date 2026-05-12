@@ -1,0 +1,34 @@
+---
+description: "Default multi-agent mode is Teams; TaskCreate + Task with team_name; Scribe still mandatory"
+priority: high
+---
+# Team Orchestration
+
+Default multi-agent mode is Teams.
+
+Core requirements:
+
+1. Use team tasks for coordination and dependency tracking.
+2. Put the direct-Scribe warning in the first lines of each teammate prompt: use `mcp__scribe__*` directly and never `mcp__council-v2__scribe_call` when direct Scribe tools are loaded.
+3. Include project name + repo root in each teammate prompt.
+4. Start teammates as fresh execution windows. Do not fork the coordinator thread into the teammate by default.
+5. Every teammate launch must include the active Scribe project name and require the teammate to bind it once with `set_project`, then use that same project on all teammate Scribe/Council calls. Do not instruct teammates to call `set_project` before each log entry.
+5. Keep Scribe logging mandatory even in team mode.
+6. Prefer direct teammate messages over broad broadcast spam.
+7. Close teammates cleanly before deleting team resources.
+
+When subagents are acceptable:
+
+- Single, bounded, low-overhead task with no cross-agent dependency.
+
+Forbidden patterns:
+
+- Background workers without task-level visibility.
+- `fork_context:true` for routine teammate launches.
+- teammate prompts that omit the active Scribe project name or allow the teammate to choose a different project.
+- Treating a forked Atlas transcript as normal teammate context instead of a special-case override.
+- Skipping Scribe because TaskList exists.
+- Removing task dependencies to "go faster."
+
+For full team lifecycle protocol, teammate mapping, and messaging rules, use skill:
+`/team-orchestration`.

@@ -1,11 +1,13 @@
 {# Scribe Protocol — shared boilerplate for all agents #}
 ## Scribe Protocol (Non-Negotiable)
 
+**Scribe protocol is LAW. Every item below is mandatory for every agent in every session.**
+
 Every significant action must be logged. Every document must go through `manage_docs`.
 
 ### Critical Rules
 
-1. **TaskOutput is BANNED** — Use `read_recent`/`query_entries` to check agent progress. NEVER read task output files.
+1. **TaskOutput is BANNED** — Use `read_recent`/`query_entries` to check agent progress. NEVER read task output files. In team mode, use TaskList for real-time coordination, but Scribe remains the audit trail.
 2. **MCP tools are TOOL CALLS** — Call `mcp__scribe__*` directly. NEVER substitute with bash/echo/python.
 3. **No replacement files** — Edit existing files. No `*_v2`, `enhanced_*`, `*_new`.
 
@@ -23,6 +25,13 @@ read_recent(agent="{{ agent.name }}", limit=5)
 
 **Skip steps 1-2 = your work gets rejected.**
 
+**Project binding is sticky.** Call `set_project` once during startup for the active project, then keep using `append_entry`, `manage_docs`, `read_recent`, and related Scribe calls against that project. Do **not** call `set_project` before every `append_entry`.
+
+Only call `set_project` again when:
+- the operator or orchestrator explicitly switches you to a different Scribe project
+- an `append_entry`/Scribe response indicates sentinel/fallback/base-project mode, project mismatch, or orphaned logging
+- you are correcting a confirmed wrong-project logging mistake
+
 ### Logging
 
 Log every 2-3 significant actions with reasoning:
@@ -32,7 +41,80 @@ append_entry(agent="{{ agent.name }}", message="What you did", status="info",
     meta={"reasoning": {"why": "...", "what": "...", "how": "..."}})
 ```
 
-**When:** Findings, decisions, code changes, errors, phase completions.
+**When:** file reads that materially shape the task, findings, decisions, implementation steps, code changes, test runs, errors, blockers, handoff state, and phase completions.
+
+Do not collapse Scribe usage into startup and shutdown markers only. During active work, keep an in-flight audit trail that answers:
+- what files or surfaces you inspected
+- what you concluded from those reads
+- what you changed or chose not to change
+- what commands/tests you ran
+- why the next handoff is ready or blocked
+
+If another agent cannot reconstruct your work from `read_recent`, your logging is too thin.
+
+For read-heavy work, prefer one structured batch entry over one entry per file. Use a `READ SUMMARY` shape like:
+
+```text
+READ SUMMARY
+Files:
+- src/auth.py
+- src/session.py
+- tests/test_auth_flow.py
+
+Purpose:
+Trace authentication flow and current validation boundaries
+
+Findings:
+- Token validation is duplicated in two paths
+- `session.py` lacks an expiration guard on reused session tokens
+
+Implications:
+- Fail-closed behavior can drift between the two validation paths
+- Reused session tokens may silently bypass expiry enforcement
+
+Invariants / Contracts:
+- Authentication checks must fail closed on invalid or expired tokens
+- Reused session tokens must still respect expiration boundaries
+
+Impact / Next Action:
+- High risk of inconsistent auth behavior
+- Blueprint / Forge must preserve auth invariants while consolidating validation
+```
+
+Batch related reads together. Emit a single-file read entry only when that one file changed direction, proved a critical point, or created a blocker.
+
+For implementation work, add a decision checkpoint when you commit to an approach or reject a meaningful alternative:
+
+```text
+DECISION CHECKPOINT
+Chosen approach:
+Consolidate token validation in a shared helper called by both auth paths
+
+Alternatives rejected:
+- Patch each call site independently
+
+Why:
+- One enforcement point reduces drift and keeps the fail-closed contract explicit
+
+Risk:
+- Shared helper changes both login and reuse flows, so regression coverage must hit each caller
+```
+
+After verification, interpret the result instead of logging pass/fail alone:
+
+```text
+VERIFICATION MEANING
+Commands:
+- pytest tests/test_auth_flow.py -q
+- python -c 'from src.auth import validate_token'
+
+What this proves:
+- Unknown and expired tokens are rejected on the covered auth paths
+- The shared helper imports cleanly and the direct contract still resolves
+
+What is still unproven:
+- Full browser session renewal was not exercised in this verification slice
+```
 
 ### File Reading (MANDATORY — Use Instead of Native Read)
 
@@ -62,6 +144,14 @@ read_file(agent="{{ agent.name }}", path="/absolute/path/file.py",
 
 All `.scribe/docs/` files MUST use `manage_docs`.
 
+**Frontmatter and quality gates are part of done-state truth.**
+
+- Narrative-doc YAML/frontmatter changes use `manage_docs(action="frontmatter_update", metadata={"frontmatter": {...}})`.
+- `status_update` is checklist-only. If it is used on narrative docs, treat `DOC_STATUS_INTENT_MISMATCH` as a real intent error and switch to `frontmatter_update`.
+- Before handoff on managed docs, run `manage_docs(action="quality_check", doc_name="<doc>", dry_run=True)` or record why it is not applicable.
+- Scaffold residue blocks readiness. Treat `DOC_NOT_DONE_SCAFFOLD_QUALITY` and blocking `SCF_*` warnings as completion blockers, not cosmetic lint.
+- Do not replace `quality_check` with ad hoc grep/regex proof when the Scribe tool is available.
+
 **CRITICAL: `create` only scaffolds an empty doc. You MUST follow up with `replace_section` to write actual content.**
 
 ```python
@@ -74,6 +164,12 @@ manage_docs(agent="{{ agent.name }}", action="replace_section",
 # Update checklist
 manage_docs(agent="{{ agent.name }}", action="status_update",
     doc_name="checklist", section="task_1", metadata={"status": "done"})
+# Update narrative-doc frontmatter
+manage_docs(agent="{{ agent.name }}", action="frontmatter_update",
+    doc_name="architecture", metadata={"frontmatter": {"status": "ready"}})
+# Prove scaffold/readiness quality before handoff
+manage_docs(agent="{{ agent.name }}", action="quality_check",
+    doc_name="architecture", dry_run=True)
 ```
 
 ### Bug Reporting (ALL AGENTS)
@@ -88,7 +184,7 @@ open_bug(agent="{{ agent.name }}", title="Brief desc", symptoms="What's happenin
 manage_docs(agent="{{ agent.name }}", action="create",
     metadata={"doc_type": "bug", "category": "logic", "slug": "descriptive-name",
               "severity": "critical|high|medium|low", "title": "Full title"})
-# 3. WRITE the report (create is NOT enough)
+# 3. WRITE the report — MINIMUM 3 SECTIONS REQUIRED: symptoms, root_cause, fix
 manage_docs(agent="{{ agent.name }}", action="replace_section",
     doc_name="descriptive-name", section="symptoms", content="...")
 manage_docs(agent="{{ agent.name }}", action="replace_section",
@@ -110,8 +206,13 @@ search(agent="{{ agent.name }}", pattern="class.*Manager", glob="**/*.py")
 
 | Stage | Agent | Produces | Gate |
 |-------|-------|----------|------|
-| 1. Research | Lens | `RESEARCH_*.md` | Confidence scores |
-| 2. Architect | Blueprint | Architecture + Phase Plan + Checklist | Review ≥93% |
-| 3. Review | Arbiter | Pre-implementation feasibility | Pass/fail |
-| 4. Code | Forge | Working code + tests | Tests pass |
-| 5. Review | Arbiter | Post-implementation grading | ≥93% to ship |
+| 1. Research | Assigned research specialists | `RESEARCH_*.md` or approved specialist reports | Research ready |
+| 2. Architect | Blueprint | Architecture + Phase Plan + Checklist + task packages | Planning ready |
+| 3. Review (Pre-Imp) | Witness -> Arbiter | Full-plan truth + intent review | PASS to start implementation |
+| 4. Code | Forge | Working code + tests for the active package | Implementation checkpoint exists |
+| 5. Validation (Between Waves) | Crucible | Behavioral validation for the active implementation wave | PASS to continue implementation |
+| 6. Review (Post-Imp) | Witness -> Arbiter | Final truth + quality review on the completed project boundary | PASS to ship |
+
+Pre-implementation review is for the full plan/project boundary, not each implementation package by default.
+During implementation, the default loop is `Forge -> Crucible`.
+If ambiguity, elevated risk, schema/concurrency sensitivity, or contract uncertainty warrants an extra mid-implementation review checkpoint, that escalation must be explicit to the operator and logged in Scribe before or at routing time.

@@ -1,0 +1,255 @@
+---
+description: All Python code uses type annotations; no `Any` escape hatches; Protocol over ABC
+priority: medium
+---
+# Typing Standards
+
+**All Python code must use type annotations following these conventions.**
+
+## Basic Patterns
+
+- **Function signatures**: All parameters and return types must be annotated
+- **Variables**: Annotate when type is not obvious from assignment
+- **None defaults**: Use `X | None = None` (Python 3.10+ union syntax), not `Optional[X]`
+- **Return types**: Always annotate, even for `-> None`
+
+```python
+# Correct
+def process_data(items: list[str], config: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Process items with optional config."""
+    if config is None:
+        config = {}
+    return {"processed": items}
+
+# Wrong - missing annotations
+def process_data(items, config=None):
+    if config is None:
+        config = {}
+    return {"processed": items}
+```
+
+## Container Types
+
+Use lowercase generics (Python 3.9+):
+- `list[str]` - NOT `List[str]`
+- `dict[str, Any]` - NOT `Dict[str, Any]`
+- `set[int]` - NOT `Set[int]`
+- `tuple[str, int]` - NOT `Tuple[str, int]`
+
+```python
+# Correct - modern syntax
+def get_config() -> dict[str, Any]:
+    return {"key": "value"}
+
+def get_items() -> list[str]:
+    return ["a", "b", "c"]
+
+# Wrong - deprecated typing module
+from typing import Dict, List
+
+def get_config() -> Dict[str, Any]:  # Deprecated
+    return {"key": "value"}
+```
+
+## Structured Data
+
+### Dataclass for Structured Types
+Use `@dataclass` for mutable state containers and value objects:
+
+```python
+from dataclasses import dataclass, field
+
+@dataclass
+class SessionConfig:
+    """Session configuration."""
+    name: str
+    timeout: float = 5.0
+    tags: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+# Immutable value objects
+@dataclass(frozen=True, slots=True)
+class StreamEvent:
+    """Base stream event."""
+    type: str
+    seq: int = 0
+```
+
+### TypedDict for Known Keys
+Use `TypedDict` for typed dictionaries with known keys:
+
+```python
+from typing import TypedDict
+
+class PersonaProfile(TypedDict):
+    slug: str
+    name: str
+    domains: list[str]
+    council_id: str | None
+```
+
+### NamedTuple for Immutable Records
+Use `NamedTuple` for immutable record types:
+
+```python
+from typing import NamedTuple
+
+class Point(NamedTuple):
+    x: float
+    y: float
+```
+
+## Union Types and None
+
+Use modern union syntax with `|`:
+
+```python
+# Correct - Python 3.10+
+def find_config() -> Path | None:
+    """Find config file or return None."""
+    ...
+
+def get_setting(key: str) -> str | int | None:
+    """Get setting that could be string, int, or missing."""
+    ...
+
+# Wrong - deprecated Optional
+from typing import Optional
+
+def find_config() -> Optional[Path]:  # Don't use
+    ...
+```
+
+## Return Types
+
+- Always annotate return types, even `-> None`
+- Use `-> NoReturn` for functions that always raise
+- For async functions, use `async def` with `-> ReturnType` (not `Coroutine[...]`)
+
+```python
+# Correct
+async def create_session(config: SessionConfig) -> SessionRecord:
+    """Create new session."""
+    ...
+
+def validate_or_die(value: str) -> None:
+    """Validate value or raise."""
+    if not value:
+        raise ValueError("Empty value")
+
+from typing import NoReturn
+
+def fatal_error(msg: str) -> NoReturn:
+    """Always raises, never returns."""
+    raise RuntimeError(msg)
+
+# Wrong - missing return annotation
+def validate_or_die(value: str):  # Missing -> None
+    if not value:
+        raise ValueError("Empty value")
+```
+
+## Common Patterns in Council MCP
+
+### Config Access
+```python
+def get_setting(key: str, default: str | None = None) -> str | None:
+    """Safe nested config read with fallback."""
+    cfg = get_council_config()
+    return cfg.get("council", {}).get("section", {}).get(key, default)
+```
+
+### Async Tool Signatures
+```python
+async def my_tool(
+    persona_id: str,
+    text: str = "",
+    metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """MCP tool implementation."""
+    ...
+```
+
+### Database Cursor Rows
+```python
+from agentkit.storage.models import db
+
+with db.connection() as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT id, slug FROM persona_profiles LIMIT 1")
+        row: dict[str, Any] = cur.fetchone()  # Returns dict, not tuple
+        print(row['slug'])  # Dict access
+```
+
+## Anti-Patterns
+
+### Wrong - Legacy Typing Imports
+```python
+from typing import List, Dict, Optional, Tuple
+
+def process(items: List[str]) -> Optional[Dict[str, Any]]:
+    """Deprecated typing module syntax."""
+    ...
+```
+
+### Right - Modern Syntax
+```python
+def process(items: list[str]) -> dict[str, Any] | None:
+    """Python 3.9+ generics, 3.10+ union."""
+    ...
+```
+
+### Wrong - Untyped Function
+```python
+def process(data, config):
+    """Missing all type annotations."""
+    return data
+```
+
+### Right - Fully Annotated
+```python
+def process(data: bytes, config: dict[str, Any]) -> bytes:
+    """All types annotated."""
+    return data
+```
+
+### Wrong - Optional with Default
+```python
+from typing import Optional
+
+def foo(x: Optional[str] = None):  # Deprecated Optional
+    ...
+```
+
+### Right - Union with Default
+```python
+def foo(x: str | None = None) -> None:
+    """Modern union syntax."""
+    ...
+```
+
+## Type Checking
+
+Use `from __future__ import annotations` for forward references and to enable string-based type hints:
+
+```python
+from __future__ import annotations
+
+from typing import Any
+
+class Node:
+    def add_child(self, child: Node) -> None:  # Forward reference works
+        """Add child node."""
+        ...
+```
+
+## When to Use Any
+
+Use `Any` when:
+- Truly arbitrary types (config dicts, JSON payloads)
+- Interfacing with untyped third-party code
+- Type is determined at runtime
+
+Avoid `Any` when:
+- Type is known but complex (use TypedDict, Protocol, or unions)
+- You just don't want to type it (discipline!)

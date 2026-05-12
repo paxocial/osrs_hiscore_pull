@@ -1,8 +1,80 @@
 council:
   name: osrs_hiscore_pull
   version: 2.0.0
+  generation:
+    rules_mode: merge
+    rules_autoload_policy: critical_only
+    rules:
+    - '!atlas-discipline'
+    - '!pipeline-gates'
+    - '!orchestration-law'
+    - '!agentkit-schema'
+    critical_rule_word_budget: 12000
+    critical_rule_slugs:
+    - taskoutput-banned
+    - mcp-tool-calls
+    - session-protocol
+    - dual-logging
+    - root-cause-only
+    - pipeline-gates
+    - orchestration-law
+    - manage-docs-create
+    - error-handling
+    - coordinator-discipline
+    - migrations
+    - team-orchestration
+    rule_skill_migrations:
+      enabled: true
+      mode: auto_apply
+      cleanup_mode: soft_retire
+      mapping_file: .council/rule_skill_migrations.yaml
+      warn_on_unmapped_orphans: true
+      allow_package_defaults: true
+    agent_template:
+      include_default_identity_prompt: true
+      include_default_expertise_prompt: true
+      include_council_membership: true
+      include_council_protocol: true
+      include_default_communication_style: true
+      include_default_behavioral_guidelines: true
+      auto_apply_default_protocol_bundles_on_create: true
+      default_protocol_bundles:
+        council_tools: true
+        scribe_protocol: true
+        session_protocol: false
+        agentkit_patterns: false
+        dual_logging: false
+        persona_embodiment: false
+    key_directories:
+    - path: agents
+      description: Snapshot and report orchestration agents
+    - path: core
+      description: Hiscore client, normalization, and delta logic
+    - path: web
+      description: Existing FastAPI web UI and dashboard routes
+    - path: api
+      description: API entrypoints and transport-facing endpoints
+    - path: tests
+      description: Regression and integration test suite
+    - path: docs
+      description: Dev plans, runbooks, and operator notes
+  environment:
+    runtime_class: scaffold_unknown
+    env_manager: host
+    lockfiles:
+      required: []
+    shared_shell:
+      mode: compatibility_only
+      shell_name: uap
+    lifecycle:
+      ensure_mode: read_only
+      reconcile_mode: read_only
+      run_mode: delegate_connect_serve
+      rebuild_policy: manual_only
+    intelligence:
+      analysis_depth: shallow
   hooks:
-    shared_secret: null
+    shared_secret: 21674624ea603a5a91a469a5826702547eb24b25d73855f146cc6114380bfa98
     web_url: http://localhost:8015
     request_timeout: 5.0
     registry: {}
@@ -12,6 +84,7 @@ council:
     cleanup_on_startup: true
     stale_cleanup_interval_seconds: 1800
     stale_session_timeout_minutes: 180
+    auto_open_enabled: true
   memories:
     default_visibility: private
     default_strength: 0.5
@@ -27,6 +100,14 @@ council:
     auto_thread: true
     retention_days: 0
     pending_messages_limit: 10
+    system_agents:
+    - federation-daemon
+    - reactive-engine
+    - autonomous-worker
+    - governance-auditor
+    coordinator_roles:
+    - coordinator
+    inbox_summary_enabled: true
   access:
     require_project_id: true
     allow_cross_project: false
@@ -143,6 +224,7 @@ council:
   web:
     host: 0.0.0.0
     port: 8015
+    force_ws_transport: true
     reload: true
     reload_dirs:
     - web
@@ -165,6 +247,7 @@ council:
     browser_reconnect_cap_ms: 10000
     connection_status_enabled: true
     custom_pages_enabled: true
+    custom_routes_enabled: true
     hidden_pages: []
     hidden_nav_items: []
     nav_group_label: OSRS Control
@@ -182,6 +265,8 @@ council:
     - HTTP
     - URL
     - ID
+    ws_timeline_idle_timeout_seconds: 600
+    ws_timeline_heartbeat_seconds: 30
   daemon:
     pre_restart_notify_url: http://127.0.0.1:8015/api/daemon/pre-restart
     pre_restart_timeout: 3.0
@@ -189,6 +274,9 @@ council:
     project_resolution_retry_delays:
     - 1
     - 2
+    runtime_truth_auth_mode: auto
+    control_plane_api_key: ''
+    control_plane_api_key_env: COUNCIL_API_KEY
     log_filename: daemon.log
     log_max_size_mb: 10
     log_backup_count: 3
@@ -196,6 +284,9 @@ council:
     cleanup_stale_on_start: true
   ws_proxy:
     default_url: ws://127.0.0.1:8016/mcp
+    endpoints: []
+    probe_timeout_seconds: 2.0
+    probe_on_reconnect: true
     ping_interval_seconds: 20.0
     ping_timeout_seconds: 120.0
     max_reconnect_attempts: 20
@@ -203,6 +294,30 @@ council:
     dev_mode_backoff_cap_seconds: 5
     dev_mode_max_retries: 10
     inactivity_timeout_seconds: 300
+    monitor_parent_pid: false
+  runtime_routing:
+    policy: prefer_workstation
+    preferred_hostnames: []
+    preferred_roles:
+    - dev-workstation
+    prefer_gpu: true
+    allow_fallback: false
+    manual_hostname: ''
+    stale_seconds: 120
+    route_class: interactive_control
+    resource_pool: ''
+    gpu_requirements:
+      min_count: 0
+      min_vram_gb: null
+      accelerator_labels: []
+    affinity:
+      preferred_hostnames: []
+      preferred_roles:
+      - dev-workstation
+      ray_node_id: ''
+      soft_affinity: true
+    fallback_mode: fail_closed
+    strict_manual_hostname: ''
   ask:
     scribe_context_entries: 5
     scribe_context_token_budget: 500
@@ -214,6 +329,39 @@ council:
   bridges:
     scribe_health_check_timeout: 1.0
     scribe_tool_timeout: 5.0
+  scribe:
+    sse_endpoint: null
+    remote_auth_token: null
+  mcp_topology:
+    compatibility:
+      allow_legacy_transport_fallback: false
+    rules:
+      council-v2:
+        cost_class: heavy
+        runtime_owner: daemon_proxy
+        allowed_export_shapes:
+        - thin-client
+        enforcement: rewrite
+      channel:
+        cost_class: heavy
+        runtime_owner: daemon_proxy
+        allowed_export_shapes:
+        - thin-client
+        enforcement: rewrite
+      scribe:
+        cost_class: heavy
+        runtime_owner: shared_service
+        allowed_export_shapes:
+        - shared-service
+        - tool-based
+        enforcement: rewrite
+      knowledge:
+        cost_class: heavy
+        runtime_owner: shared_service
+        allowed_export_shapes:
+        - shared-service
+        - tool-based
+        enforcement: rewrite
   server:
     resolver_retry_delays_seconds:
     - 1
@@ -221,13 +369,50 @@ council:
     - 4
   process_manager:
     health_check_interval_seconds: 30
-    heartbeat_stale_multiplier: 2.0
     default_grace_seconds: 5.0
     max_restarts_before_giveup: 3
     restart_backoff_base_seconds: 1.0
     restart_backoff_cap_seconds: 60.0
     registry_db_path: .council/process_registry.db
     reboot_timeout_seconds: 30
+    orphan_sweep:
+      kill_after_seconds: 600.0
+      hard_kill_grace_seconds: 1.5
+    resource_contract:
+      warning_spawn_delay_seconds: 0.5
+      critical_allow_process_types:
+      - mcp_server
+      per_process:
+        sdk_session:
+          max_running: 128
+          defer_on_warning: true
+        plugin:
+          max_running: 64
+          defer_on_warning: true
+        web_ui:
+          max_running: 8
+          defer_on_warning: true
+        mcp_server:
+          max_running: 64
+          defer_on_warning: false
+        scribe_mcp:
+          max_running: 8
+          defer_on_warning: false
+      wsl_thresholds:
+        warning_memory_percent: 90.0
+        critical_memory_percent: 97.0
+        warning_process_count: 700
+        critical_process_count: 900
+        warning_thread_count: 4000
+        critical_thread_count: 6000
+        warning_fd_percent: 85.0
+        critical_fd_percent: 95.0
+        warning_load_per_cpu: 1.0
+        critical_load_per_cpu: 1.5
+      runtime_pressure_thresholds:
+        warning_thread_delta: 200
+        critical_thread_delta: 400
+    heartbeat_stale_multiplier: 2.0
   system_health:
     enabled: true
     check_interval_seconds: 60
@@ -241,6 +426,8 @@ council:
       disk_percent: 95.0
       gpu_memory_percent: 95.0
       temperature_celsius: 90.0
+    runtime_pressure:
+      enabled: true
   logs:
     log_dir: .
     default_tail_lines: 50
@@ -251,6 +438,8 @@ council:
       warning: (?i)\b(WARNING|WARN)\b
       info: (?i)\b(INFO)\b
       debug: (?i)\b(DEBUG)\b
+    max_size_mb: 10
+    backup_count: 5
     known_sources:
       daemon:
         path: daemon.log
@@ -258,6 +447,121 @@ council:
       web:
         path: web_ui.log
         format: plain
+  cli:
+    colors:
+      primary: '#0066FF'
+      gold: '#FFB800'
+      success: '#00CC66'
+      amber: '#FF9900'
+      error: '#FF3333'
+    role_colors:
+      coordinator: '#0066FF'
+      specialist: '#00CC66'
+      omniscient: '#FFB800'
+      auditor: '#FF9900'
+    model_colors:
+      opus: '#FF6B6B'
+      sonnet: '#4ECDC4'
+      haiku: '#95E1D3'
+    banner_text: Corta Labs Council MCP
+    default_mode: rich
+    quiet_default: false
+    command_groups:
+    - name: Core Operations
+      commands:
+      - init
+      - update
+      - start
+      - stop
+      - reboot
+      - status
+      - reload
+    - name: Agent Management
+      commands:
+      - roster
+      - add-agent
+      - modify-agent
+      - sync-agents
+    - name: Configuration
+      commands:
+      - db
+      - env
+      - mcp
+      - skills
+      - rules
+      - templates
+    - name: Network & Federation
+      commands:
+      - connect
+      - federation
+      - repo
+      - supervisor
+      - service
+    - name: Diagnostics
+      commands:
+      - logs
+      - health
+      - audit
+      - list
+  observability:
+    log_level: INFO
+    max_message_bytes: 10240
+    redaction:
+      key_blocklist:
+      - password
+      - passwd
+      - secret
+      - token
+      - api_key
+      - x_api_key
+      - x-api-key
+      - access_token
+      - refresh_token
+      - id_token
+      - client_secret
+      - authorization
+      - cookie
+      - set_cookie
+      - set-cookie
+      - session_token
+      patterns:
+      - ck_[A-Za-z0-9]{20,}
+      - (?i)\b(?:sk|rk|pk)-[A-Za-z0-9_-]{16,}\b
+      - eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?
+      inline_patterns:
+      - pattern: (?i)([?&](?:access_token|refresh_token|id_token|session_token|token|api[_-]?key|x-api-key|client_secret|secret|password|passwd)=)([^&#\s]+)
+        replacement: \1[REDACTED]
+      - pattern: (?i)\b((?:authorization|proxy-authorization)\s*:\s*bearer\s+)([^\s,;]+)
+        replacement: \1[REDACTED]
+      - pattern: (?i)\b((?:cookie|set-cookie|x-api-key|api[_-]?key|client_secret|secret|password|passwd|session_token|access_token|refresh_token|id_token)\s*[:=]\s*)([^,\s;]+)
+        replacement: \1[REDACTED]
+      - pattern: (?i)(^|[\s,;])((?:token|client_secret|secret|password|passwd|session_token|access_token|refresh_token|id_token)\s*=\s*)([^\s,;]+)
+        replacement: \1\2[REDACTED]
+      - pattern: (?i)\b(Bearer\s+)([A-Za-z0-9._~+/-]+=*)
+        replacement: \1[REDACTED]
+      - pattern: (?i)\b(postgres(?:ql)?://)([^\s'"]+)
+        replacement: \1[REDACTED]
+    correlation_header: X-Correlation-ID
+    dynamic_sources: []
+    errors:
+      enabled: true
+      active_after_occurrences: 2
+      stale_after_seconds: 3600
+      traceback_sample_limit: 3
+      auto_capture_error_tracebacks: true
+      synthetic_stack_frame_limit: 24
+      critical_error_kinds: []
+      service_criticality:
+        downstream_routes: 1.0
+        daemon: 0.85
+        web: 0.7
+        sdk_worker: 0.55
+        tooling: 0.3
+    alerts:
+      enabled: false
+      rules: []
+      unresolved_age_seconds: 0
+      regression_count_threshold: 0
   agents:
     types:
       valid_types:
@@ -271,10 +575,144 @@ council:
     default_agent: osrs-atlas
     auto_open: false
     persist_session: true
+    rooms_enabled: false
+    mention_pattern: '@(\w[\w-]*)'
+    max_hops: 4
+    max_room_participants: 20
+    realtime_agent_replies: false
     page_agents:
       /pages/osrs-dashboard: bridge
-      /pages/osrs-jobs: snapshot
-      /pages/osrs-snapshots: report
+      /pages/osrs-accounts: bridge
+      /pages/osrs-snapshots: bridge
+      /pages/osrs-compare: bridge
+    page_agent_profiles:
+      git_page_main:
+        enforce:
+          strict_tool_allowlist: true
+          allowed_tools:
+          - sdk_create_session
+          - sdk_send_message
+          - sdk_end_session
+          - git_status
+          - git_diff
+          - git_log
+          - git_branches
+          - git_stage
+          - git_unstage
+          - git_commit
+          - git_stale_branches
+          - Bash
+          - Read
+          - Grep
+          - Glob
+          - Write
+          - Edit
+          blocked_tools:
+          - git_reset
+          - git_clean
+          - git_push_force
+          - git_rebase
+          - git_branch_delete
+          - git_checkout_discard
+      git_page_executor:
+        enforce:
+          strict_tool_allowlist: true
+          allowed_tools_by_mode:
+            read_only:
+            - git_status
+            - git_diff
+            - git_log
+            - git_branches
+            stage:
+            - git_status
+            - git_diff
+            - git_log
+            - git_branches
+            - git_stage
+            - git_unstage
+            commit:
+            - git_status
+            - git_diff
+            - git_log
+            - git_branches
+            - git_stage
+            - git_unstage
+            - git_commit
+            - git_stale_branches
+            sync:
+            - git_status
+            - git_diff
+            - git_log
+            - git_branches
+            - git_stage
+            - git_unstage
+            - git_commit
+            - git_stale_branches
+            - git_pull
+            - git_fetch
+          blocked_tools:
+          - sdk_create_session
+          - sdk_send_message
+          - sdk_end_session
+          - git_reset
+          - git_clean
+          - git_push_force
+          - git_rebase
+          - git_branch_delete
+          - git_checkout_discard
+          - bash
+          - write
+          - edit
+        mode_metadata_key: session_mode
+  codex_task:
+    protocol:
+      default_profile: scribe_strict
+      override_mode: per_run
+      allowed_profile_overrides: []
+    bounds:
+      watchdog_interval_seconds: 5
+      terminate_grace_seconds: 2
+  governance:
+    enabled: false
+    scribe_compliance:
+      enabled: true
+      require_set_project_by_turn: 2
+      max_turns_without_log: 5
+      require_reasoning_traces: true
+      require_open_session: true
+    enforcement:
+      mode: graduated
+      warn_threshold: 3
+      soft_block_threshold: 5
+      hard_block_threshold: 8
+    exempt_tools:
+    - mcp__scribe__set_project
+    - mcp__scribe__append_entry
+    - mcp__scribe__read_recent
+    - mcp__council-v2__open_session
+    - mcp__council-v2__end_session
+    - mcp__council-v2__store_memory
+    - mcp__council-v2__list_messages
+    - mcp__council-v2__list_urgent_messages
+    - mcp__council-v2__mark_read
+    - mcp__council-v2__record_message
+    git_blocklist_extra: []
+    escalation_exempt_roles:
+    - coordinator
+    - omniscient
+    budget_enforcement: hard
+    budget_warn_threshold: 0.8
+    workflow_stage_gating: 'off'
+    enforce_tool_restrictions: true
+    allowlists:
+      per_agent: {}
+      default: []
+    approval_rules:
+      require_approval: []
+      bypass_roles:
+      - operator
+      timeout_minutes: 30
+      auto_approve_below_severity: null
   sdk:
     enabled: true
     max_concurrent_sessions: 10
@@ -318,10 +756,28 @@ council:
       openai:
         enabled: false
         default_model: gpt-4o
+        models:
+        - gpt-4o
+        - gpt-4o-mini
+        - gpt-5.2-codex
+        - gpt-5.2-codex-mini
+        - gpt-5.1-codex
+        - gpt-5.1-codex-mini
+        - gpt-5-codex
+        - gpt-5-codex-mini
+        - gpt-5.3-codex
+        - gpt-5.3-codex-spark
         max_budget_usd: 10.0
       codex:
         enabled: true
         display_name: OpenAI Codex
+        backend: app_server
+        fallback_backend: legacy_cli
+        app_server:
+          enabled: true
+          experimental_api: false
+        legacy_cli:
+          frozen: true
         cli_path: codex
         default_model: gpt-5.3-codex
         fallback_model: gpt-5.2-codex
@@ -333,11 +789,74 @@ council:
         - gpt-5.2-codex
         - gpt-5-codex
         sandbox_mode: workspace-write
+        approval_policy: on-request
+        web_search: live
+        agents:
+          max_depth: 1
+          max_threads: 12
+        sandbox_workspace_write:
+          network_access: true
         skip_git_repo_check: true
         full_auto: false
         dangerously_bypass_approvals_and_sandbox: false
         enforce_cwd_restrictions: true
         allowed_cwd_roots: []
+        mcp_servers:
+          scribe:
+            enabled_tools:
+            - authorize_repo_root
+            - append_entry
+            - append_event
+            - configure_reminders
+            - edit_file
+            - get_project
+            - link_fix
+            - list_projects
+            - list_open_cases
+            - manage_docs
+            - open_bug
+            - open_security
+            - query_entries
+            - query_reminders
+            - read_file
+            - read_recent
+            - reset_reminders
+            - scribe_doctor
+            - search
+            - set_project
+          council-v2:
+            enabled_tools:
+            - acknowledge_message
+            - ask_agent
+            - ask_council
+            - ask_self
+            - end_session
+            - get_reminders
+            - get_runtime_fingerprint
+            - get_runtime_health
+            - get_work_item_stage_state
+            - list_active_sessions
+            - list_log_sources
+            - list_messages
+            - list_urgent_messages
+            - list_work_items
+            - mark_read
+            - open_session
+            - query_logs
+            - query_memories
+            - record_message
+            - store_memory
+            - stream_logs
+          knowledge:
+            enabled_tools:
+            - browse_dataset
+            - get_chunk
+            - list_datasets
+            - list_extensions
+            - list_routes
+            - query_answer
+            - query_relationships
+            - search_sources
         strict_fork_isolation: true
         max_budget_usd: 10.0
         env: {}
@@ -380,6 +899,15 @@ council:
       - WebFetch
       - WebSearch
       cleanup_on_end: true
+    worktree_base_dir: .worktrees
+    worktree_branch_prefix: agent/
+    worktree_cleanup_on_start: true
+    agents:
+      max_depth: 2
+      max_concurrent: 8
+      recursive_spawning: true
+      output_buffer_lines: 2000
+      output_flush_threshold: 0.8
   cost_tracking:
     enabled: true
     pricing:
@@ -409,17 +937,84 @@ council:
         gpt-4o-mini:
           input_per_mtok: 0.15
           output_per_mtok: 0.6
+        gpt-5-codex:
+          input_per_mtok: 1.25
+          output_per_mtok: 10.0
+        gpt-5-codex-mini:
+          input_per_mtok: 0.25
+          output_per_mtok: 2.0
+        gpt-5.1-codex:
+          input_per_mtok: 1.5
+          output_per_mtok: 12.0
+        gpt-5.1-codex-mini:
+          input_per_mtok: 0.25
+          output_per_mtok: 2.0
+        gpt-5.2-codex:
+          input_per_mtok: 1.75
+          output_per_mtok: 14.0
+        gpt-5.2-codex-mini:
+          input_per_mtok: 0.35
+          output_per_mtok: 2.8
+        gpt-5.3-codex:
+          input_per_mtok: 1.75
+          output_per_mtok: 14.0
+          estimated: true
+          estimate_basis: mirrors gpt-5.2-codex until official API pricing is published
+        gpt-5.3-codex-spark:
+          input_per_mtok: 0.35
+          output_per_mtok: 2.8
+          estimated: true
+          estimate_basis: mirrors gpt-5.2-codex-mini until official API pricing is
+            published
       codex:
         gpt-5.3-codex:
           input_per_mtok: 2.5
           output_per_mtok: 10.0
+          estimated: true
+          estimate_basis: mirrors gpt-5.2-codex until official API pricing is published
         gpt-5.2-codex:
           input_per_mtok: 2.5
           output_per_mtok: 10.0
+        gpt-5.2-codex-mini:
+          input_per_mtok: 0.35
+          output_per_mtok: 2.8
+        gpt-5.1-codex:
+          input_per_mtok: 1.5
+          output_per_mtok: 12.0
+        gpt-5.1-codex-mini:
+          input_per_mtok: 0.25
+          output_per_mtok: 2.0
         gpt-5-codex:
           input_per_mtok: 2.5
           output_per_mtok: 10.0
+        gpt-5-codex-mini:
+          input_per_mtok: 0.25
+          output_per_mtok: 2.0
+        gpt-5.3-codex-spark:
+          input_per_mtok: 0.35
+          output_per_mtok: 2.8
+          estimated: true
+          estimate_basis: mirrors gpt-5.2-codex-mini until official API pricing is
+            published
       zlm:
+        GLM-5:
+          input_per_mtok: 0.28
+          output_per_mtok: 1.12
+        GLM-5-Air:
+          input_per_mtok: 0.07
+          output_per_mtok: 0.28
+        GLM-5-Flash:
+          input_per_mtok: 0.0
+          output_per_mtok: 0.0
+        GLM-5-FlashX:
+          input_per_mtok: 0.014
+          output_per_mtok: 0.07
+        GLM-5-X:
+          input_per_mtok: 0.7
+          output_per_mtok: 2.8
+        GLM-5-Code:
+          input_per_mtok: 0.28
+          output_per_mtok: 1.12
         GLM-4.7:
           input_per_mtok: 0.6
           output_per_mtok: 2.2
@@ -458,26 +1053,166 @@ council:
     shared_secret: ''
     timeout_seconds: 10
     max_retries: 3
+  federation:
+    enabled: false
+    transport:
+      receive_path: /api/v1/federation/receive
+      timeout_seconds: 30
+      max_payload_bytes: 1048576
+    idempotency:
+      ttl_hours: 72
+    ipc:
+      notify_channel: federation_events
+    scribe:
+      proxy_enabled: false
+      meta_tag_prefix: fed
+    hierarchy:
+      policy_push_enabled: false
+      push_debounce_seconds: 5
+    autonomous:
+      enabled: false
+      system_persona_id: system-daemon
+    services:
+      registry_enabled: false
+  git:
+    command_timeout_seconds: 30
+    max_diff_size_bytes: 1048576
+    max_repo_scan_depth: 3
+    stale_branch_days: 30
+    commit_message_max_length: 10000
+  compute:
+    execution_mode: auto
+    ray_enabled: false
+    ray_address: auto
+    gpu_fallback_to_cpu: true
+    dispatch_timeout_seconds: 30
+    supervision_check_interval_seconds: 15
+    supervision_reconnect_max_backoff_seconds: 60
+    tei_url: ''
+    tei_timeout_seconds: 5
+    service_routes: {}
+    service_timeout_seconds: 10
+    agent_dispatch:
+      enabled: false
+      repo_node_map: {}
+    tei_container:
+      enabled: false
+      image: ghcr.io/huggingface/text-embeddings-inference:turing-1.5
+      model: sentence-transformers/all-MiniLM-L6-v2
+      dtype: float16
+      port: 8080
+      startup_timeout_seconds: 120
+      health_check_interval_seconds: 30
+      health_check_timeout_seconds: 5
+    faiss:
+      verify_on_serve_start: true
+      rebuild_if_stale: true
+      rebuild_on_verify_failure: true
+      storage_root_candidates: []
+      create_storage_root_if_missing: true
+  node:
+    heartbeat_interval_seconds: 30
+    stale_timeout_seconds: 90
+    auto_detect_capabilities: true
+    default_role: dev-workstation
+    services_by_role:
+      gpu-compute:
+        tei: true
+      dev-workstation:
+        tei: false
+      ci-runner:
+        tei: false
+      hub:
+        tei: false
+  platform:
+    health:
+      stale_threshold_seconds: 120
+      sync_lag_threshold_seconds: 300
+  deployment:
+    mode: local
+    operating_mode: local_default
+    hub_tailscale_ip: ''
+    gateway_domain: ''
+    operating_modes:
+      local_default:
+        stm_backend: memory
+        redis_required: false
+        control_plane_topology: single-node
+        notes: Default local control plane; keep Redis out of the topology.
+      distributed_stateful:
+        stm_backend: redis
+        redis_required: true
+        control_plane_topology: distributed
+        degraded_state: If Redis is unavailable or unhealthy, fail closed for distributed
+          stateful flows until Redis recovers.
+  connection:
+    db_connect_timeout_seconds: 5
+    daemon_health_timeout_seconds: 3
+    startup_fail_fast: true
+  repos:
+    clone_base_dir: /opt
+    webhook_secret_env: WEBHOOK_SECRET
+    compose_override_path: deploy/docker-compose.repos.yaml
+  sync:
+    enabled: false
+    syncthing_url: http://localhost:8384
+    syncthing_api_key: ''
+    default_sync_paths:
+    - .council/web/pages
+    - .council/web/static
+    role_policies:
+      hub:
+        sync_paths:
+        - .council/web/pages
+        - .council/web/static
+        - .council/web/routes
+        direction: sendreceive
+      gpu-compute:
+        sync_paths:
+        - .council/web/pages
+        direction: receiveonly
+      dev-workstation:
+        sync_paths:
+        - .council/web/pages
+        - .council/web/static
+        - .council/web/routes
+        direction: sendreceive
+      ci-runner:
+        sync_paths: []
+        direction: receiveonly
+  dev_serve:
+    enabled: false
+    scribe_sse_endpoint: ''
+    auto_set_scribe_sse: true
+    register_dev_web_service: true
+    web_reload: false
+  reactive:
+    enabled: false
+    poll_interval_seconds: 30
+    max_concurrent_agents: 3
+    default_agent: mantis
+    default_model: gpt-5-mini
+    default_provider: openai
+    approval_required: true
+    auto_approve_severities: []
+    dispatch_rules:
+    - category: security
+      agent: sentinel
+      model: gpt-5
+      provider: openai
+    - category: runtime
+      agent: mantis
+      model: gpt-5-mini
+      provider: openai
+    - category: performance
+      agent: forge
+      model: gpt-5-mini
+      provider: openai
+    - category: logic
+      agent: mantis
+      model: gpt-5
+      provider: openai
   display_name: OSRS Hiscore
-  generation:
-    key_directories:
-    - path: agents
-      description: Snapshot and report orchestration agents
-    - path: core
-      description: Hiscore client, normalization, and delta logic
-    - path: web
-      description: Existing FastAPI web UI and dashboard routes
-    - path: api
-      description: API entrypoints and transport-facing endpoints
-    - path: tests
-      description: Regression and integration test suite
-    - path: docs
-      description: Dev plans, runbooks, and operator notes
-    rules:
-    - '!atlas-discipline'
-    - '!pipeline-gates'
-    - '!orchestration-law'
-    - '!agentkit-schema'
   description: Council for OSRS hiscore ingestion, reporting, and web operations
   repo_path: null
   parent_council_name: null
@@ -494,4 +1229,6 @@ policy:
   - access.max_sessions
 search:
   default_scope: local
+update:
+  auto_commit: true
 council_id: 413a9cfc-f79f-4087-86ed-3ba17561c84f

@@ -1,0 +1,137 @@
+---
+description: "Every codebase must preserve a clear module, naming, and ownership structure; no random file sprawl"
+priority: critical
+---
+# Codebase Organization
+
+Council-managed repositories must be organized for long-term expansion. Do not add files, folders, tools, prompts, routes, templates, or scripts wherever they happen to fit today. Every artifact belongs to a named module, layer, or workflow surface with a clear reason to exist.
+
+## Structural Invariants
+
+- `GOV-STRUCT-001`: Every artifact must belong to a defined module, layer, workflow surface, or explicitly documented boundary.
+- `GOV-STRUCT-002`: Duplicate capability implementations are invalid unless Blueprint explicitly approves a new bounded responsibility.
+- `GOV-STRUCT-003`: If reuse or placement cannot be confidently determined, implementation is blocked until planning clarifies the boundary.
+
+## Default Invariant
+
+Every codebase inherits this organization contract by default:
+
+- Naming communicates purpose, domain, and ownership.
+- Modules should be able to stand alone where practical and compose with other modules through explicit interfaces.
+- New artifacts must fit an existing boundary or define a new boundary intentionally.
+- Existing capabilities must be reused or refined before new parallel implementations are created.
+- DRY and KISS are architectural constraints: prefer one clear reusable path over duplicated special cases.
+- Local councils may refine naming and module conventions, but they may not weaken this rule into "put it anywhere."
+- Code that introduces unbounded placement or unclear ownership is invalid until corrected or explicitly waived by the operator.
+
+Violations of this rule are structural defects. They must be flagged in review and cannot be silently accepted.
+
+## Small-Change Carve-Out
+
+This rule does not require restructuring for a small, contained edit inside an existing module boundary. The edit still has to preserve that module's naming style, dependency direction, and public/private boundary.
+
+## Before Creating Any New File Or Directory
+
+1. Search for the existing module, package, workflow, template family, or service boundary that already owns the behavior.
+2. If a boundary exists, place the artifact there and follow that boundary's naming style.
+3. If similar behavior exists, refine, extend, or adapt the existing implementation instead of building a second version.
+4. If no boundary exists, define the new boundary before adding multiple scattered files.
+5. If the new boundary is durable, update the repo's local architecture/context hook or managed planning doc so future agents can find it.
+6. If placement or reuse is unclear, stop and escalate to planning instead of guessing.
+
+Implementation is forbidden to proceed when reuse or placement cannot be confidently determined. The boundary must be clarified by planning, operator waiver, or source-backed evidence before code changes continue.
+
+## Reuse-First Rule
+
+Do not implement the same capability twice.
+
+Before adding a new implementation, agents must search for existing:
+
+- modules, services, registries, adapters, providers, validators, resolvers, or facades
+- CLI commands, MCP tools, API routes, hooks, templates, skills, rules, tests, and config surfaces
+- helper functions and shared utilities with a clearly defined owner
+
+Search means inspecting source files, imports, references, tests, and existing interfaces. It is not enough to skim filenames or directory names.
+
+If something already exists, refine what exists. Add extension points, improve naming, extract a cleaner interface, or consolidate behavior behind the existing boundary. Do not create `*_v2`, `new_*`, `enhanced_*`, parallel registries, duplicate clients, duplicate config loaders, or second workflow engines unless Blueprint explicitly approves the split as a new bounded responsibility.
+
+Duplicate behavior across boundaries is a defect even when both implementations are functionally correct. "This one is slightly different" is not sufficient justification for a second implementation; either consolidate, parameterize, or document the approved split.
+
+KISS requirement: choose the smallest design that preserves the boundary and future extension path. Do not introduce abstraction layers just to look modular.
+
+DRY requirement: shared behavior belongs behind one owned interface. If two call sites need the same behavior, extract or route through the existing owner instead of copy-pasting logic.
+
+## Boundary Definition Minimum
+
+A new boundary is not defined until all of these are explicit:
+
+- Name: the stable module, package, workflow, template family, service, or layer name.
+- Location: the directory/module path that owns the boundary.
+- Responsibility: a one-sentence statement of what the boundary owns and what it does not own.
+- Entry surface: the API, CLI command, route, tool, template, export, or documented interface other modules may use.
+- Dependency direction: what this boundary may depend on and what may depend on it.
+- Test/proof surface: where behavior or placement correctness is checked.
+
+If an agent cannot fill this minimum contract, the boundary is not ready for implementation.
+
+## Naming Rules
+
+Use names that describe stable responsibility, not temporary implementation state.
+
+Prefer:
+
+- Domain nouns: `governance`, `runtime_probes`, `work_items`, `template_federation`
+- Capability names: `migration`, `generated_surfaces`, `scribe_gates`
+- Interface-oriented names: `registry`, `resolver`, `adapter`, `provider`, `validator`
+
+Avoid:
+
+- Junk-drawer names: `utils`, `helpers`, `misc`, `common`, unless the codebase already has a tightly defined convention for them
+- Version names: `new`, `v2`, `enhanced`, `final`, `fixed`
+- Ambiguous buckets: `stuff`, `general`, `shared`, `temp`, `scratch`
+- Names that describe an implementation trick instead of the domain concept
+
+## Module Boundary Rules
+
+A module boundary should have:
+
+- A clear responsibility in one sentence.
+- A stable public surface: exports, CLI commands, routes, tools, templates, or documented entry points.
+- Internal helpers that stay internal instead of leaking across the codebase.
+- Tests near the behavior they prove, with names that map to the module's contract.
+- Dependencies that are explicit and directional. Do not create circular or "everyone imports everyone" structures.
+
+Good modules can be used alone or composed with peers. If a module can only work because unrelated files reach into its internals, the boundary is wrong.
+
+## Organization Refactoring Trigger
+
+If work needs several files across unrelated locations, the orchestrator must ask whether the codebase is missing a module boundary. Do not normalize sprawl by saying "this is just how the repo grew."
+
+Create or refine the boundary first, then implement inside it.
+
+## Scribe And Planning Proof
+
+New durable module boundaries must be logged in Scribe or documented in managed architecture context before dependent work proceeds. The record must include the boundary name, location, responsibility, entry surface, and why the existing structure was insufficient.
+
+For Tier 2+ work, Blueprint owns boundary definition in planning docs. Forge implements inside the approved boundary. If implementation discovers the boundary is wrong or missing, Forge stops and escalates instead of inventing structure mid-task.
+
+## Review Enforcement
+
+Witness must flag misplaced artifacts, missing boundary definitions, and claims of placement correctness that are not backed by source evidence.
+
+Witness must also flag duplicate implementations when an existing reusable or refinable path is visible in source. Duplicate behavior across boundaries must be treated as a defect even if functionally correct.
+
+Arbiter must reject architectural quality when a change introduces unbounded placement, unclear ownership, junk-drawer modules, circular dependency sprawl, undocumented durable boundaries, duplicate implementations, unnecessary abstraction, or avoidable copy-paste.
+
+Operator waivers must be explicit and scoped. A waiver may allow a temporary placement, but it does not create precedent and must identify the follow-up boundary cleanup if the placement is expected to last.
+
+## Local Refinement
+
+Downstream councils should document repo-specific organization choices in source-owned local context:
+
+- `.council/templates/claude/hooks/_repo_context.j2`
+- `.council/templates/claude/hooks/_architecture_map.j2`
+- managed `ARCHITECTURE_GUIDE` / `PHASE_PLAN` docs for active workstreams
+- package-level docs when the convention belongs to the source package
+
+Local refinements may add language/framework-specific structure, but the default Council invariant remains: organized modules, meaningful names, explicit boundaries, and no random file sprawl.

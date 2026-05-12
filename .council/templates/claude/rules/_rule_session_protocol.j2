@@ -1,0 +1,128 @@
+---
+description: "Clock in once (set_project + open_session + read_recent), work (append_entry every 2-3 actions), clock out (end_session)"
+priority: critical
+---
+# Session Protocol
+
+**Scribe protocol is not optional. Skipping startup steps is a protocol violation.**
+
+## Mandatory Startup (Non-Negotiable)
+
+Before ANY work — reading files, editing code, planning — execute in this order:
+
+```python
+# 1. Activate project — establishes audit trail context
+set_project(agent="<your-name>", name="<project_name>", root="<repo_root>")
+# 2. Load prior context — prevents duplicating completed work
+read_recent(agent="<your-name>", limit=5)
+# 3. THEN work begins
+```
+
+**Skip these = your work is orphaned. The session is invalid.**
+
+## Project Binding Is Sticky
+
+`set_project` is a startup/context-binding call, not a heartbeat.
+
+- Call `set_project` once for the active project at session/workstream start.
+- Do not call `set_project` before each `append_entry`.
+- Do not call `set_project` every few minutes just because work is still active.
+- Keep logging with `append_entry` on the established project context.
+- A reboot or process restart closes the session context. After a reboot, run startup again: `set_project` once, then `read_recent`.
+- If `append_entry`, `manage_docs`, or another Scribe call fails because the project context is missing, wrong, sentinel/fallback, base-project, or orphaned, immediately call `set_project` for the correct active project and retry the operation.
+- Do not continue writing sentinel/base-project logs for named work. Wrong-project or sentinel logging is a BLOCK until the project is rebound.
+- Call `set_project` again only if the operator/orchestrator switches projects, the session was restarted/rebooted, an `append_entry` or Scribe response indicates sentinel/fallback/base-project mode, or you are repairing a confirmed wrong-project logging mistake.
+
+## Forbidden Patterns
+
+```
+WRONG: Starting work without set_project → append_entry logs to orphaned/base project
+WRONG: Calling set_project before every append_entry → noisy context churn and wasted tool calls
+WRONG: Rebinding the same project on a timer during one active session
+WRONG: Using base project when a named workstream exists → work lost in noise
+WRONG: Continuing after a Scribe write fails into sentinel/base-project mode
+WRONG: Skipping read_recent → duplicating already-done work from prior sessions
+WRONG: Subagents use "whatever project" when orchestrator set a named project
+RIGHT: set_project once → read_recent → work → append_entry every 2-3 actions → end_session
+RIGHT: after reboot or Scribe project-context failure → set_project once again → read_recent or retry the failed write
+```
+
+## Full Session Lifecycle
+
+```
+1. CLOCK IN
+   open_session(persona_id="<agent>", summary="<task>")
+   set_project(agent="<agent>", name="<project>", root="<repo>")  # once per active project
+   read_recent(agent="<agent>", limit=5)
+
+2. WORK
+   append_entry() — every 2-3 significant actions (Scribe audit trail)
+   store_memory() — important findings/decisions (Council memory)
+   log_audit()    — milestones only (Council milestones)
+
+3. CLOCK OUT
+   end_session(summary="<what was accomplished>")
+   → triggers automatic reflection
+```
+
+## Session Auto-Open (Optional)
+
+When `council.sessions.auto_open_enabled: true` is set in council.yaml:
+- Sessions are auto-opened on first MCP tool call if no active session exists
+- Auto-opened sessions use `session_type: "auto"` and default project context
+- Explicit `open_session` calls still work and are preferred for named workstreams
+- Works for both Claude Code and Codex agents (no hooks required)
+
+When disabled (default): existing behavior unchanged. Agents must call `open_session` explicitly.
+
+## Unified Message Operations
+
+### acknowledge_message
+One-call message handling: marks messages as read and optionally sends a reply.
+```python
+acknowledge_message(persona_id="atlas", message_ids="msg-1,msg-2", reply_body="Acknowledged.")
+```
+Replaces the old 3-call pattern: `list_urgent_messages` → `mark_read` → `record_message`.
+
+### Inbox Summary
+When `council.messages.inbox_summary_enabled: true`, every successful tool response includes:
+```json
+{"inbox_summary": {"unread": 3, "urgent": 1, "action": "Call acknowledge_message() or list_urgent_messages()"}}
+```
+This works for all agents (Claude and Codex) since it's injected into tool responses.
+
+### System Agents
+Non-roster system processes (e.g., `federation-daemon`) can send/receive messages without profiles when listed in `council.messages.system_agents`.
+
+### Coordinator Urgent Bypass
+Agents with `council_role: coordinator` are never hard-blocked by urgent messages. They still see urgent counts via `inbox_summary` but can continue working.
+
+## Project Discipline
+
+- Base Scribe project (`{{ council_slug }}`) is for ephemeral tactical work ONLY
+- Named project required for any multi-session, multi-agent, or scoped workstream
+- If a named project exists for this effort, use it — not the base project
+- Propagate named project to every delegated agent explicitly in their prompt
+- See `project-discipline` rule for decision tree and naming convention
+
+## Self-Reporting Violations
+
+If you realize you logged to the wrong project:
+```python
+append_entry(agent="<agent>", status="warn",
+    message="Self-correction: prior entries logged to '<wrong>'. Correct project: '<right>'. Continuing on correct project.")
+```
+Do NOT edit prior entries. Continue correctly from here.
+
+## Quick Reference
+
+```python
+open_session(persona_id="{{ coordinator_name }}", summary="Implementing auth flow")
+set_project(agent="{{ coordinator_name }}", name="my_project", root="{{ repo_root }}")
+read_recent(agent="{{ coordinator_name }}", limit=5)
+
+append_entry(agent="{{ coordinator_name }}", message="Action taken", status="info",
+    meta={"reasoning": {"why": "...", "what": "...", "how": "..."}})
+
+end_session(session_id="...", summary="What was accomplished")
+```
