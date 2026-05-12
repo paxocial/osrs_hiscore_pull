@@ -21,6 +21,7 @@ router = APIRouter()
 @router.get("/auth/register", response_class=HTMLResponse)
 async def register_form(request: Request):
     return templates.TemplateResponse(
+        request,
         "auth_register.html",
         {"request": request, "user": get_current_user(request), "csrf_token": get_csrf_token(request)},
     )
@@ -38,6 +39,7 @@ async def register_submit(
     verify_csrf(request, csrf_token)
     if password != confirm_password:
         return templates.TemplateResponse(
+            request,
             "auth_register.html",
             {
                 "request": request,
@@ -56,6 +58,7 @@ async def register_submit(
     except ValueError as e:
         # Password validation failed
         return templates.TemplateResponse(
+            request,
             "auth_register.html",
             {
                 "request": request,
@@ -68,6 +71,7 @@ async def register_submit(
 
     if not created_id:
         return templates.TemplateResponse(
+            request,
             "auth_register.html",
             {
                 "request": request,
@@ -94,6 +98,7 @@ async def login_form(request: Request):
     if current:
         return RedirectResponse(url="/profiles", status_code=303)
     return templates.TemplateResponse(
+        request,
         "auth_login.html",
         {"request": request, "user": current, "csrf_token": get_csrf_token(request)},
     )
@@ -106,6 +111,7 @@ async def login_submit(request: Request, email: str = Form(...), password: str =
     user = auth_service.authenticate(email, password, request)
     if not user:
         return templates.TemplateResponse(
+            request,
             "auth_login.html",
             {"request": request, "error": "Invalid credentials.", "user": None, "csrf_token": get_csrf_token(request)},
             status_code=401,
@@ -138,6 +144,7 @@ async def token_list(request: Request):
     user = require_user(request)
     tokens = auth_service.list_tokens(user["id"])
     return templates.TemplateResponse(
+        request,
         "auth_tokens.html",
         {"request": request, "user": user, "tokens": tokens, "new_token": None, "csrf_token": get_csrf_token(request)},
     )
@@ -151,6 +158,7 @@ async def token_issue(request: Request, scopes: str = Form("read"), label: str =
     plain_token, _ = auth_service.issue_token(user["id"], scopes=scopes, label=label)
     tokens = auth_service.list_tokens(user["id"])
     return templates.TemplateResponse(
+        request,
         "auth_tokens.html",
         {"request": request, "user": user, "tokens": tokens, "new_token": plain_token, "csrf_token": get_csrf_token(request)},
     )
@@ -163,6 +171,7 @@ async def token_revoke(request: Request, token_id: int = Form(...), csrf_token: 
     auth_service.revoke_token(user["id"], token_id)
     tokens = auth_service.list_tokens(user["id"])
     return templates.TemplateResponse(
+        request,
         "auth_tokens.html",
         {"request": request, "user": user, "tokens": tokens, "new_token": None, "csrf_token": get_csrf_token(request)},
     )
@@ -175,6 +184,7 @@ async def forgot_password_form(request: Request):
     Phase 3, Task 3.4: Password Reset Flow
     """
     return templates.TemplateResponse(
+        request,
         "auth_forgot_password.html",
         {"request": request, "user": get_current_user(request), "csrf_token": get_csrf_token(request)},
     )
@@ -221,6 +231,7 @@ async def forgot_password_submit(request: Request, email: str = Form(...), csrf_
             send_password_reset_email(user["email"], token, base_url)
 
     return templates.TemplateResponse(
+        request,
         "auth_forgot_password.html",
         {
             "request": request,
@@ -250,6 +261,7 @@ async def reset_password_form(request: Request, token: str):
 
         if not reset_token:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -266,6 +278,7 @@ async def reset_password_form(request: Request, token: str):
         # Check if already used
         if reset_token["used_at"]:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -281,6 +294,7 @@ async def reset_password_form(request: Request, token: str):
         expires_at = datetime.fromisoformat(reset_token["expires_at"])
         if datetime.utcnow() > expires_at:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -294,6 +308,7 @@ async def reset_password_form(request: Request, token: str):
 
     # Token valid, show reset password form
     return templates.TemplateResponse(
+        request,
         "auth_reset_password.html",
         {"request": request, "user": get_current_user(request), "token": token, "csrf_token": get_csrf_token(request)},
     )
@@ -320,6 +335,7 @@ async def reset_password_submit(
     # Check passwords match
     if password != confirm_password:
         return templates.TemplateResponse(
+            request,
             "auth_reset_password.html",
             {
                 "request": request,
@@ -335,6 +351,7 @@ async def reset_password_submit(
     is_valid, error_msg = validate_password_strength(password)
     if not is_valid:
         return templates.TemplateResponse(
+            request,
             "auth_reset_password.html",
             {
                 "request": request,
@@ -356,6 +373,7 @@ async def reset_password_submit(
 
         if not reset_token:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -372,6 +390,7 @@ async def reset_password_submit(
         # Check if already used
         if reset_token["used_at"]:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -387,6 +406,7 @@ async def reset_password_submit(
         expires_at = datetime.fromisoformat(reset_token["expires_at"])
         if datetime.utcnow() > expires_at:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -420,6 +440,7 @@ async def reset_password_submit(
                       metadata={"method": "password_reset"})
 
     return templates.TemplateResponse(
+        request,
         "message.html",
         {
             "request": request,
@@ -447,6 +468,7 @@ async def verify_email(request: Request, token: str):
     # Check if email verification is enabled
     if not config.features.enable_email_verification:
         return templates.TemplateResponse(
+            request,
             "message.html",
             {
                 "request": request,
@@ -466,6 +488,7 @@ async def verify_email(request: Request, token: str):
 
         if not user:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -482,6 +505,7 @@ async def verify_email(request: Request, token: str):
         # Check if already verified
         if user["email_verified"]:
             return templates.TemplateResponse(
+                request,
                 "message.html",
                 {
                     "request": request,
@@ -496,6 +520,7 @@ async def verify_email(request: Request, token: str):
             expires = datetime.fromisoformat(user["verification_expires"])
             if datetime.utcnow() > expires:
                 return templates.TemplateResponse(
+                    request,
                     "message.html",
                     {
                         "request": request,
@@ -515,6 +540,7 @@ async def verify_email(request: Request, token: str):
         conn.commit()
 
     return templates.TemplateResponse(
+        request,
         "message.html",
         {
             "request": request,

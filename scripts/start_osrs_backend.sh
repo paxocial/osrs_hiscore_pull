@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+# Activate virtualenv if present
+if [[ -f "${ROOT_DIR}/.venv/bin/activate" ]]; then
+  source "${ROOT_DIR}/.venv/bin/activate"
+fi
+
 HOST="${OSRS_BACKEND_HOST:-127.0.0.1}"
 PORT="${OSRS_BACKEND_PORT:-8001}"
 COUNCIL_WEB_ORIGIN="${COUNCIL_WEB_ORIGIN:-http://localhost:8015}"

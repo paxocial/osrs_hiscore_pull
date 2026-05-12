@@ -19,6 +19,7 @@ router = APIRouter()
 async def home(request: Request):
     user = get_current_user(request)
     return templates.TemplateResponse(
+        request,
         "home.html",
         {
             "request": request,
@@ -48,6 +49,7 @@ async def status(request: Request):
     status_text = f"API {api_status}" if api_status != "healthy" else "API healthy"
 
     return templates.TemplateResponse(
+        request,
         "partials/status.html",
         {
             "request": request,

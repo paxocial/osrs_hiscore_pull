@@ -131,6 +131,35 @@ def test_total_level_only_overall():
     assert _total_level(skills) == 0
 
 
+def test_total_xp_prefers_overall_when_present():
+    skills = [
+        {"name": "Overall", "level": 100, "xp": 1_000_000},
+        {"name": "Attack", "level": 50, "xp": 100_000},
+        {"name": "Defence", "level": 30, "xp": 50_000},
+    ]
+
+    assert _total_xp(skills) == 1_000_000
+
+
+def test_total_xp_fallback_sums_non_overall_when_overall_absent():
+    skills = [
+        {"name": "Attack", "level": 50, "xp": 100_000},
+        {"name": "Defence", "level": 30, "xp": 50_000},
+        {"name": "Strength", "level": 20, "xp": 30_000},
+    ]
+
+    assert _total_xp(skills) == 180_000
+
+
+def test_total_xp_handles_missing_overall_xp_safely():
+    skills = [
+        {"name": "Overall", "level": 100, "xp": None},
+        {"name": "Attack", "level": 50, "xp": 100_000},
+    ]
+
+    assert _total_xp(skills) == 0
+
+
 def test_report_content_uses_correct_total_level():
     """Test that the generated report content uses the correct total level."""
     snapshot = {
@@ -157,6 +186,44 @@ def test_report_content_uses_correct_total_level():
     # Total level should be 50 + 30 + 20 = 100 (excluding Overall)
     # Not 100 (Overall) + 100 = 200
     assert "- **Total Level:** 100" in content
-    assert "- **Total XP:** 1,180,000" in content  # Should still include Overall XP
+    assert "- **Total XP:** 1,000,000" in content
     assert "Attack | 50" in content
     assert "Overall | 100" in content  # Overall should still be displayed in skills table
+
+
+def test_report_delta_summary_uses_overall_total_and_excludes_overall_highlight():
+    snapshot = {
+        "metadata": {
+            "player": "Flamelborn",
+            "resolved_mode": "ironman",
+            "fetched_at": "2026-05-12T00:00:00+00:00",
+            "snapshot_id": "flamelborn-delta",
+        },
+        "data": {
+            "skills": [
+                {"name": "Overall", "level": 952, "xp": 14_096_057},
+                {"name": "Agility", "level": 60, "xp": 276_656},
+                {"name": "Mining", "level": 76, "xp": 1_439_935},
+                {"name": "Magic", "level": 1, "xp": 3_145_017},
+            ],
+            "activities": [],
+        },
+        "delta": {
+            "total_xp_delta": 4_676_414,
+            "skill_deltas": [
+                {"name": "Overall", "xp_delta": 4_676_414, "level_delta": 169},
+                {"name": "Magic", "xp_delta": 3_145_017, "level_delta": 0},
+                {"name": "Mining", "xp_delta": 1_438_781, "level_delta": 67},
+                {"name": "Agility", "xp_delta": 92_616, "level_delta": 4},
+            ],
+            "activity_deltas": [],
+        },
+    }
+
+    content = build_report_content(snapshot)
+
+    assert "- **Changes:** ΔXP 4,676,414" in content
+    assert "ΔXP 9,352,828" not in content
+    assert "Levels Overall" not in content
+    assert "Levels Mining (+67), Agility (+4)" in content
+    assert "| Overall | +4,676,414 | +169 |" in content

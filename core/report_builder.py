@@ -116,8 +116,12 @@ def _format_timestamp(timestamp: Any) -> str:
 
 
 def _total_xp(skills: Iterable[Dict[str, Any]]) -> int:
-    # Exclude "Overall" skill from total XP calculation since it already represents the sum
-    return sum(_safe_int(skill.get("xp")) for skill in skills if skill.get("name") != "Overall")
+    skills_list = list(skills)
+    for skill in skills_list:
+        if skill.get("name") == "Overall":
+            return _safe_int(skill.get("xp"))
+
+    return sum(_safe_int(skill.get("xp")) for skill in skills_list if skill.get("name") != "Overall")
 
 
 def _total_level(skills: Iterable[Dict[str, Any]]) -> int:
@@ -167,9 +171,14 @@ def _group_notable_activities(activities: Iterable[Dict[str, Any]]) -> List[Tupl
 def _summarize_delta(delta: Dict[str, Any]) -> str:
     total_xp_delta = int(delta.get("total_xp_delta", 0))
     skill_deltas: List[Dict[str, Any]] = delta.get("skill_deltas", [])
-    leveled = [skill for skill in skill_deltas if skill.get("level_delta")]
+    player_skill_deltas = [
+        skill for skill in skill_deltas if skill.get("name") != "Overall"
+    ]
+    leveled = [skill for skill in player_skill_deltas if skill.get("level_delta")]
     xp_highlights = [
-        skill for skill in skill_deltas if skill.get("xp_delta") and skill.get("xp_delta") > 0
+        skill
+        for skill in player_skill_deltas
+        if skill.get("xp_delta") and skill.get("xp_delta") > 0
     ]
 
     fragments = []

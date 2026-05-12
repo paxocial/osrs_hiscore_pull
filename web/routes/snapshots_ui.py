@@ -20,6 +20,7 @@ async def run_snapshot(request: Request, player: str = Form(...), mode: str = Fo
     user = require_user(request)
     job_id = jobs.create_job("snapshot", {"player": player, "mode": mode, "user_id": user["id"], "target_type": "account"})
     return templates.TemplateResponse(
+        request,
         "partials/snapshot_result.html",
         {"request": request, "job_id": job_id, "player": player},
     )
@@ -30,6 +31,7 @@ async def snapshot_status(request: Request, job_id: str = Query(...), player: st
     require_user(request)
     job = jobs.get_job(job_id)
     return templates.TemplateResponse(
+        request,
         "partials/snapshot_result.html",
         {"request": request, "job": job, "job_id": job_id, "player": player},
     )

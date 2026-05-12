@@ -224,13 +224,16 @@ async def get_account(
 
             if latest_snapshot:
                 # Get skills and activities for latest snapshot
+                # Use skill_id/activity_id as id to match Pydantic schema expectations
                 skills_query = """
-                    SELECT * FROM skills WHERE snapshot_id = ?
+                    SELECT skill_id as id, snapshot_id, name, level, xp, rank
+                    FROM skills WHERE snapshot_id = ?
                 """
                 skills_data = conn.execute(skills_query, (latest_snapshot["id"],)).fetchall()
 
                 activities_query = """
-                    SELECT * FROM activities WHERE snapshot_id = ?
+                    SELECT activity_id as id, snapshot_id, name, score, rank
+                    FROM activities WHERE snapshot_id = ?
                 """
                 activities_data = conn.execute(activities_query, (latest_snapshot["id"],)).fetchall()
 
@@ -304,13 +307,13 @@ async def get_account_snapshots(
 
             # Include skills if requested
             if include_skills:
-                skills_query = "SELECT * FROM skills WHERE snapshot_id = ?"
+                skills_query = "SELECT skill_id as id, snapshot_id, name, level, xp, rank FROM skills WHERE snapshot_id = ?"
                 skills_data = conn.execute(skills_query, (snapshot_row["id"],)).fetchall()
                 snapshot_dict["skills"] = [dict(skill) for skill in skills_data]
 
             # Include activities if requested
             if include_activities:
-                activities_query = "SELECT * FROM activities WHERE snapshot_id = ?"
+                activities_query = "SELECT activity_id as id, snapshot_id, name, score, rank FROM activities WHERE snapshot_id = ?"
                 activities_data = conn.execute(activities_query, (snapshot_row["id"],)).fetchall()
                 snapshot_dict["activities"] = [dict(activity) for activity in activities_data]
 

@@ -29,7 +29,7 @@ async def compare_page(
     if a and b:
         data = comparison.head_to_head(a, b, timeframe)
 
-    return templates.TemplateResponse("compare.html", {
+    return templates.TemplateResponse(request, "compare.html", {
         "request": request,
         "user": get_current_user(request),
         "csrf_token": get_csrf_token(request),
@@ -54,7 +54,7 @@ async def compare_results(
     if a and b:
         data = comparison.head_to_head(a, b, timeframe)
 
-    return templates.TemplateResponse("partials/compare_results.html", {
+    return templates.TemplateResponse(request, "partials/compare_results.html", {
         "request": request,
         "player_a": a,
         "player_b": b,

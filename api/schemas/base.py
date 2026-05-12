@@ -93,14 +93,17 @@ class Account(AccountBase):
     total_snapshots: Optional[int] = Field(None, description="Total number of snapshots")
     latest_snapshot: Optional[datetime] = Field(None, description="Latest snapshot timestamp")
 
+    # Populated by include_latest_snapshot=true
+    latest_snapshot_data: Optional[Any] = Field(None, description="Full latest snapshot with skills/activities")
+
 
 class SkillBase(BaseModel):
     """Base skill model."""
     id: int = Field(..., ge=0, le=99, description="Skill ID (0-99)")
     name: str = Field(..., min_length=1, max_length=50, description="Skill name")
-    level: Optional[int] = Field(None, ge=1, le=99, description="Skill level (1-99)")
+    level: Optional[int] = Field(None, ge=1, description="Skill level (1-99 per skill, up to 2277 for Overall)")
     xp: Optional[int] = Field(None, ge=0, description="Skill XP (>= 0)")
-    rank: Optional[int] = Field(None, ge=0, description="Hiscore rank (>= 0)")
+    rank: Optional[int] = Field(None, description="Hiscore rank (-1 = unranked)")
 
     @field_validator("name")
     @classmethod
@@ -130,8 +133,8 @@ class ActivityBase(BaseModel):
     """Base activity model."""
     id: int = Field(..., ge=0, description="Activity ID")
     name: str = Field(..., min_length=1, max_length=100, description="Activity name")
-    score: Optional[int] = Field(None, ge=0, description="Activity score")
-    rank: Optional[int] = Field(None, ge=0, description="Hiscore rank")
+    score: Optional[int] = Field(None, description="Activity score (-1 = unranked)")
+    rank: Optional[int] = Field(None, description="Hiscore rank (-1 = unranked)")
 
     @field_validator("name")
     @classmethod
@@ -174,10 +177,19 @@ class SnapshotBase(BaseModel):
                 return {}
         return v or {}
 
-    @field_validator("requested_mode", "resolved_mode")
+    @field_validator("requested_mode")
     @classmethod
-    def validate_mode(cls, v: str) -> str:
-        """Validate game modes."""
+    def validate_requested_mode(cls, v: str) -> str:
+        """Validate requested game mode (allows 'auto' for auto-detection)."""
+        from core.constants import GAME_MODES
+        if v not in GAME_MODES and v not in ("auto", "auto-detect"):
+            raise ValueError(f"Invalid game mode: {v}")
+        return v
+
+    @field_validator("resolved_mode")
+    @classmethod
+    def validate_resolved_mode(cls, v: str) -> str:
+        """Validate resolved game mode (must be an actual mode)."""
         from core.constants import GAME_MODES
         if v not in GAME_MODES:
             raise ValueError(f"Invalid game mode: {v}")
@@ -205,6 +217,7 @@ class Snapshot(SnapshotBase):
 
     id: int = Field(..., description="Database ID")
     account_id: int = Field(..., description="Account ID")
+    account_name: Optional[str] = Field(None, description="Account name (from JOIN)")
     created_at: datetime = Field(..., description="Database creation timestamp")
 
     # Optional relationships
@@ -218,6 +231,18 @@ class SnapshotDeltaBase(BaseModel):
     time_diff_hours: Optional[float] = Field(None, ge=0, description="Time difference in hours")
     skill_deltas: List[Dict[str, Any]] = Field(default_factory=list, description="Skill changes")
     activity_deltas: List[Dict[str, Any]] = Field(default_factory=list, description="Activity changes")
+
+    @field_validator("skill_deltas", "activity_deltas", mode="before")
+    @classmethod
+    def parse_json_deltas(cls, v):
+        """Parse delta lists from JSON string if stored as text in DB."""
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return []
+        return v or []
 
 
 class SnapshotDelta(SnapshotDeltaBase):

@@ -61,9 +61,7 @@ def compute_snapshot_delta(
                 }
             )
 
-    total_xp_prev = sum(_safe_number(skill.get("xp")) for skill in previous.get("skills", []))
-    total_xp_curr = sum(_safe_number(skill.get("xp")) for skill in current.get("skills", []))
-    total_xp_delta = total_xp_curr - total_xp_prev
+    total_xp_delta = _total_xp_delta(prev_skills, curr_skills)
 
     return {
         "total_xp_delta": total_xp_delta,
@@ -82,6 +80,28 @@ def _safe_number(value: Optional[Any]) -> float:
     return 0.0
 
 
+def _total_xp_delta(
+    prev_skills: Dict[str, Dict[str, Any]], curr_skills: Dict[str, Dict[str, Any]]
+) -> float:
+    if "Overall" in prev_skills or "Overall" in curr_skills:
+        return _number_delta(
+            prev_skills.get("Overall", {}).get("xp"),
+            curr_skills.get("Overall", {}).get("xp"),
+        )
+
+    total_xp_prev = sum(
+        _safe_number(skill.get("xp"))
+        for name, skill in prev_skills.items()
+        if name != "Overall"
+    )
+    total_xp_curr = sum(
+        _safe_number(skill.get("xp"))
+        for name, skill in curr_skills.items()
+        if name != "Overall"
+    )
+    return total_xp_curr - total_xp_prev
+
+
 def _number_delta(old: Optional[Any], new: Optional[Any]) -> float:
     return _safe_number(new) - _safe_number(old)
 
@@ -96,9 +116,12 @@ def summarize_delta(delta: Dict[str, Any]) -> str:
     if total_xp_delta:
         fragments.append(f"ΔXP {format_number(total_xp_delta)}")
 
+    player_skill_deltas = [
+        skill for skill in skill_deltas if skill.get("name") != "Overall"
+    ]
     leveled = [
         skill
-        for skill in skill_deltas
+        for skill in player_skill_deltas
         if skill.get("level_delta", 0) > 0
     ]
 
@@ -110,12 +133,12 @@ def summarize_delta(delta: Dict[str, Any]) -> str:
                 for skill in leveled[:3]
             )
         )
-    elif skill_deltas:
+    elif player_skill_deltas:
         fragments.append(
             "XP gains: "
             + ", ".join(
                 f"{skill['name']}({format_number(int(skill['xp_delta']))})"
-                for skill in skill_deltas[:3]
+                for skill in player_skill_deltas[:3]
             )
         )
 

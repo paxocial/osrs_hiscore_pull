@@ -75,6 +75,7 @@ async def clan_detail(request: Request, slug: str):
     members = clan_service.list_members_paginated(clan["id"], offset=0, limit=20)
     modes = ["auto"] + list(["main", "ironman", "hardcore", "ultimate", "deadman", "tournament", "seasonal"])
     return templates.TemplateResponse(
+        request,
         "clan_detail.html",
         {
             "request": request,
@@ -103,6 +104,7 @@ async def run_clan_snapshot(request: Request, clan_id: int, csrf_token: str = Fo
     }
     job_id = jobs.create_job("clan_snapshot", payload)
     return templates.TemplateResponse(
+        request,
         "partials/clan_snapshot_job.html",
         {"request": request, "job_id": job_id, "clan": clan},
     )
@@ -113,6 +115,7 @@ async def clan_job_status(request: Request, job_id: str):
     require_user(request)
     job = jobs.get_job(job_id)
     return templates.TemplateResponse(
+        request,
         "partials/clan_snapshot_job.html",
         {"request": request, "job": job, "job_id": job_id},
     )
@@ -126,6 +129,7 @@ async def clan_stats_view(request: Request, slug: str, timeframe: str = "7d"):
         return HTMLResponse("<div class='alert error'>Clan not found</div>", status_code=404)
     data = clan_stats.compute_stats(clan["id"], timeframe=timeframe)
     return templates.TemplateResponse(
+        request,
         "partials/clan_stats.html",
         {"request": request, "clan": clan, "data": data},
     )
@@ -146,6 +150,7 @@ async def clan_leaderboard(
         return HTMLResponse("<div class='alert error'>Clan not found</div>", status_code=404)
     lb = clan_stats.get_leaderboard(clan["id"], timeframe=timeframe, metric=metric, page=page, page_size=page_size)
     return templates.TemplateResponse(
+        request,
         "partials/clan_leaderboard.html",
         {"request": request, "clan": clan, "lb": lb},
     )
@@ -159,6 +164,7 @@ async def clan_last_run(request: Request, slug: str):
         return HTMLResponse("<div class='alert error'>Clan not found</div>", status_code=404)
     last = clan_stats.get_last_run(clan["id"])
     return templates.TemplateResponse(
+        request,
         "partials/clan_last_run.html",
         {"request": request, "clan": clan, "last": last},
     )
@@ -197,6 +203,7 @@ async def clan_member_overview(request: Request, slug: str, name: str, timeframe
             latest["delta_summary"] = profile_data._delta_summary(window_delta)
 
     return templates.TemplateResponse(
+        request,
         "partials/clan_member_overview.html",
         {
             "request": request,
@@ -216,6 +223,7 @@ async def clan_members(request: Request, slug: str, offset: int = 0, limit: int 
         return HTMLResponse("<div class='alert error'>Clan not found</div>", status_code=404)
     page = clan_service.list_members_paginated(clan["id"], offset=offset, limit=limit)
     return templates.TemplateResponse(
+        request,
         "partials/clan_members.html",
         {
             "request": request,
@@ -239,6 +247,7 @@ async def clan_compare(
         return HTMLResponse("<div class='alert error'>Clan not found</div>", status_code=404)
     data = comparison_service.roster_compare(clan["id"], timeframe=timeframe, metric=metric)
     return templates.TemplateResponse(
+        request,
         "partials/clan_comparison.html",
         {
             "request": request,

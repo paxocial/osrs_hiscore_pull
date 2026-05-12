@@ -11,8 +11,10 @@ import anyio
 from pydantic import BaseModel, Field
 from pathlib import Path
 
+from agents.report_agent import ReportAgent
 from agents.osrs_snapshot_agent import SnapshotAgent, SnapshotResult
 from core.constants import DEFAULT_MODE
+from web.services.snapshot_ingest import SnapshotIngestService
 
 from api.dependencies import (
     get_database_connection,
@@ -21,6 +23,7 @@ from api.dependencies import (
     get_snapshot_or_404
 )
 from api.schemas import (
+    Account,
     Snapshot,
     SnapshotCreate,
     SnapshotListResponse,
@@ -191,13 +194,13 @@ async def list_snapshots(
 
                 # Include skills if requested
                 if params.include_skills:
-                    skills_query = "SELECT * FROM skills WHERE snapshot_id = ?"
+                    skills_query = "SELECT skill_id as id, snapshot_id, name, level, xp, rank FROM skills WHERE snapshot_id = ?"
                     skills_data = conn.execute(skills_query, (snapshot_row["id"],)).fetchall()
                     snapshot_dict["skills"] = [dict(skill) for skill in skills_data]
 
                 # Include activities if requested
                 if params.include_activities:
-                    activities_query = "SELECT * FROM activities WHERE snapshot_id = ?"
+                    activities_query = "SELECT activity_id as id, snapshot_id, name, score, rank FROM activities WHERE snapshot_id = ?"
                     activities_data = conn.execute(activities_query, (snapshot_row["id"],)).fetchall()
                     snapshot_dict["activities"] = [dict(activity) for activity in activities_data]
 
@@ -304,11 +307,11 @@ async def get_snapshot(
             account = conn.execute(account_query, (snapshot_data["account_id"],)).fetchone()
 
             # Get skills
-            skills_query = "SELECT * FROM skills WHERE snapshot_id = ? ORDER BY skill_id"
+            skills_query = "SELECT skill_id as id, snapshot_id, name, level, xp, rank FROM skills WHERE snapshot_id = ? ORDER BY skill_id"
             skills_data = conn.execute(skills_query, (snapshot_data["id"],)).fetchall()
 
             # Get activities
-            activities_query = "SELECT * FROM activities WHERE snapshot_id = ? ORDER BY activity_id"
+            activities_query = "SELECT activity_id as id, snapshot_id, name, score, rank FROM activities WHERE snapshot_id = ? ORDER BY activity_id"
             activities_data = conn.execute(activities_query, (snapshot_data["id"],)).fetchall()
 
             # Build complete snapshot
@@ -333,11 +336,13 @@ async def get_snapshot(
             return SnapshotDetailResponse(
                 snapshot=snapshot,
                 deltas=deltas,
-                account=account
+                account=Account.model_validate(dict(account))
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error getting snapshot {snapshot_id}: {e}")
+        logger.error(f"Error getting snapshot {snapshot_data.get('snapshot_id', 'unknown')}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve snapshot"
@@ -374,7 +379,7 @@ async def get_snapshot_deltas(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting deltas for snapshot {snapshot_id}: {e}")
+        logger.error(f"Error getting deltas for snapshot {snapshot_data.get('snapshot_id', 'unknown')}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve snapshot deltas"
@@ -551,9 +556,31 @@ async def _run_snapshots(payload: SnapshotRunRequest) -> List[dict]:
         mode_cache_path=Path("config/mode_cache.json"),
         config_path=Path("config/project.json"),
     )
+    ingest_service = SnapshotIngestService()
+    report_agent = ReportAgent(Path("reports"), scribe_config=Path("config/project.json"))
 
     def runner():
-        return [_convert_result(r) for r in agent.run(accounts)]
+        results = agent.run(accounts)
+        for result in results:
+            if not result.success or not result.payload:
+                continue
+
+            ingest_info = ingest_service.ingest_result(result)
+            if isinstance(ingest_info, dict):
+                if ingest_info.get("delta"):
+                    result.delta = ingest_info["delta"]
+                    result.payload["delta"] = ingest_info["delta"]
+                if ingest_info.get("delta_summary"):
+                    result.delta_summary = ingest_info["delta_summary"]
+
+            if result.snapshot_path:
+                report_agent.build_from_payload(
+                    payload=result.payload,
+                    report_source=result.snapshot_path,
+                    delta_summary=result.delta_summary,
+                )
+
+        return [_convert_result(r) for r in results]
 
     return await anyio.to_thread.run_sync(runner)
 
@@ -681,12 +708,12 @@ async def create_snapshot(
 
         # Get skills and activities for the response
         skills_data = conn.execute(
-            "SELECT * FROM skills WHERE snapshot_id = ?",
+            "SELECT skill_id as id, snapshot_id, name, level, xp, rank FROM skills WHERE snapshot_id = ?",
             (snapshot_id,)
         ).fetchall()
 
         activities_data = conn.execute(
-            "SELECT * FROM activities WHERE snapshot_id = ?",
+            "SELECT activity_id as id, snapshot_id, name, score, rank FROM activities WHERE snapshot_id = ?",
             (snapshot_id,)
         ).fetchall()
 

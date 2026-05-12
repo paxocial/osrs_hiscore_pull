@@ -21,6 +21,7 @@ async def list_webhooks(request: Request):
     user = require_user(request)
     hooks = webhooks.list_webhooks(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/webhooks.html",
         {"request": request, "hooks": hooks},
     )
@@ -40,6 +41,7 @@ async def create_user_webhook(request: Request, url: str = Form(...), events: st
     )
     hooks = webhooks.list_webhooks(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/webhooks.html",
         {"request": request, "hooks": hooks},
     )
@@ -65,6 +67,7 @@ async def create_clan_webhook(request: Request, clan_id: int = Form(...), url: s
     )
     hooks = webhooks.list_webhooks(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/webhooks.html",
         {"request": request, "hooks": hooks},
     )

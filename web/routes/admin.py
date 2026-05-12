@@ -55,7 +55,7 @@ async def admin_dashboard(request: Request):
             ).fetchone()["count"],
         }
 
-    return templates.TemplateResponse("admin/dashboard.html", {
+    return templates.TemplateResponse(request, "admin/dashboard.html", {
         "request": request,
         "admin": admin,
         "stats": stats,
@@ -105,7 +105,7 @@ async def admin_users_list(request: Request, page: int = 1, search: str = ""):
         else:
             total_users = conn.execute(count_query).fetchone()["count"]
 
-    return templates.TemplateResponse("admin/users.html", {
+    return templates.TemplateResponse(request, "admin/users.html", {
         "request": request,
         "admin": admin,
         "users": users,
@@ -238,7 +238,7 @@ async def admin_audit_logs(
         # Get unique event types for filter dropdown
         event_types = conn.execute("SELECT DISTINCT event_type FROM audit_log ORDER BY event_type").fetchall()
 
-    return templates.TemplateResponse("admin/audit_logs.html", {
+    return templates.TemplateResponse(request, "admin/audit_logs.html", {
         "request": request,
         "admin": admin,
         "logs": logs,
@@ -269,7 +269,7 @@ async def admin_rate_limits(request: Request):
             ORDER BY request_count DESC
         """).fetchall()
 
-    return templates.TemplateResponse("admin/rate_limits.html", {
+    return templates.TemplateResponse(request, "admin/rate_limits.html", {
         "request": request,
         "admin": admin,
         "blocked_ips": blocked_ips,
@@ -315,7 +315,7 @@ async def admin_clans(request: Request, page: int = 1):
 
         total_clans = conn.execute("SELECT COUNT(*) as count FROM clans").fetchone()["count"]
 
-    return templates.TemplateResponse("admin/clans.html", {
+    return templates.TemplateResponse(request, "admin/clans.html", {
         "request": request,
         "admin": admin,
         "clans": clans,
@@ -369,7 +369,7 @@ async def admin_config(request: Request):
         },
     }
 
-    return templates.TemplateResponse("admin/config.html", {
+    return templates.TemplateResponse(request, "admin/config.html", {
         "request": request,
         "admin": admin,
         "config": config_data,

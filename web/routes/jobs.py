@@ -27,6 +27,7 @@ async def job_status(request: Request, player: str | None = None, clan_id: int |
         return HTMLResponse("", status_code=204)
     recent = jobs.list_recent(limit=5, user_id=user["id"], player=player, clan_id=clan_id)
     return templates.TemplateResponse(
+        request,
         "partials/job_status.html",
         {"request": request, "jobs": recent},
     )
@@ -46,6 +47,7 @@ async def schedule_account(
     schedules.add_account_schedule(user["id"], account_name, cron_expr)
     user_schedules = schedules.list_user_schedules(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/job_schedules.html",
         {"request": request, "schedules": user_schedules},
     )
@@ -59,6 +61,7 @@ async def list_schedules(request: Request):
     user_schedules = schedules.list_user_schedules(user["id"])
     clan_schedules = schedules.list_clan_schedules(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/job_schedules.html",
         {"request": request, "schedules": user_schedules, "clan_schedules": clan_schedules},
     )
@@ -71,6 +74,7 @@ async def delete_schedule(request: Request, schedule_id: int = Form(...)):
     user_schedules = schedules.list_user_schedules(user["id"])
     clan_schedules = schedules.list_clan_schedules(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/job_schedules.html",
         {"request": request, "schedules": user_schedules, "clan_schedules": clan_schedules},
     )
@@ -98,6 +102,7 @@ async def schedule_clan(request: Request, clan_id: int = Form(...), cron: str = 
     user_schedules = schedules.list_user_schedules(user["id"])
     clan_schedules = schedules.list_clan_schedules(user["id"])
     return templates.TemplateResponse(
+        request,
         "partials/job_schedules.html",
         {"request": request, "schedules": user_schedules, "clan_schedules": clan_schedules},
     )

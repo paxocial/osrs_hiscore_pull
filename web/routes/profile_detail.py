@@ -56,6 +56,7 @@ async def profile_detail(request: Request, rsn: str):
     mode_value = data["latest"]["resolved_mode"] if data.get("latest") else "—"
 
     return templates.TemplateResponse(
+        request,
         "profile_detail.html",
         {
             "request": request,
@@ -77,6 +78,7 @@ async def profile_timeline(request: Request, rsn: str, page: int = Query(1, ge=1
     data = profile_data.get_profile(rsn, limit=page_size, offset=start)
     snapshots = data["timeline"]
     return templates.TemplateResponse(
+        request,
         "partials/timeline.html",
         {
             "request": request,
@@ -146,6 +148,7 @@ async def profile_snapshot_detail(request: Request, rsn: str, snapshot_id: str, 
         json_content = json.dumps(payload, indent=2)
 
     return templates.TemplateResponse(
+        request,
         "partials/snapshot_detail.html",
         {
             "request": request,
@@ -172,6 +175,7 @@ async def profile_refresh_mode(request: Request, rsn: str):
         account_service.ensure_account(rsn.strip(), display_name=None, mode=mode, update_default_mode=True)
 
     return templates.TemplateResponse(
+        request,
         "partials/profile_mode_status.html",
         {
             "request": request,
@@ -218,6 +222,7 @@ async def profile_snapshot_delete(
     data = profile_data.get_profile(rsn, limit=page_size, offset=start)
     snapshots = data["timeline"]
     resp = templates.TemplateResponse(
+        request,
         "partials/timeline.html",
         {
             "request": request,

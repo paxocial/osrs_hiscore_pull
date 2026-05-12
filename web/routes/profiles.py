@@ -24,6 +24,7 @@ async def profiles(request: Request):
     clans = clan_service.list_clans_for_user(user["id"])
     modes = ["auto"] + list(["main", "ironman", "hardcore", "ultimate", "deadman", "tournament", "seasonal"])
     return templates.TemplateResponse(
+        request,
         "profiles.html",
         {
             "request": request,
@@ -91,6 +92,7 @@ async def detect_profile_mode(request: Request, name: str = Form(...), csrf_toke
     verify_csrf(request, csrf_token)
     result = detect_mode(name.strip(), requested_mode="auto")
     return templates.TemplateResponse(
+        request,
         "partials/detect_result.html",
         {"request": request, "result": result, "name": name},
     )
@@ -116,6 +118,7 @@ async def refresh_profile_mode(
     if mode:
         account_service.ensure_account(name.strip(), display_name=None, mode=mode, update_default_mode=True)
     return templates.TemplateResponse(
+        request,
         "partials/mode_status.html",
         {
             "request": request,

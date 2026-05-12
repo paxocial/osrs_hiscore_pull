@@ -58,3 +58,36 @@ def test_compute_snapshot_delta_and_summary():
     assert "ΔXP" in summary
     assert "Magic" in summary
     assert "Tempoross" in summary
+
+
+def test_compute_snapshot_delta_prefers_overall_and_summary_excludes_overall():
+    previous = {
+        "skills": [
+            {"name": "Overall", "level": 783, "xp": 9_419_643},
+            {"name": "Agility", "level": 56, "xp": 184_040},
+            {"name": "Mining", "level": 9, "xp": 1_154},
+            {"name": "Magic", "level": 1, "xp": 0},
+        ],
+        "activities": [],
+    }
+    current = {
+        "skills": [
+            {"name": "Overall", "level": 952, "xp": 14_096_057},
+            {"name": "Agility", "level": 60, "xp": 276_656},
+            {"name": "Mining", "level": 76, "xp": 1_439_935},
+            {"name": "Magic", "level": 1, "xp": 3_145_017},
+        ],
+        "activities": [],
+    }
+
+    delta = compute_snapshot_delta(previous, current)
+
+    assert delta["total_xp_delta"] == 4_676_414
+    assert delta["total_xp_delta"] != 9_352_828
+
+    summary = summarize_delta(delta)
+    assert "ΔXP 4.68M" in summary
+    assert "9.35M" not in summary
+    assert "Overall" not in summary
+    assert "Mining(+67)" in summary
+    assert "Agility(+4)" in summary
