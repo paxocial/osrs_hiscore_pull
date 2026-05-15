@@ -6,8 +6,8 @@ doc_name: checklist
 category: engineering
 status: ready
 version: v1.0
-last_updated: 2026-05-15 07:28:16 UTC
-maintained_by: agent-20260515-071009-2c5bfb98
+last_updated: 2026-05-15 08:01:27 UTC
+maintained_by: agent-20260515-075323-5d3ac258
 created_by: agent-20260515-071009-2c5bfb98
 owners: []
 related_docs: []
@@ -17,9 +17,9 @@ edit_trace:
   tool: manage_docs
   created_at: 2026-05-15 07:27:23 UTC
   created_via: frontmatter_update
-  last_edited_at: 2026-05-15 07:28:16 UTC
-  last_edited_by: agent-20260515-071009-2c5bfb98
-  last_action: replace_text
+  last_edited_at: 2026-05-15 08:01:27 UTC
+  last_edited_by: agent-20260515-075323-5d3ac258
+  last_action: replace_section
   stage: blueprint_ready
 ---
 
@@ -42,18 +42,18 @@ edit_trace:
 ## Phase 0
 <!-- ID: phase_0 -->
 ### `CATHERBY-LIVE-01A` Checklist
-- [ ] Forge reads the required inputs and modifies only the files listed in `PHASE_PLAN.md` for `CATHERBY-LIVE-01A`.
-- [ ] `api/schemas/ledger.py` defines event envelope, batch, response, family, privacy, and export contracts for session/xp only.
-- [ ] `api/endpoints/ledger.py` exposes authenticated `/api/v1/ledger/osrs/events`, `/events/batch`, and `/status` routes.
-- [ ] `api/dependencies.py` preserves fail-closed key behavior and adds exact delimiter-aware ingest scope checks; substring false positives fail.
-- [ ] `database/sql/013_live_event_ledger.sql` creates local SQLite ledger tables for events, payloads, batches, validation errors, source refs, quarantine, durable rate records, and intake control.
-- [ ] Accepted events store payload hash, validation status, privacy/export class, source refs, token/user refs, and source metadata.
-- [ ] Duplicate replay with same idempotency key and hash returns the original accepted event; conflicting replay rejects or quarantines without export eligibility.
-- [ ] Persistent per-key/per-IP ledger rate records are used; in-memory limiters are not treated as readiness proof.
-- [ ] Payload and batch caps reject oversized submissions before accepted writes.
-- [ ] Disabled/status-only intake rejects writes while authenticated status remains available.
-- [ ] No RuneLite exporter, admin UI, report generation, public marketplace claim, or Dungeon Crawl mutation/export is implemented.
-- [ ] Required verification commands pass: `pytest tests/test_live_event_ledger_schemas.py -q`, `pytest tests/test_live_event_ledger_api.py -q`, `pytest tests/test_api_dependencies.py -q`, `pytest tests/test_plugin_schemas.py -q`, and all listed import smokes.
+- [x] Forge reads the required inputs and modifies only the files listed in `PHASE_PLAN.md` for `CATHERBY-LIVE-01A`.
+- [x] `api/schemas/ledger.py` defines event envelope, batch, response, family, privacy, and export contracts for session/xp only.
+- [x] `api/endpoints/ledger.py` exposes authenticated `/api/v1/ledger/osrs/events`, `/events/batch`, and `/status` routes.
+- [x] `api/dependencies.py` preserves fail-closed key behavior and adds exact delimiter-aware ingest scope checks; substring false positives fail.
+- [x] `database/sql/013_live_event_ledger.sql` creates local SQLite ledger tables for events, payloads, batches, validation errors, source refs, quarantine, durable rate records, and intake control.
+- [x] Accepted events store payload hash, validation status, privacy/export class, source refs, token/user refs, and source metadata.
+- [x] Duplicate replay with same idempotency key and hash returns the original accepted event; conflicting replay rejects or quarantines without export eligibility.
+- [x] Persistent per-key/per-IP ledger rate records are used; in-memory limiters are not treated as readiness proof.
+- [x] Payload and batch caps reject oversized submissions before accepted writes.
+- [x] Disabled/status-only intake rejects writes while authenticated status remains available.
+- [x] No RuneLite exporter, admin UI, report generation, public marketplace claim, or Dungeon Crawl mutation/export is implemented.
+- [x] Required verification commands pass: `pytest tests/test_live_event_ledger_schemas.py -q`, `pytest tests/test_live_event_ledger_api.py -q`, `pytest tests/test_api_dependencies.py -q`, `pytest tests/test_plugin_schemas.py -q`, and all listed import smokes.
 - [ ] Crucible gives package-specific PASS before `CATHERBY-LIVE-01B`, `CATHERBY-LIVE-01C`, RuneLite exporter, admin/frontend, or Dungeon Crawl mapping routes.
 ## Phase 1
 <!-- ID: phase_1 -->

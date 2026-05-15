@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
-from api.dependencies import require_plugin_key
+from api.dependencies import require_plugin_key, require_plugin_ingest_key, parse_token_scopes
 
 
 @pytest.fixture
@@ -147,14 +147,13 @@ class TestRequirePluginKey:
         assert call_args[0][1] == (expected_hash,)
 
     @pytest.mark.asyncio
-    async def test_plugin_scope_substring_match(self, mock_db_connection, valid_token):
-        """Test that 'plugin' scope is matched as substring in scopes field."""
-        # Test with plugin at different positions in scope string
+    async def test_plugin_scope_exact_token_match(self, mock_db_connection, valid_token):
+        """Test exact tokenized plugin scope matching."""
         test_cases = [
             "plugin",
             "plugin,read,write",
             "read,plugin,write",
-            "read,write,plugin"
+            "read write plugin"
         ]
 
         for scopes in test_cases:
@@ -176,14 +175,12 @@ class TestRequirePluginKey:
             assert result["scopes"] == scopes
 
     @pytest.mark.asyncio
-    async def test_plugin_scope_false_positive(self, mock_db_connection, valid_token):
-        """Test that substring match works correctly (e.g., 'plugin' in 'my_plugin_api')."""
-        # This tests that 'plugin' substring matching works as intended
-        # Note: If exact scope matching is needed, this test documents current behavior
+    async def test_plugin_scope_false_positive_fails(self, mock_db_connection, valid_token):
+        """Test that substring false-positives fail exact scope matching."""
         mock_token = {
             "id": 1,
             "user_id": 100,
-            "scopes": "my_plugin_api",  # Contains 'plugin' as substring
+            "scopes": "my_plugin_api",
             "label": "Test"
         }
 
@@ -193,6 +190,32 @@ class TestRequirePluginKey:
 
         mock_db_connection.execute.side_effect = [mock_select_result, mock_update_result]
 
-        # Currently passes due to substring match - document this behavior
-        result = await require_plugin_key(x_api_key=valid_token, conn=mock_db_connection)
-        assert result is not None
+        with pytest.raises(HTTPException) as exc_info:
+            await require_plugin_key(x_api_key=valid_token, conn=mock_db_connection)
+        assert exc_info.value.status_code == 403
+
+    def test_parse_token_scopes(self):
+        assert parse_token_scopes("plugin,read write") == {"plugin", "read", "write"}
+        assert parse_token_scopes("") == set()
+
+    @pytest.mark.asyncio
+    async def test_require_plugin_ingest_key_allows_plugin_and_plugin_ingest(self, mock_db_connection, valid_token):
+        for scopes in ("plugin", "plugin:ingest", "read plugin:ingest"):
+            mock_token = {"id": 1, "user_id": 100, "scopes": scopes, "label": "Test"}
+            mock_select_result = MagicMock()
+            mock_select_result.fetchone.return_value = mock_token
+            mock_update_result = MagicMock()
+            mock_db_connection.execute.side_effect = [mock_select_result, mock_update_result]
+            result = await require_plugin_ingest_key(x_api_key=valid_token, conn=mock_db_connection)
+            assert result["id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_require_plugin_ingest_key_rejects_insufficient_scope(self, mock_db_connection, valid_token):
+        mock_token = {"id": 1, "user_id": 100, "scopes": "readplugin", "label": "Test"}
+        mock_select_result = MagicMock()
+        mock_select_result.fetchone.return_value = mock_token
+        mock_update_result = MagicMock()
+        mock_db_connection.execute.side_effect = [mock_select_result, mock_update_result]
+        with pytest.raises(HTTPException) as exc_info:
+            await require_plugin_ingest_key(x_api_key=valid_token, conn=mock_db_connection)
+        assert exc_info.value.status_code == 403

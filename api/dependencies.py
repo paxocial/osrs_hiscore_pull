@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Generator
 from fastapi import Depends, HTTPException, status, Query, Header
@@ -31,7 +32,9 @@ def get_database_connection() -> Generator[sqlite3.Connection, None, None]:
     try:
         with _shared_db.get_connection() as conn:
             yield conn
-    except Exception as e:
+    except HTTPException:
+        raise
+    except sqlite3.Error as e:
         logger.error(f"Database connection error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -96,9 +99,9 @@ async def require_plugin_key(
 
     token = dict(token_row)
 
-    # Validate that token has 'plugin' scope
-    scopes = token.get("scopes", "")
-    if "plugin" not in scopes:
+    # Validate that token has exact plugin scope token
+    scopes = parse_token_scopes(token.get("scopes", ""))
+    if "plugin" not in scopes and "plugin:ingest" not in scopes:
         logger.warning(f"API token {token['id']} lacks 'plugin' scope (has: {scopes})")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -114,6 +117,29 @@ async def require_plugin_key(
 
     logger.info(f"Plugin API access authorized for token {token['id']} (user {token['user_id']})")
 
+    return token
+
+
+def parse_token_scopes(scopes: str) -> set[str]:
+    """Parse comma/space-delimited scope strings into exact tokens."""
+    if not scopes:
+        return set()
+    normalized = scopes.replace(",", " ")
+    return {item.strip() for item in normalized.split() if item.strip()}
+
+
+async def require_plugin_ingest_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    conn: sqlite3.Connection = Depends(get_database_connection),
+) -> dict:
+    """Require token valid for ledger ingest operations."""
+    token = await require_plugin_key(x_api_key=x_api_key, conn=conn)
+    scopes = parse_token_scopes(token.get("scopes", ""))
+    if "plugin:ingest" not in scopes and "plugin" not in scopes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key does not have ledger ingest scope",
+        )
     return token
 
 

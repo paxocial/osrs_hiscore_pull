@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from api.dependencies import rate_limiter
 from api.exceptions import setup_exception_handlers
 from api.endpoints import accounts, snapshots, analytics, runelite, plugin
+from api.endpoints import ledger
 from api import test_accounts
 from config.settings import AppConfig
 
@@ -283,6 +284,13 @@ app.include_router(
     plugin.router,
     prefix="/api/v1/plugin",
     tags=["Plugin"],
+    responses={404: {"description": "Not found"}}
+)
+
+app.include_router(
+    ledger.router,
+    prefix="/api/v1/ledger/osrs",
+    tags=["Ledger"],
     responses={404: {"description": "Not found"}}
 )
 
