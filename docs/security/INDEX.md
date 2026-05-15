@@ -1,16 +1,17 @@
 # Security Reports Index
 
-*Last Updated: 2026-05-15 03:01:34 UTC*
+*Last Updated: 2026-05-15 05:12:25 UTC*
 
 This directory contains security reports generated during development and testing.
 
 ## Security Statistics
 
-- **Total Reports:** 6
+- **Total Reports:** 7
 - **Categories:** 5
 
 ## Recent Security Reports
 
+- **[auth/2026-05-15_catherby-live-01b-public-route-gate](auth/2026-05-15_catherby-live-01b-public-route-gate/report.md)** - 2026-05-15 05:12
 - **[security/2026-05-15_catherby-live-ingestion](security/2026-05-15_catherby-live-ingestion/report.md)** - 2026-05-15 03:01
 - **[exposure/2026-05-12_SEC-2026-05-12-0005](exposure/2026-05-12_SEC-2026-05-12-0005/report.md)** - 2026-05-12 01:02
 - **[exposure/2026-05-12_SEC-2026-05-12-0004](exposure/2026-05-12_SEC-2026-05-12-0004/report.md)** - 2026-05-12 01:01
@@ -20,7 +21,8 @@ This directory contains security reports generated during development and testin
 
 ## Browse by Category
 
-### Auth (1 reports)
+### Auth (2 reports)
+- [2026-05-15_catherby-live-01b-public-route-gate](auth/2026-05-15_catherby-live-01b-public-route-gate/report.md)
 - [2026-05-12_SEC-2026-05-12-0001](auth/2026-05-12_SEC-2026-05-12-0001/report.md)
 
 ### Csrf (1 reports)
@@ -42,7 +44,7 @@ This directory contains security reports generated during development and testin
 
 - **Index Location:** `/home/austin/projects/runescape/osrs_hiscore_pull/docs/security/INDEX.md`
 - **Total Categories:** 5
-- **Last Scan:** 2026-05-15 03:01:34 UTC
+- **Last Scan:** 2026-05-15 05:12:25 UTC
 
 ---
 

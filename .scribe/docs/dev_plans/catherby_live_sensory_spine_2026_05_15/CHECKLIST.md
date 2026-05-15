@@ -6,8 +6,8 @@ doc_name: checklist
 category: engineering
 status: ready
 version: v1.0
-last_updated: 2026-05-15 08:39:02 UTC
-maintained_by: agent-20260515-020223-e707f87e
+last_updated: 2026-05-15 09:13:22 UTC
+maintained_by: agent-20260515-090040-ba9972e8
 created_by: agent-20260515-071009-2c5bfb98
 owners: []
 related_docs: []
@@ -17,8 +17,8 @@ edit_trace:
   tool: manage_docs
   created_at: 2026-05-15 07:27:23 UTC
   created_via: frontmatter_update
-  last_edited_at: 2026-05-15 08:39:02 UTC
-  last_edited_by: agent-20260515-020223-e707f87e
+  last_edited_at: 2026-05-15 09:13:22 UTC
+  last_edited_by: agent-20260515-090040-ba9972e8
   last_action: replace_text
   stage: blueprint_ready
 ---
@@ -62,7 +62,7 @@ edit_trace:
 - [x] Public/private route inventory is explicit and tested in `tests/test_public_route_separation.py`.
 - [x] Anonymous public mode cannot reach private backend APIs, docs/OpenAPI, test routes, admin routes, local operator pages, or Council/runtime surfaces.
 - [x] Ledger ingestion/status routes remain authenticated and do not claim legacy `/api/v1/plugin` readiness.
-- [ ] Sentinel gives PASS before any public/plugin readiness claim.
+- [x] Sentinel gives PASS before any public/plugin readiness claim. PASS is scoped to CATHERBY-LIVE-01B route separation only; broader public/plugin readiness remains blocked by the Sentinel security report.
 
 ### `CATHERBY-LIVE-01C` Checklist
 - [x] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
