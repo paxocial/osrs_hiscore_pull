@@ -6,8 +6,8 @@ doc_name: checklist
 category: engineering
 status: ready
 version: v1.0
-last_updated: 2026-05-15 08:01:27 UTC
-maintained_by: agent-20260515-075323-5d3ac258
+last_updated: 2026-05-15 08:39:02 UTC
+maintained_by: agent-20260515-020223-e707f87e
 created_by: agent-20260515-071009-2c5bfb98
 owners: []
 related_docs: []
@@ -17,9 +17,9 @@ edit_trace:
   tool: manage_docs
   created_at: 2026-05-15 07:27:23 UTC
   created_via: frontmatter_update
-  last_edited_at: 2026-05-15 08:01:27 UTC
-  last_edited_by: agent-20260515-075323-5d3ac258
-  last_action: replace_section
+  last_edited_at: 2026-05-15 08:39:02 UTC
+  last_edited_by: agent-20260515-020223-e707f87e
+  last_action: replace_text
   stage: blueprint_ready
 ---
 
@@ -54,18 +54,18 @@ edit_trace:
 - [x] Disabled/status-only intake rejects writes while authenticated status remains available.
 - [x] No RuneLite exporter, admin UI, report generation, public marketplace claim, or Dungeon Crawl mutation/export is implemented.
 - [x] Required verification commands pass: `pytest tests/test_live_event_ledger_schemas.py -q`, `pytest tests/test_live_event_ledger_api.py -q`, `pytest tests/test_api_dependencies.py -q`, `pytest tests/test_plugin_schemas.py -q`, and all listed import smokes.
-- [ ] Crucible gives package-specific PASS before `CATHERBY-LIVE-01B`, `CATHERBY-LIVE-01C`, RuneLite exporter, admin/frontend, or Dungeon Crawl mapping routes.
+- [x] Crucible gives package-specific PASS before `CATHERBY-LIVE-01B`, `CATHERBY-LIVE-01C`, RuneLite exporter, admin/frontend, or Dungeon Crawl mapping routes.
 ## Phase 1
 <!-- ID: phase_1 -->
 ### `CATHERBY-LIVE-01B` Checklist
-- [ ] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
+- [x] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
 - [ ] Public/private route inventory is explicit and tested in `tests/test_public_route_separation.py`.
 - [ ] Anonymous public mode cannot reach private backend APIs, docs/OpenAPI, test routes, admin routes, local operator pages, or Council/runtime surfaces.
 - [ ] Ledger ingestion/status routes remain authenticated and do not claim legacy `/api/v1/plugin` readiness.
 - [ ] Sentinel gives PASS before any public/plugin readiness claim.
 
 ### `CATHERBY-LIVE-01C` Checklist
-- [ ] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
+- [x] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
 - [ ] Advisory observations are derived only from accepted, non-quarantined ledger events.
 - [ ] Every advisory observation preserves event ids, payload hashes, source refs, privacy class, and export eligibility.
 - [ ] Advisory feed is read-only and does not mutate Dungeon Crawl or local LLM state.
