@@ -105,3 +105,14 @@ class LedgerIngestResponse(BaseModel):
     payload_hash: str
     validation_status: str
     reason_code: str | None = None
+
+
+class AdvisoryObservation(BaseModel):
+    observation_id: str
+    event_ids: list[str] = Field(min_length=1)
+    source_refs: list[SourceRef] = Field(default_factory=list)
+    payload_hashes: list[str] = Field(min_length=1)
+    privacy_class: PrivacyClass
+    export_eligibility: ExportEligibility
+    summary: str = Field(min_length=1, max_length=512)
+    created_at: datetime

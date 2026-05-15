@@ -66,9 +66,9 @@ edit_trace:
 
 ### `CATHERBY-LIVE-01C` Checklist
 - [x] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
-- [ ] Advisory observations are derived only from accepted, non-quarantined ledger events.
-- [ ] Every advisory observation preserves event ids, payload hashes, source refs, privacy class, and export eligibility.
-- [ ] Advisory feed is read-only and does not mutate Dungeon Crawl or local LLM state.
+- [x] Advisory observations are derived only from accepted, non-quarantined ledger events. (Proof: `tests/test_ledger_observations.py::test_observations_exclude_non_exportable_and_quarantined`)
+- [x] Every advisory observation preserves event ids, payload hashes, source refs, privacy class, and export eligibility. (Proof: `tests/test_ledger_observations.py::test_observations_include_lineage_fields`)
+- [x] Advisory feed is read-only and does not mutate Dungeon Crawl or local LLM state. (Proof: GET-only route `api/endpoints/ledger_observations.py` + required tests/imports)
 - [ ] Sentinel or Arbiter confirms privacy/export and authority boundaries before any Dungeon Crawl adapter package.
 ## Phase 2
 <!-- ID: phase_2 -->
