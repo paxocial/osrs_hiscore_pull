@@ -6,8 +6,8 @@ doc_name: checklist
 category: engineering
 status: ready
 version: v1.0
-last_updated: 2026-05-15 09:13:22 UTC
-maintained_by: agent-20260515-090040-ba9972e8
+last_updated: 2026-05-15 09:56:59 UTC
+maintained_by: agent-20260515-020223-e707f87e
 created_by: agent-20260515-071009-2c5bfb98
 owners: []
 related_docs: []
@@ -17,8 +17,8 @@ edit_trace:
   tool: manage_docs
   created_at: 2026-05-15 07:27:23 UTC
   created_via: frontmatter_update
-  last_edited_at: 2026-05-15 09:13:22 UTC
-  last_edited_by: agent-20260515-090040-ba9972e8
+  last_edited_at: 2026-05-15 09:56:59 UTC
+  last_edited_by: agent-20260515-020223-e707f87e
   last_action: replace_text
   stage: blueprint_ready
 ---
@@ -69,7 +69,7 @@ edit_trace:
 - [x] Advisory observations are derived only from accepted, non-quarantined ledger events. (Proof: `tests/test_ledger_observations.py::test_observations_exclude_non_exportable_and_quarantined`)
 - [x] Every advisory observation preserves event ids, payload hashes, source refs, privacy class, and export eligibility. (Proof: `tests/test_ledger_observations.py::test_observations_include_lineage_fields`)
 - [x] Advisory feed is read-only and does not mutate Dungeon Crawl or local LLM state. (Proof: GET-only route `api/endpoints/ledger_observations.py` + required tests/imports)
-- [ ] Sentinel or Arbiter confirms privacy/export and authority boundaries before any Dungeon Crawl adapter package.
+- [x] Arbiter confirms 01C privacy/export and authority boundaries before any Dungeon Crawl adapter package. PASS is scoped to the Catherby advisory read model only; future Dungeon Crawl adapter implementation still requires its own package/gates.
 ## Phase 2
 <!-- ID: phase_2 -->
 ### Future RuneLite Exporter Gate
