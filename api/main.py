@@ -8,6 +8,7 @@ and automatic documentation.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +28,16 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+PUBLIC_HOST_MODE = _env_flag("CATHERBY_PUBLIC_HOST_MODE", default=False)
 
 
 @asynccontextmanager
@@ -86,9 +97,9 @@ app = FastAPI(
     API is rate-limited to 100 requests per minute per IP address for development.
     """,
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url=None if PUBLIC_HOST_MODE else "/docs",
+    redoc_url=None if PUBLIC_HOST_MODE else "/redoc",
+    openapi_url=None if PUBLIC_HOST_MODE else "/openapi.json",
     lifespan=lifespan,
     contact={
         "name": "OSRS Analytics Support",
@@ -246,53 +257,54 @@ async def root():
 
 # Include API routers
 app.include_router(
-    test_accounts.router,
-    prefix="/test",
-    tags=["Test"],
-    responses={404: {"description": "Not found"}}
-)
-
-app.include_router(
-    accounts.router,
-    prefix="/accounts",
-    tags=["Accounts"],
-    responses={404: {"description": "Not found"}}
-)
-
-app.include_router(
-    snapshots.router,
-    prefix="/snapshots",
-    tags=["Snapshots"],
-    responses={404: {"description": "Not found"}}
-)
-
-app.include_router(
-    analytics.router,
-    prefix="/analytics",
-    tags=["Analytics"],
-    responses={404: {"description": "Not found"}}
-)
-
-app.include_router(
-    runelite.router,
-    prefix="",
-    tags=["RuneLite"],
-    responses={404: {"description": "Not found"}}
-)
-
-app.include_router(
-    plugin.router,
-    prefix="/api/v1/plugin",
-    tags=["Plugin"],
-    responses={404: {"description": "Not found"}}
-)
-
-app.include_router(
     ledger.router,
     prefix="/api/v1/ledger/osrs",
     tags=["Ledger"],
     responses={404: {"description": "Not found"}}
 )
+
+if not PUBLIC_HOST_MODE:
+    app.include_router(
+        test_accounts.router,
+        prefix="/test",
+        tags=["Test"],
+        responses={404: {"description": "Not found"}}
+    )
+
+    app.include_router(
+        accounts.router,
+        prefix="/accounts",
+        tags=["Accounts"],
+        responses={404: {"description": "Not found"}}
+    )
+
+    app.include_router(
+        snapshots.router,
+        prefix="/snapshots",
+        tags=["Snapshots"],
+        responses={404: {"description": "Not found"}}
+    )
+
+    app.include_router(
+        analytics.router,
+        prefix="/analytics",
+        tags=["Analytics"],
+        responses={404: {"description": "Not found"}}
+    )
+
+    app.include_router(
+        runelite.router,
+        prefix="",
+        tags=["RuneLite"],
+        responses={404: {"description": "Not found"}}
+    )
+
+    app.include_router(
+        plugin.router,
+        prefix="/api/v1/plugin",
+        tags=["Plugin"],
+        responses={404: {"description": "Not found"}}
+    )
 
 
 # Development server startup

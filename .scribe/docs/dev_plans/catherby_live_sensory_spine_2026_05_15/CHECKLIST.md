@@ -59,9 +59,9 @@ edit_trace:
 <!-- ID: phase_1 -->
 ### `CATHERBY-LIVE-01B` Checklist
 - [x] `CATHERBY-LIVE-01A` has package-specific Crucible PASS before routing.
-- [ ] Public/private route inventory is explicit and tested in `tests/test_public_route_separation.py`.
-- [ ] Anonymous public mode cannot reach private backend APIs, docs/OpenAPI, test routes, admin routes, local operator pages, or Council/runtime surfaces.
-- [ ] Ledger ingestion/status routes remain authenticated and do not claim legacy `/api/v1/plugin` readiness.
+- [x] Public/private route inventory is explicit and tested in `tests/test_public_route_separation.py`.
+- [x] Anonymous public mode cannot reach private backend APIs, docs/OpenAPI, test routes, admin routes, local operator pages, or Council/runtime surfaces.
+- [x] Ledger ingestion/status routes remain authenticated and do not claim legacy `/api/v1/plugin` readiness.
 - [ ] Sentinel gives PASS before any public/plugin readiness claim.
 
 ### `CATHERBY-LIVE-01C` Checklist

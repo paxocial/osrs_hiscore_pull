@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import PlainTextResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from api.main import app as api_app
@@ -24,6 +27,41 @@ from web.services.scheduler import Scheduler
 from config.settings import AppConfig
 from web.middleware.security_headers import SecurityHeadersMiddleware
 from web.middleware.session_timeout import SessionTimeoutMiddleware
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_allowed_public_api_path(path: str) -> bool:
+    return (
+        path == "/api/v1/ledger/osrs"
+        or path.startswith("/api/v1/ledger/osrs/")
+        or path == "/api/api/v1/ledger/osrs"
+        or path.startswith("/api/api/v1/ledger/osrs/")
+    )
+
+
+def _is_blocked_public_path(path: str) -> bool:
+    blocked_prefixes = (
+        "/admin",
+        "/jobs",
+        "/webhooks",
+        "/operator",
+        "/ops",
+        "/runtime",
+        "/council",
+        "/.council",
+        "/.codex",
+        "/.claude",
+        "/.mcp",
+    )
+    if path.startswith("/api"):
+        return not _is_allowed_public_api_path(path)
+    return any(path == prefix or path.startswith(prefix + "/") for prefix in blocked_prefixes)
 
 
 def create_app() -> FastAPI:
@@ -63,6 +101,14 @@ def create_app() -> FastAPI:
         https_only=config.security.https_only,
         max_age=config.security.session_max_age,
     )
+
+    public_host_mode = _env_flag("CATHERBY_PUBLIC_HOST_MODE", default=False)
+    if public_host_mode:
+        @app.middleware("http")
+        async def public_surface_guard(request, call_next):
+            if _is_blocked_public_path(request.url.path):
+                return PlainTextResponse("Not Found", status_code=404)
+            return await call_next(request)
 
     # Mount existing API under /api for reuse.
     app.mount("/api", api_app)
